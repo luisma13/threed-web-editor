@@ -6,6 +6,8 @@ import { PlayerComponent } from "../components/players/player.component";
 import { engine } from "../core/engine/engine";
 import { GameObject } from "../core/gameobject";
 import { loadGLTF, loadVRM } from "../loaders/modelsLoader";
+import { ColliderCameraComponent } from "../components/camera/collider-camera.component";
+import { FirstPersonCameraComponent } from "../components/camera/free-camera.component";
 
 export async function createTestScene() {
 
@@ -49,7 +51,7 @@ export async function createTestScene() {
 
     const freecam = new GameObject();
     engine.addGameObjects(freecam);
-    // freecam.addComponent(new FreeCameraComponent());
-    // freecam.addComponent(new ColliderCameraComponent());
+    //freecam.addComponent(new FirstPersonCameraComponent());
+    freecam.addComponent(new ColliderCameraComponent());
 
 }

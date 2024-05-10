@@ -2,7 +2,7 @@ import * as io from "socket.io-client";
 import { PlayerComponent } from "../players/player.component";
 import { SyncablePlayerReceiverComponent } from "./syncable-player-receiver.component";
 import { Component } from "../../core/component";
-import { Engine } from "../../core/engine/engine";
+import { engine } from "../../core/engine/engine";
 import { GameObject } from "../../core/gameobject";
 import { loadVRM } from "../../loaders/modelsLoader";
 import { BlendshapesComponent } from "../players/blendshapes.components";
@@ -43,7 +43,7 @@ export class SyncableSceneComponent extends Component {
         syncableObjectComponent.setNetworkdData(this.socket, objectId);
         player.addComponent(syncableObjectComponent);
 
-        Engine.addGameObjects(player);
+        engine.addGameObjects(player);
     }
 
     public update(deltaTime: number): void { }
