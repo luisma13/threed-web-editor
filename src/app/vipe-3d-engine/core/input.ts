@@ -44,8 +44,13 @@ export class EngineInput {
         this.mouse.y = event.clientY;
     }
 
+    static wheelEventEndTimeout = null;
     private static readonly wheel = (event) => {
         this.mouseWheel = event.deltaY;
+        clearTimeout(this.wheelEventEndTimeout);
+        this.wheelEventEndTimeout = setTimeout(() => {
+            this.mouseWheel = 0;
+        }, 100);
     }
 
     private static readonly mousedown = (event) => {

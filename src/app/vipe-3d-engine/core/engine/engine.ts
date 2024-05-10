@@ -30,7 +30,10 @@ class Engine extends EngineBase {
     private lastTime: number = 0;
 
     override init() {
-        this.renderer = new THREE.WebGLRenderer();
+        this.renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            powerPreference: "high-performance"
+        });
         // enable antialias for smoother lines
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -67,11 +70,11 @@ class Engine extends EngineBase {
         this.composer = new EffectComposer(this.renderer);
         this.composer.setSize(window.innerWidth, window.innerHeight);
 
-        this.fxaaPass = new ShaderPass(FXAAShader);
-        this.fxaaPass.material.uniforms['resolution'].value.x = 1 / (window.innerWidth * window.devicePixelRatio);
-        this.fxaaPass.material.uniforms['resolution'].value.y = 1 / (window.innerHeight * window.devicePixelRatio);
+        // Render pass for the scene
         const renderPass = new RenderPass(this.scene, this.camera);
+        this.composer.addPass(renderPass);
 
+        // Outline pass for selected objects
         this.outlinePass = new OutlinePass(
             new THREE.Vector2(window.innerWidth, window.innerHeight),
             this.scene,
@@ -83,14 +86,16 @@ class Engine extends EngineBase {
         this.outlinePass.pulsePeriod = Number(0.0);
         this.outlinePass.visibleEdgeColor.set('#ffffff');
         this.outlinePass.hiddenEdgeColor.set('#ffffff');
-
-        const gammaCorrectionPass = new ShaderPass(GammaCorrectionShader);
-        gammaCorrectionPass.renderToScreen = true;
-
-        this.composer.addPass(this.fxaaPass);
-        this.composer.addPass(renderPass);
         this.composer.addPass(this.outlinePass);
+
+        // Gamma correction pass
+        const gammaCorrectionPass = new ShaderPass(GammaCorrectionShader);
         this.composer.addPass(gammaCorrectionPass);
+
+        // FXAA pass for anti-aliasing
+        this.fxaaPass = new ShaderPass(FXAAShader);
+        this.fxaaPass.material.uniforms['resolution'].value.set(1 / (window.innerWidth * window.devicePixelRatio), 1 / (window.innerHeight * window.devicePixelRatio));
+        this.composer.addPass(this.fxaaPass);
 
         const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
         pmremGenerator.compileEquirectangularShader();
