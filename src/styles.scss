@@ -1,0 +1,24 @@
+html {
+  padding: 0px;
+  margin: 0px;
+  min-height: 100%;
+}
+
+body {
+  padding: 0px;
+  margin: 0px;
+  height: 100%;
+}
+
+* {
+  padding: 0px;
+  margin: 0px;
+  box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+}
+
+#ARButton {
+  border: 1px solid gray !important;
+  color: black !important;
+}
