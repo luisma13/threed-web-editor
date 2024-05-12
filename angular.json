@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "portfolio-3dweb": {
+    "threed-web-editor": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -17,7 +17,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist/portfolio-3dweb",
+            "outputPath": "dist/threed-web-editor",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": [
@@ -67,10 +67,10 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "portfolio-3dweb:build:production"
+              "buildTarget": "threed-web-editor:build:production"
             },
             "development": {
-              "buildTarget": "portfolio-3dweb:build:development"
+              "buildTarget": "threed-web-editor:build:development"
             }
           },
           "options": {
@@ -81,7 +81,7 @@
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "buildTarget": "portfolio-3dweb:build"
+            "buildTarget": "threed-web-editor:build"
           }
         },
         "test": {

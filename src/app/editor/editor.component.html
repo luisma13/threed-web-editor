@@ -1,11 +1,26 @@
-<div #viewer class="canvas">
+<div class="container">
+    <div class="toolbar">
+        <button (click)="exportScene()">Export scene</button>
+        <button (click)="loadScene()">Load scene</button>
+        <button (click)="loadModel('.gltf')">Load GLB</button>
+        <button (click)="loadModel('.fbx')">Load FBX</button>
+        <button (click)="loadModel('.obj')">Load OBJ</button>
+        <button (click)="loadModel('.vrm')">Load VRM</button>
+    </div>
+    <div class="editor">
+        <div class="sidebar">
+            <h4>Scene objects</h4>
+            <hr/>
+            <app-game-object *ngFor="let child of engine.gameObjects" [gameObject]="child"></app-game-object>
+        </div>
+        <div #viewer class="canvas-container">
 
-</div>
-<div class="toolbar">
-    <button (click)="exportScene()">Export scene</button>
-    <button (click)="loadScene()">Load scene</button>
-    <button (click)="loadGLB()">Load GLB</button>
-    <button (click)="loadFBX()">Load FBX</button>
-    <button (click)="loadOBJ()">Load OBJ</button>
-    <button (click)="loadVRM()">Load VRM</button>
+        </div>
+        <div class="sidebar">
+            <h4>{{objectSelected?.name}}</h4>
+            <hr/>
+            <app-component *ngFor="let child of objectSelected?.components" [component]="child"></app-component>
+        </div>
+    </div>
+    <app-context-menu #contextMenu [menuItems]="menuItems"></app-context-menu>
 </div>

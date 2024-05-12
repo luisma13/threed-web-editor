@@ -1,0 +1,9 @@
+<div class="row">
+    {{component.name}}
+    <ul>
+        <li *ngFor="let property of attributes">
+            {{property.name}}
+            <input type="text" [value]="property">
+        </li>
+    </ul>
+</div>

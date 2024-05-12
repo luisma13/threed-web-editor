@@ -10,6 +10,10 @@ export class EngineInput {
     static keys = new Map<string, boolean>();
     static keysPressed = new Map<string, boolean>();
     static keysReleased = new Map<string, boolean>();
+    static controlLeft = false;
+    static shiftLeft = false;
+    static controlRight = false;
+    static shiftRight = false;
 
     static init() {
         window.addEventListener("keydown", this.keydown);
@@ -18,6 +22,7 @@ export class EngineInput {
         window.addEventListener("wheel", this.wheel);
         window.addEventListener("mousedown", this.mousedown);
         window.addEventListener("mouseup", this.mouseup);
+        window.addEventListener("contextmenu", (event) => event.preventDefault());
     }
 
     static destroy() {
@@ -30,13 +35,30 @@ export class EngineInput {
     }
 
     private static readonly keydown = (event) => {
-        this.keys.set(event.key, true);
-        this.keysPressed.set(event.key, true);
+        this.controlLeft = event.ctrlKey;
+        this.shiftLeft = event.shiftKey;
+        this.controlRight = event.ctrlKey;
+        this.shiftRight = event.shiftKey;
+
+        // save letters only in lowercase
+        if (event.key.length === 1 && event.key.match(/[a-z]/i)) {
+            this.keys.set(event.key.toLowerCase(), true);
+            this.keysPressed.set(event.key.toLowerCase(), true);
+        } else {
+            this.keys.set(event.key, true);
+            this.keysPressed.set(event.key, true);
+        }
     }
 
     private static readonly keyup = (event) => {
-        this.keys.set(event.key, false);
-        this.keysReleased.set(event.key, true);
+        // save letters only in lowercase
+        if (event.key.length === 1 && event.key.match(/[a-z]/i)) {
+            this.keys.set(event.key.toLowerCase(), false);
+            this.keysReleased.set(event.key.toLowerCase(), true);
+        } else {
+            this.keys.set(event.key, false);
+            this.keysReleased.set(event.key, true);
+        }
     }
 
     private static readonly mousemove = (event) => {

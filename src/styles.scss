@@ -1,24 +1,55 @@
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+    -webkit-box-sizing: inherit;
+    -moz-box-sizing: inherit;
+    box-sizing: inherit;
+}
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+    background-color: #f7f7f7;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #6c6c6c;
+}
+
 html {
-  padding: 0px;
-  margin: 0px;
-  min-height: 100%;
+    scroll-behavior: smooth;
 }
 
 body {
-  padding: 0px;
-  margin: 0px;
-  height: 100%;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 100svh;
+    padding: 0px;
+    margin: 0px;
+    overflow: hidden auto;
 }
 
-* {
-  padding: 0px;
-  margin: 0px;
-  box-sizing: border-box;
-  -webkit-box-sizing: border-box;
-  -moz-box-sizing: border-box;
+body,
+html {
+    font-family: "Roboto", sans-serif;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0px;
+    margin: 0px;
+    color: #1a1a1a;
+}
+
+a {
+    color: #000;
+    text-decoration: none;
+    background-color: transparent;
 }
 
 #ARButton {
-  border: 1px solid gray !important;
-  color: black !important;
+    border: 1px solid gray !important;
+    color: black !important;
 }

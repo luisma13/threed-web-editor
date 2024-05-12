@@ -15,17 +15,26 @@ export class FirstPersonCameraComponent extends Component {
     private lastMouseX = 0;
     private lastMouseY = 0;
 
+    constructor() {
+        super("FirstPersonCameraComponent");
+    }
+
     public override start(): void {
         this.camera = engine.camera as THREE.PerspectiveCamera;
         engine.controls.enabled = false;
     }
 
     public override update(deltaTime: number): void {
+        if (engine.draggingObject)
+            return;
+        
         this.handleInput(deltaTime);
     }
 
     private handleInput(deltaTime: number): void {
         const moveDirection = new THREE.Vector3();
+
+        // console.log({a: engine.input.keys.get('a'), d: engine.input.keys.get('d'), w: engine.input.keys.get('w'), s: engine.input.keys.get('s')});
 
         if (engine.input.keys.get('w')) {
 

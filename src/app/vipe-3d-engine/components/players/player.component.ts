@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { Component } from "../../core/component";
 import { engine } from "../../core/engine/engine";
 import { loadMixamoAnimation } from "../../loaders/mixamoAnimLoader";
+import { GameObject } from "../../core/gameobject";
 
 interface OnAvatarChangeEvent {
     (newAvatar: VRM, url: string): void;
@@ -19,6 +20,10 @@ export class PlayerComponent extends Component {
 
     // to subscribe to action changes
     private onAvatarChange: OnAvatarChangeEvent[] = [];
+
+    constructor(object?: GameObject) {
+        super("PlayerComponent", object);
+    }
 
     public start(): void { }
 

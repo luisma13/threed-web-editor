@@ -29,27 +29,36 @@ class Engine extends EngineBase {
     // to manage timeStep of cannon world physics
     private lastTime: number = 0;
 
-    override init() {
+    // to manage editor scene
+    draggingObject: boolean = false;
+
+    rendererContainer: HTMLElement;
+
+    override init(container?: HTMLElement, backgroundColour: string = "#fff") {
+        this.rendererContainer = container;
+        const width = container?.clientWidth || window.innerWidth;
+        const height = container?.clientHeight || window.innerHeight;
+
         this.renderer = new THREE.WebGLRenderer({
             antialias: true,
             powerPreference: "high-performance"
         });
-        // enable antialias for smoother lines
+        
         this.renderer.setPixelRatio(window.devicePixelRatio);
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setSize(width, height);
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = 1.0;
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.BasicShadowMap;
 
-        this.camera = new THREE.PerspectiveCamera(60.0, window.innerWidth / window.innerHeight, 0.01, 1000);
+        this.camera = new THREE.PerspectiveCamera(60.0, width / height, 0.01, 1000);
 
         this.scene = new THREE.Scene();
 
         this.world = new CANNON.World();
         this.world.gravity.set(0, -9.82, 0); // m/s²
         this.world.defaultContactMaterial.friction = 0.1;
-        // this.world.addContactMaterial(this.BODY_GROUND_CONTACT_MATERIAL);
+        this.world.addContactMaterial(this.BODY_GROUND_CONTACT_MATERIAL);
 
         this.cannonDebugger = CannonDebugger(this.scene, this.world, {
             onInit(body, mesh) {
@@ -68,7 +77,7 @@ class Engine extends EngineBase {
         this.controls.update();
 
         this.composer = new EffectComposer(this.renderer);
-        this.composer.setSize(window.innerWidth, window.innerHeight);
+        this.composer.setSize(width, height);
 
         // Render pass for the scene
         const renderPass = new RenderPass(this.scene, this.camera);
@@ -76,7 +85,7 @@ class Engine extends EngineBase {
 
         // Outline pass for selected objects
         this.outlinePass = new OutlinePass(
-            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            new THREE.Vector2(width, height),
             this.scene,
             this.camera
         );
@@ -94,7 +103,7 @@ class Engine extends EngineBase {
 
         // FXAA pass for anti-aliasing
         this.fxaaPass = new ShaderPass(FXAAShader);
-        this.fxaaPass.material.uniforms['resolution'].value.set(1 / (window.innerWidth * window.devicePixelRatio), 1 / (window.innerHeight * window.devicePixelRatio));
+        this.fxaaPass.material.uniforms['resolution'].value.set(1 / (width * window.devicePixelRatio), 1 / (height * window.devicePixelRatio));
         this.composer.addPass(this.fxaaPass);
 
         const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
@@ -102,7 +111,7 @@ class Engine extends EngineBase {
 
         const neutralEnvironment = pmremGenerator.fromScene(new RoomEnvironment()).texture;
         this.scene.environment = neutralEnvironment;
-        this.scene.background = new THREE.Color('#000');
+        this.scene.background = new THREE.Color(backgroundColour);
 
         this.input.init();
     }
@@ -135,11 +144,21 @@ class Engine extends EngineBase {
     }
 
     override onResize(event?: Event) {
-        super.onResize(event);
-        this.fxaaPass.material.uniforms['resolution'].value.x = 1 / (window.innerWidth * window.devicePixelRatio);
-        this.fxaaPass.material.uniforms['resolution'].value.y = 1 / (window.innerHeight * window.devicePixelRatio);
-        if (this.composer)
-            this.composer.setSize(window.innerWidth, window.innerHeight);
+        if (this.rendererContainer) {
+            const width = this.rendererContainer.clientWidth;
+            const height = this.rendererContainer.clientHeight;
+            this.camera.aspect = width / height;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setSize(width, height);
+            this.composer.setSize(width, height);
+            this.fxaaPass.material.uniforms['resolution'].value.set(1 / (width * window.devicePixelRatio), 1 / (height * window.devicePixelRatio));
+        } else {
+            super.onResize(event);
+            this.fxaaPass.material.uniforms['resolution'].value.x = 1 / (window.innerWidth * window.devicePixelRatio);
+            this.fxaaPass.material.uniforms['resolution'].value.y = 1 / (window.innerHeight * window.devicePixelRatio);
+            if (this.composer)
+                this.composer.setSize(window.innerWidth, window.innerHeight);
+        }
     }
 
 }

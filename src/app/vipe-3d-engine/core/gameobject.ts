@@ -5,9 +5,7 @@ import * as CANNON from "cannon-es";
 export class GameObject extends THREE.Object3D {
 
     public isAddedToScene: boolean = false;
-
-    private readonly components: Component[];
-
+    public components: Component[];
     public rigidbody: CANNON.Body;
 
     constructor(threeObject?: THREE.Object3D, body?: CANNON.Body) {

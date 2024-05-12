@@ -31,6 +31,9 @@ export abstract class EngineBase {
         {}
     )
 
+    onGameobjectsChanged: BehaviorSubject<GameObject[]> = new BehaviorSubject(null);
+    onGameObjectSelected: BehaviorSubject<GameObject> = new BehaviorSubject(null);
+
     cannonDebugger: any;
 
     // INPUT
@@ -70,6 +73,7 @@ export abstract class EngineBase {
 
             gameobject.isAddedToScene = true;
         });
+        this.onGameobjectsChanged.next(this.gameObjects);
     }
 
     findGameObjectByName(name: string) {
@@ -114,6 +118,8 @@ export abstract class EngineBase {
             }
             gameobject = undefined;
         });
+
+        this.onGameobjectsChanged.next(this.gameObjects);
     }
 
     private deepDelete3DObject(gameobject: THREE.Object3D) {

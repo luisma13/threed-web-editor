@@ -12,6 +12,10 @@ export class SyncablePlayerSenderComponent extends Component {
 
     timer = 0;
 
+    constructor() {
+        super("SyncablePlayerSenderComponent");
+    }
+
     public start(): void {
         this.playerComponent = this.gameObject.getComponent(PlayerComponent);
         this.playerControllerComponent = this.gameObject.getComponent(PlayerControllerComponent);

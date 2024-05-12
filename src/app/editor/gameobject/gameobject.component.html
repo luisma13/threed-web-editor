@@ -1,0 +1,9 @@
+<div (click)="onClick()" class="row" [style.background-color]="isSelected ? '#535353' : ''">
+    <span (click)="toggleChildren()">
+    {{ children.length > 0 && !showChildren ? "+ " : "" }}
+    {{ children.length > 0 && showChildren ? "- " : "" }}
+    {{ gameObject?.name || gameObject?.type }}</span>
+    <div *ngIf="showChildren">
+        <app-game-object *ngFor="let child of children" [gameObject]="child"></app-game-object>
+    </div>
+</div>

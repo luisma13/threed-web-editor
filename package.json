@@ -1,5 +1,5 @@
 {
-  "name": "portfolio-3dweb",
+  "name": "threed-web-editor",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
@@ -8,7 +8,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "start:live": "concurrently --names 'wds,localtunnel' --prefix-colors 'green,yellow' --kill-others-on-fail \"npm start\" \"lt --port 4200\"",
-    "serve:ssr:portfolio-3dweb": "node dist/portfolio-3dweb/server/server.mjs"
+    "serve:ssr:threed-web-editor": "node dist/threed-web-editor/server/server.mjs"
   },
   "private": true,
   "dependencies": {
@@ -26,7 +26,10 @@
     "cannon-es": "^0.20.0",
     "cannon-es-debugger": "^1.0.0",
     "express": "4.18.2",
+    "file-saver": "^2.0.5",
     "gsap": "^3.12.4",
+    "jszip": "^3.10.1",
+    "reflect-metadata": "^0.2.2",
     "rxjs": "7.8.0",
     "three": "0.149.0",
     "three-to-cannon": "^4.3.0",
@@ -41,13 +44,13 @@
     "@types/jasmine": "5.1.0",
     "@types/node": "18.18.0",
     "@types/three": "0.149.0",
+    "concurrently": "^7.0.0",
     "jasmine-core": "5.1.0",
     "karma": "6.4.0",
     "karma-chrome-launcher": "3.2.0",
     "karma-coverage": "2.2.0",
     "karma-jasmine": "5.1.0",
     "karma-jasmine-html-reporter": "2.1.0",
-    "typescript": "5.2.2",
-    "concurrently": "^7.0.0"
+    "typescript": "5.2.2"
   }
 }

@@ -23,6 +23,10 @@ export class PlayerPhysicsComponent extends Component {
     public raySafeOffset = 0.03;
     raycastBox: Group;
 
+    constructor() {
+        super("PlayerPhysicsComponent");
+    }
+
     public start(): void {
         this.gameObject.rigidbody = new CANNON.Body({ mass: this.MASS });
         this.gameObject.rigidbody.angularDamping = 1;

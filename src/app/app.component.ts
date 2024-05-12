@@ -1,7 +1,6 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
-import { ViewerComponent } from './viewer/viewer.component';
 
 @Component({
   selector: 'app-root',
@@ -11,5 +10,5 @@ import { ViewerComponent } from './viewer/viewer.component';
   styleUrl: './app.component.scss'
 })
 export class AppComponent {
-  title = 'portfolio-3dweb';
+  title = 'threed-web-editor';
 }

@@ -13,6 +13,10 @@ export class BlendshapesComponent extends Component {
     public blendshapesList: string[] = [];
     private vrm: VRM;
 
+    constructor() {
+        super("BlendshapesComponent");
+    }
+
     public start(): void {
         const playerComponent = this.gameObject.getComponent<PlayerComponent>(PlayerComponent);
         if (playerComponent.vrm) {

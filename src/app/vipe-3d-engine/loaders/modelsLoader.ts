@@ -10,7 +10,6 @@ import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 import { EditableObjectComponent } from "../components/editor/editable-object.component.js";
 import { GameObject } from "../core/gameobject.js";
 import { getCannonShapeFromMesh } from "../utils/bodies.physics.factory.js";
-import { loadMixamoAnimation } from "./mixamoAnimLoader.js";
 
 // GLTF Loader
 const ktx2Loader = new KTX2Loader().setTranscoderPath("three/examples/jsm/libs/basis/");
@@ -29,7 +28,7 @@ export async function loadObj(modelObj): Promise<GameObject> {
     return new GameObject(obj);
 }
 
-export async function loadVRM(modelUrl: string, helperRoot?: THREE.Group): Promise<VRM> {
+export async function loadVRM(modelUrl: string, helperRoot?: THREE.Group): Promise<{ vrm: VRM, scene: THREE.Group }> {
     const loader = new GLTFLoader();
     loader.crossOrigin = "anonymous";
 
@@ -51,7 +50,7 @@ export async function loadVRM(modelUrl: string, helperRoot?: THREE.Group): Promi
 
     // rotate if the VRM is VRM0.0
     VRMUtils.rotateVRM0(vrm);
-    return vrm;
+    return { vrm, scene: vrm.scene };
 }
 
 export async function loadFBX(url) {
@@ -60,11 +59,10 @@ export async function loadFBX(url) {
     return new GameObject(asset);
 }
 
-export async function loadFBXAnimation(animationUrl, vrm: VRM): Promise<AnimationClip> {
+export async function loadFBXAnimation(animationUrl): Promise<AnimationClip> {
     const loader = new FBXLoader();
     const fbxObj = await loader.loadAsync(animationUrl);
     const animClip = fbxObj.animations[0];
-
     return animClip;
 }
 

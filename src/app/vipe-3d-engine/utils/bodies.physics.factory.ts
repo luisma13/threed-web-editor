@@ -18,7 +18,7 @@ export function getCannonBodyFromObject(object, shapeType?: ShapeType, toScale?:
         const shape = threeToCannon(object, { type: ShapeType.SPHERE }).shape;
         body.addShape(shape);
     } else if (shapeType === ShapeType.MESH) {
-        object.scene.traverse(function (object) {
+        object.scene.traverse((object) => {
             if (object instanceof THREE.Mesh) {
                 const shape = getShapeFromMesh(object, toScale || scale);
                 body.addShape(shape);

@@ -8,6 +8,10 @@ export class SyncablePlayerReceiverComponent extends Component {
     private socket: io.Socket;
     private objectId: any;
 
+    constructor() {
+        super("SyncablePlayerReceiverComponent");
+    }
+
     public start(): void {
         try {
             this.socket.on("playerPositions", (data: any) => {
@@ -21,7 +25,7 @@ export class SyncablePlayerReceiverComponent extends Component {
 
             this.socket.on("change avatar", async (objectId: string, url: string) => {
                 if (objectId == this.objectId) {
-                    const vrm = await loadVRM(url);
+                    const { vrm } = await loadVRM(url);
                     this.gameObject.getComponent<PlayerComponent>(PlayerComponent).changeAvatar(vrm, url);
                 }
             });

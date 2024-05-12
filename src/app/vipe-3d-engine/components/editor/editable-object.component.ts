@@ -15,6 +15,10 @@ export class EditableObjectComponent extends Component {
     // optimization for collision scale
     isChangingScale = false;
 
+    constructor() {
+        super("EditableObjectComponent");
+    }
+
     public start(): void {
         this.lastPos.copy(this.gameObject.position);
         this.lastRot.copy(this.gameObject.rotation);

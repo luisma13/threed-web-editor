@@ -2,7 +2,6 @@ import * as THREE from "three";
 import * as CANNON from "cannon-es";
 import { Component } from "../../core/component";
 import { CollisionGroups, engine } from "../../core/engine/engine";
-import { EngineInput } from "../../core/input";
 
 export class ColliderCameraComponent extends Component {
 
@@ -10,13 +9,17 @@ export class ColliderCameraComponent extends Component {
     private smoothFactor: number = 0.2;
     private cameraOffset: number = 0.4; 
 
+    constructor() {
+        super("ColliderCameraComponent");
+    }
+
     public override start(): void {
 
     }
 
     public override update(deltaTime: number): void {
-        if (EngineInput.mouseWheel !== 0) {
-            this.previousDistanceObjectToCamera += EngineInput.mouseWheel * 0.001;
+        if (engine.input.mouseWheel !== 0) {
+            this.previousDistanceObjectToCamera += engine.input.mouseWheel * 0.001;
             this.previousDistanceObjectToCamera = THREE.MathUtils.clamp(this.previousDistanceObjectToCamera, 1, 10);
             console.log("Distance: ", this.previousDistanceObjectToCamera);
         }

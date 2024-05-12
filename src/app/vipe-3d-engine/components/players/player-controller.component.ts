@@ -35,6 +35,10 @@ export class PlayerControllerComponent extends Component {
 
     onActionChange: OnActionChangeEvent[] = [];
 
+    constructor() {
+        super("PlayerControllerComponent");
+    }
+
     public start(): void {
         this.startPosition = this.gameObject.position.clone();
         this.startRotation = this.gameObject.rotation.clone();
