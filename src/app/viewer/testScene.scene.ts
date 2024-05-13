@@ -1,12 +1,12 @@
 import * as CANNON from "cannon-es";
 import * as THREE from "three";
-import { PlayerControllerComponent } from "../components/players/player-controller.component";
-import { PlayerPhysicsComponent } from "../components/players/player-physics.component";
-import { PlayerComponent } from "../components/players/player.component";
-import { engine } from "../core/engine/engine";
-import { GameObject } from "../core/gameobject";
-import { loadGLTF, loadVRM } from "../loaders/modelsLoader";
-import { ColliderCameraComponent } from "../components/camera/collider-camera.component";
+import { PlayerControllerComponent } from "../vipe-3d-engine/components/players/player-controller.component";
+import { PlayerPhysicsComponent } from "../vipe-3d-engine/components/players/player-physics.component";
+import { PlayerComponent } from "../vipe-3d-engine/components/players/player.component";
+import { engine } from "../vipe-3d-engine/core/engine/engine";
+import { GameObject } from "../vipe-3d-engine/core/gameobject";
+import { loadGLTF, loadVRM } from "../vipe-3d-engine/loaders/modelsLoader";
+import { ColliderCameraComponent } from "../vipe-3d-engine/components/camera/collider-camera.component";
 
 export async function createTestScene() {
 

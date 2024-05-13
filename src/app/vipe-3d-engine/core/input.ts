@@ -8,8 +8,8 @@ export class EngineInput {
     static mouseRightDown = false;
     static mouseMiddleDown = false;
     static keys = new Map<string, boolean>();
-    static keysPressed = new Map<string, boolean>();
-    static keysReleased = new Map<string, boolean>();
+    static keysDown = new Map<string, boolean>();
+    static keysUp= new Map<string, boolean>();
     static controlLeft = false;
     static shiftLeft = false;
     static controlRight = false;
@@ -43,10 +43,12 @@ export class EngineInput {
         // save letters only in lowercase
         if (event.key.length === 1 && event.key.match(/[a-z]/i)) {
             this.keys.set(event.key.toLowerCase(), true);
-            this.keysPressed.set(event.key.toLowerCase(), true);
+            this.keysDown.set(event.key.toLowerCase(), true);
+            this.keysUp.set(event.key.toLowerCase(), false);
         } else {
             this.keys.set(event.key, true);
-            this.keysPressed.set(event.key, true);
+            this.keysDown.set(event.key, true);
+            this.keysUp.set(event.key, false);
         }
     }
 
@@ -54,10 +56,12 @@ export class EngineInput {
         // save letters only in lowercase
         if (event.key.length === 1 && event.key.match(/[a-z]/i)) {
             this.keys.set(event.key.toLowerCase(), false);
-            this.keysReleased.set(event.key.toLowerCase(), true);
+            this.keysDown.set(event.key.toLowerCase(), false);
+            this.keysUp.set(event.key.toLowerCase(), true);
         } else {
             this.keys.set(event.key, false);
-            this.keysReleased.set(event.key, true);
+            this.keysDown.set(event.key, false);
+            this.keysUp.set(event.key, true);
         }
     }
 

@@ -17,6 +17,22 @@ export class EditableSceneComponent extends Component {
     redoStackSubject = new BehaviorSubject(this.redoStack);
     selectedObject = new BehaviorSubject(null);
 
+    keysActions = {
+        "1": this.changeTransformMode.bind(this, "translate"),
+        "2": this.changeTransformMode.bind(this, "rotate"),
+        "3": this.changeTransformMode.bind(this, "scale"),
+        "Escape": this.unselectObject.bind(this),
+        "Delete": () => {
+            if (this.transformControls.object) {
+                // engine.removeGameObjects(this.transformControls.object as GameObject);
+                // this.saveHistory(this.transformControls.object);
+                // this.unselectObject();
+            }
+        },
+        "z": this.undo.bind(this),
+        "y": this.redo.bind(this)
+    };
+
     constructor() {
         super("EditableSceneComponent", undefined);
         this.start();
@@ -26,13 +42,13 @@ export class EditableSceneComponent extends Component {
         this.transformControls = new TransformControls(engine.camera, engine.renderer.domElement);
         this.transformControls.addEventListener("dragging-changed", (event) => {
             engine.draggingObject = event['value'];
-            if (event['value'] && !this.transformControls.userData['transforming']) {
+            if (event['value']) {
                 this.transformControls.userData['transforming'] = true;
-                this.saveHistory(this.transformControls.object, true);
             }
         });
         this.transformControls.addEventListener("mouseDown", (event) => {
             this.isSelectEnabled = false;
+            this.saveHistory(this.transformControls.object);
         });
         this.transformControls.addEventListener("mouseUp", (event) => {
             this.isSelectEnabled = true;
@@ -43,33 +59,19 @@ export class EditableSceneComponent extends Component {
         });
 
         engine.scene.add(this.transformControls);
-
         document.addEventListener("mousedown", this.onDocumentMouseDown.bind(this), false);
     }
 
     public override update(deltaTime: number): void {
-        if (engine.input.keys.get('1')) {
-            this.changeTransformMode("translate");
-
-        } else if (engine.input.keys.get('2')) {
-            this.changeTransformMode("rotate");
-
-        } else if (engine.input.keys.get('3')) {
-            this.changeTransformMode("scale");
-
-        } else if (engine.input.keys.get('Escape')) {
-            this.unselectObject();
-
-        } else if (engine.input.keys.get('Delete') && this.transformControls.object) {
-            // engine.removeGameObjects(this.transformControls.object as GameObject);
-            // this.saveHistory(this.transformControls.object);
-            // this.unselectObject();
-
-        } else if (engine.input.controlLeft && engine.input.keys.get('z')) {
-            this.undo();
-
-        } else if (engine.input.controlLeft && engine.input.keys.get('y')) {
-            this.redo();
+        for (let key in this.keysActions) {
+            if (engine.input.keys.get(key)) {
+                if (key === "z" || key === "y") {
+                    if (engine.input.controlLeft)
+                        this.keysActions[key]();
+                    continue;
+                }
+                this.keysActions[key]();
+            }
         }
     }
 
@@ -87,7 +89,7 @@ export class EditableSceneComponent extends Component {
         this.transformControls.attach(object);
     }
 
-    saveHistory(object, initialState = false) {
+    saveHistory(object) {
         if (!object)
             return;
 
@@ -98,14 +100,18 @@ export class EditableSceneComponent extends Component {
             object: object
         };
 
-        if (initialState) {
-            this.history.push(currentState);
-            this.redoStack = [];
-            this.redoStackSubject.next(this.redoStack);
-        } else {
+        if (!this.history.length || !this.isStateSimilar(this.history[this.history.length - 1], currentState)) {
             this.history.push(currentState);
             this.historySubject.next(this.history);
+            this.redoStack = [];
+            this.redoStackSubject.next(this.redoStack);
         }
+    }
+
+    isStateSimilar(state1, state2) {
+        return state1.position.equals(state2.position) &&
+            state1.rotation.equals(state2.rotation) &&
+            state1.scale.equals(state2.scale);
     }
 
     undo() {
@@ -115,8 +121,6 @@ export class EditableSceneComponent extends Component {
             const lastState = this.history[this.history.length - 1];
             this.applyState(lastState);
         }
-        this.historySubject.next(this.history);
-        this.redoStackSubject.next(this.redoStack);
     }
 
     redo() {
@@ -125,8 +129,6 @@ export class EditableSceneComponent extends Component {
             this.history.push(state);
             this.applyState(state);
         }
-        this.historySubject.next(this.history);
-        this.redoStackSubject.next(this.redoStack);
     }
 
     applyState(state) {
@@ -140,6 +142,9 @@ export class EditableSceneComponent extends Component {
         state.object.position.copy(state.position);
         state.object.rotation.copy(state.rotation);
         state.object.scale.copy(state.scale);
+
+        this.historySubject.next(this.history);
+        this.redoStackSubject.next(this.redoStack);
     }
 
     onDocumentMouseDown(event) {

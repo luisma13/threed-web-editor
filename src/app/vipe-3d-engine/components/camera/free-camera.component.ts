@@ -76,6 +76,10 @@ export class FirstPersonCameraComponent extends Component {
 
             this.quaternion.setFromEuler(this.euler);
             this.camera.quaternion.copy(this.quaternion);
+
+            if (engine.input.mouseWheel !== 0) {
+                this.moveSpeed += engine.input.mouseWheel * -0.01;
+            }
         }
 
         this.lastMouseX = engine.input.mouse.x;

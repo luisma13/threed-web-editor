@@ -30,8 +30,7 @@ export class ContextMenuComponent {
             },
             {
                 label: 'Load 3D model', subItems: [
-                    { label: 'Load GLTF', action: 'load:.gltf' },
-                    { label: 'Load GLB', action: 'load:.glb' },
+                    { label: 'Load GLTF/GLB', action: 'load:.gltf' },
                     { label: 'Load FBX', action: 'load:.fbx' },
                     { label: 'Load OBJ', action: 'load:.obj' },
                     { label: 'Load VRM', action: 'load:.vrm' }
@@ -51,6 +50,13 @@ export class ContextMenuComponent {
     @HostListener('document:click', ['$event'])
     onDocumentClick(event: MouseEvent) {
         if (this.isVisible) {
+            this.isVisible = false;
+        }
+    }
+
+    @HostListener('document:keydown', ['$event'])
+    onEscapeDown(event: KeyboardEvent) {
+        if (event.key === 'Escape' && this.isVisible) {
             this.isVisible = false;
         }
     }

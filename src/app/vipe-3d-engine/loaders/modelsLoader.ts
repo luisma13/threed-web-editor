@@ -11,15 +11,30 @@ import { EditableObjectComponent } from "../components/editor/editable-object.co
 import { GameObject } from "../core/gameobject.js";
 import { getCannonShapeFromMesh } from "../utils/bodies.physics.factory.js";
 
-// GLTF Loader
-const ktx2Loader = new KTX2Loader().setTranscoderPath("three/examples/jsm/libs/basis/");
-const dracoLoader = new DRACOLoader();
-dracoLoader.setDecoderConfig({ type: 'js' });
-dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
-const gltfLoader = new GLTFLoader();
-gltfLoader.crossOrigin = "anonymous";
-gltfLoader.setKTX2Loader(ktx2Loader)
+//GLTF Loader
+// const ktx2Loader = new KTX2Loader().setTranscoderPath("three/examples/jsm/libs/basis/");
+// const dracoLoader = new DRACOLoader();
+// dracoLoader.setDecoderConfig({ type: 'js' });
+// dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
+// const gltfLoader = new GLTFLoader();
+// gltfLoader.crossOrigin = "anonymous";
+// gltfLoader.setKTX2Loader(ktx2Loader)
+//     .setDRACOLoader(dracoLoader)
+//     .setMeshoptDecoder(MeshoptDecoder);
+
+const manager = new THREE.LoadingManager();
+
+const dracoLoader = new DRACOLoader(manager)
+    .setDecoderPath("three/examples/js/libs/draco/gltf/");
+
+const ktx2Loader = new KTX2Loader(manager)
+    .setTranscoderPath("three/examples/jsm/libs/basis/")
+    // .detectSupport(renderer);
+
+const gltfLoader = new GLTFLoader(manager)
+    .setCrossOrigin('anonymous')
     .setDRACOLoader(dracoLoader)
+    .setKTX2Loader(ktx2Loader)
     .setMeshoptDecoder(MeshoptDecoder);
 
 export async function loadObj(modelObj): Promise<GameObject> {

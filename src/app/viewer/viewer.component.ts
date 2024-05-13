@@ -1,6 +1,6 @@
 import { Component, ElementRef, ViewChild, afterNextRender, HostListener } from '@angular/core';
 import { engine } from '../vipe-3d-engine/core/engine/engine';
-import { createTestScene } from '../vipe-3d-engine/scenes/testScene.scene';
+import { createTestScene } from './testScene.scene';
 
 @Component({
     selector: 'app-viewer',
