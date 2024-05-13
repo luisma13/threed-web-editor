@@ -61,9 +61,9 @@ export class EditableSceneComponent extends Component {
             this.unselectObject();
 
         } else if (engine.input.keys.get('Delete') && this.transformControls.object) {
-            engine.removeGameObjects(this.transformControls.object as GameObject);
-            this.saveHistory(this.transformControls.object);
-            this.unselectObject();
+            // engine.removeGameObjects(this.transformControls.object as GameObject);
+            // this.saveHistory(this.transformControls.object);
+            // this.unselectObject();
 
         } else if (engine.input.controlLeft && engine.input.keys.get('z')) {
             this.undo();

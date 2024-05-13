@@ -10,7 +10,6 @@
     <div class="editor">
         <div class="sidebar">
             <h4>Scene objects</h4>
-            <hr/>
             <app-game-object *ngFor="let child of engine.gameObjects" [gameObject]="child"></app-game-object>
         </div>
         <div #viewer class="canvas-container">
@@ -18,7 +17,6 @@
         </div>
         <div class="sidebar">
             <h4>{{objectSelected?.name}}</h4>
-            <hr/>
             <app-component *ngFor="let child of objectSelected?.components" [component]="child"></app-component>
         </div>
     </div>

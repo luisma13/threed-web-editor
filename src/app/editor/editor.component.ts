@@ -31,8 +31,7 @@ export class EditorComponent {
     menuItems = [];
 
     constructor(
-        private editorService: EditorService,
-        private changeDetectorRef: ChangeDetectorRef
+        private editorService: EditorService
     ) {
         afterNextRender(() => this.initScene());
     }
@@ -50,7 +49,6 @@ export class EditorComponent {
         this.editorScene.editableSceneComponent.selectedObject.subscribe(object => {
             this.objectSelected = object;
             this.editorService.editableSceneComponent?.selectObject(object);
-            this.changeDetectorRef.markForCheck();
         });
 
         this.editorService.editableSceneComponent = this.editorScene.editableSceneComponent;
@@ -71,7 +69,6 @@ export class EditorComponent {
             actions[item.action]();
         });
 
-        // Load model input and events
         this.input = document.createElement('input');
         this.input.type = 'file';
         this.input.style.display = 'none';

@@ -22,13 +22,21 @@ export class ContextMenuComponent {
         this.menuItems.push(...[
             { label: 'Undo', action: 'undo', disabled: true },
             { label: 'Redo', action: 'redo', disabled: true },
-            { label: 'Export Scene', action: 'export:scene' },
-            { label: 'Import Scene', action: 'import:scene' },
-            { label: 'Load GLTF', action: 'load:.gltf' },
-            { label: 'Load GLB', action: 'load:.glb' },
-            { label: 'Load FBX', action: 'load:.fbx' },
-            { label: 'Load OBJ', action: 'load:.obj' },
-            { label: 'Load VRM', action: 'load:.vrm' }
+            {
+                label: 'Scene', subItems: [
+                    { label: 'Export Scene', action: 'export:scene' },
+                    { label: 'Import Scene', action: 'import:scene' }
+                ]
+            },
+            {
+                label: 'Load 3D model', subItems: [
+                    { label: 'Load GLTF', action: 'load:.gltf' },
+                    { label: 'Load GLB', action: 'load:.glb' },
+                    { label: 'Load FBX', action: 'load:.fbx' },
+                    { label: 'Load OBJ', action: 'load:.obj' },
+                    { label: 'Load VRM', action: 'load:.vrm' }
+                ]
+            },
         ]);
     }
 

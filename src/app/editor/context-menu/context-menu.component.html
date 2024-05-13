@@ -1,7 +1,19 @@
 <div class="context-menu" *ngIf="isVisible" [style.top.px]="position.y" [style.left.px]="position.x">
     <ul>
-        <li *ngFor="let item of menuItems" (click)="itemSelected(item)" [style.color]="item.disabled ? '#bdbdbd' : ''">
-            {{ item.label }}
-        </li>
+        <ng-container *ngFor="let item of menuItems">
+            <li (click)="item.subItems ? null : itemSelected(item)" [style.color]="item.disabled ? '#bdbdbd' : ''"
+                *ngIf="!item.subItems">
+                {{ item.label }}
+            </li>
+            <li *ngIf="item.subItems">
+                {{ item.label }} >
+                <ul class="submenu">
+                    <li *ngFor="let subItem of item.subItems" (click)="itemSelected(subItem)"
+                        [style.color]="item.disabled ? '#bdbdbd' : ''">
+                        {{ subItem.label }}
+                    </li>
+                </ul>
+            </li>
+        </ng-container>
     </ul>
 </div>
