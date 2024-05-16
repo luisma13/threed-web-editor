@@ -1,9 +1,10 @@
-<div class="row">
-    {{component.name}}
-    <ul>
-        <li *ngFor="let property of attributes">
-            {{property.name}}
-            <input type="text" [value]="property">
-        </li>
-    </ul>
+<div class="container col">
+    <div class="title">{{component.name}}</div>
+    <div *ngFor="let property of attributes" [class]="property.type === 'boolean' || property.type === 'color' ? 'row' : 'col'">
+        <span>{{property.name}}</span>
+        <input [type]="property.type === 'string' ? 'text' : 'number'" [(ngModel)]="property.value" *ngIf="property.type === 'string' || property.type === 'number'">
+        <!-- checkbox if property instanceof boolean-->
+        <input type="checkbox" [(ngModel)]="property.value" *ngIf="property.type === 'boolean'">
+        <div class="color" [style.background]="property.value" *ngIf="property.type === 'color'"></div>
+    </div>
 </div>

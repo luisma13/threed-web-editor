@@ -1,4 +1,34 @@
-.row {
+.container {
     margin: 0px;
-    padding: 10px 0px 10px 5px;
+    padding: 10px 5px;
+}
+
+.title {
+    border-bottom: 2px solid #7b7b7b;
+    padding: 5px;
+}
+
+.color {
+    width: 20px;
+    height: 20px;
+    border: 1px solid #7b7b7b;
+}
+
+.col {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 5px 5px;
+}
+
+.row {
+    display: flex;
+    gap: 5px;
+    align-items: stretch;
+    padding: 5px 5px;
+}
+
+span {
+    display: inline-flex;
+    align-items: center;
 }

@@ -36,6 +36,15 @@ export class FirstPersonCameraComponent extends Component {
 
         // console.log({a: engine.input.keys.get('a'), d: engine.input.keys.get('d'), w: engine.input.keys.get('w'), s: engine.input.keys.get('s')});
 
+        // space key event
+        if (engine.input.keys.get(' ')) {
+            this.camera.position.y += this.moveSpeed * deltaTime;
+        }
+
+        if (engine.input.keys.get('c')) {
+            this.camera.position.y -= this.moveSpeed * deltaTime;
+        }
+
         if (engine.input.keys.get('w')) {
 
             this.euler.setFromQuaternion(this.camera.quaternion);
@@ -80,6 +89,7 @@ export class FirstPersonCameraComponent extends Component {
             if (engine.input.mouseWheel !== 0) {
                 this.moveSpeed += engine.input.mouseWheel * -0.01;
             }
+            
         }
 
         this.lastMouseX = engine.input.mouse.x;

@@ -35,7 +35,6 @@ export class EditableSceneComponent extends Component {
 
     constructor() {
         super("EditableSceneComponent", undefined);
-        this.start();
     }
 
     public start(): void {
@@ -60,6 +59,12 @@ export class EditableSceneComponent extends Component {
 
         engine.scene.add(this.transformControls);
         document.addEventListener("mousedown", this.onDocumentMouseDown.bind(this), false);
+        this.selectedObject.subscribe(object => {
+            if (!object) {
+                this.transformControls.detach();
+                engine.outlinePass.selectedObjects = [];
+            }
+        });
     }
 
     public override update(deltaTime: number): void {

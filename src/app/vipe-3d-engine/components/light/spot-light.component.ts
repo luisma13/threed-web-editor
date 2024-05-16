@@ -1,9 +1,10 @@
 import * as THREE from "three";
-import { Component } from "../../core/component";
+import { Component, IHasHelper } from "../../core/component";
 
-export class SpotLightComponent extends Component {
+export class SpotLightComponent extends Component implements IHasHelper {
 
     private light: THREE.SpotLight;
+    private spotLightHelper: THREE.SpotLightHelper;
 
     constructor(
         color?: THREE.ColorRepresentation,
@@ -14,6 +15,11 @@ export class SpotLightComponent extends Component {
         decay?: number,) {
         super("SpotLightComponent");
         this.light = new THREE.SpotLight(color, intensity, distance, angle, penumbra, decay);
+        this.spotLightHelper = new THREE.SpotLightHelper(this.light);
+    }
+
+    public setHelperVisibility(isVisible): void {
+        this.spotLightHelper.visible = isVisible;
     }
 
     public setIntensity(intensity: number) {

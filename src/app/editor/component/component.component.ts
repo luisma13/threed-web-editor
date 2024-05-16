@@ -1,11 +1,13 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Component as Component3D } from '../../vipe-3d-engine/core/component';
+import { Component as Component3D, AttributeType } from '../../vipe-3d-engine/core/component';
+import { BrowserModule } from '@angular/platform-browser';
+import { FormsModule } from '@angular/forms';
 
 @Component({
     selector: 'app-component',
     standalone: true,
-    imports: [CommonModule],
+    imports: [CommonModule, FormsModule],
     templateUrl: './component.component.html',
     styleUrl: './component.component.scss'
 })
@@ -13,15 +15,16 @@ export class ComponentComponent {
 
     @Input() component: Component3D;
 
-    attributes = [];
+    attributes: AttributeType[] = [];
 
     constructor() {
     }
 
     ngOnInit() {
         for (const key in this.component) {
-            if (Reflect.getMetadata("isEditable", this.component, key)) {
-                this.attributes.push(key);
+            const metadata: AttributeType = Reflect.getMetadata("isEditable", this.component, key);
+            if (metadata) {
+                this.attributes.push({ ...metadata, name: key });
             }
         }
     }

@@ -35,11 +35,20 @@ export class GameObjectComponent {
                 this.isSelected = false;
             }
             this.changeDetectorRef.detectChanges();
+
+            this.gameObject.components.forEach(component => {
+                if (component['setHelperVisibility']) {
+                    component['setHelperVisibility'](this.isSelected);
+                }
+            });
         });
     }
-
     onClick() {
-        this.editorService.editableSceneComponent.selectedObject.next(this.gameObject);
+        if (this.isSelected) {
+            this.editorService.editableSceneComponent.selectedObject.next(null);
+        } else {
+            this.editorService.editableSceneComponent.selectedObject.next(this.gameObject);
+        }
     }
 
     toggleChildren() {

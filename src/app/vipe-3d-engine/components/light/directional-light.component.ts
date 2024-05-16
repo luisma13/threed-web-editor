@@ -1,16 +1,30 @@
 import * as THREE from "three";
-import { Component } from "../../core/component";
+import { Component, IHasHelper } from "../../core/component";
+import { engine } from "../../core/engine/engine";
+import { EditorPropertie } from "../../core/decorators";
 
-export class DirectionalLightComponent extends Component {
+export class DirectionalLightComponent extends Component implements IHasHelper {
+
+    @EditorPropertie({ type: "boolean", value: true })
+    isHelperVisible: boolean = true;
+
+    @EditorPropertie({ type: "color", value: "#ffffff" })
+    color: THREE.ColorRepresentation = "#ffffff";
+
+    @EditorPropertie({ type: "number", value: 1 })
+    intensity: number = 1;
 
     private light: THREE.DirectionalLight;
-    private directionalLightHelper: THREE.DirectionalLightHelper;
+    private lightHelper: THREE.DirectionalLightHelper;
 
     constructor(color?: THREE.ColorRepresentation, intensity?: number) {
         super("DirectionalLightComponent");
-        this.light = new THREE.DirectionalLight(color, intensity);
-        this.directionalLightHelper = new THREE.DirectionalLightHelper(this.light, 5);
-        this.directionalLightHelper.visible = false;
+        this.color = color;
+        this.intensity = intensity;
+    }
+
+    public setHelperVisibility(isVisible): void {
+        this.lightHelper.visible = isVisible;
     }
 
     public setIntensity(intensity: number) {
@@ -26,20 +40,23 @@ export class DirectionalLightComponent extends Component {
     }
 
     public override start(): void {
+        this.light = new THREE.DirectionalLight(this.color, this.intensity);
         this.gameObject.add(this.light);
-        this.gameObject.add(this.directionalLightHelper);
+        this.light.position.set(0, 0, 0);
+        this.lightHelper = new THREE.DirectionalLightHelper(this.light, 5);
+        this.lightHelper.visible = false;
+        engine.scene.add(this.lightHelper);
     }
 
     public override update(deltaTime: number): void {
-        
     }
 
     public override lateUpdate(deltaTime: number): void {
-        
+
     }
 
     public override onDestroy(): void {
-        
+        engine.scene.remove(this.lightHelper);
     }
 
 }

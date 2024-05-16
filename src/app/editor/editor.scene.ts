@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { FirstPersonCameraComponent } from "../vipe-3d-engine/components/camera/free-camera.component";
+import { FirstPersonCameraComponent } from "../vipe-3d-engine/components/camera/first-camera.component";
 import { engine } from "../vipe-3d-engine/core/engine/engine";
 import { GameObject } from "../vipe-3d-engine/core/gameobject";
 import { loadFBX, loadGLB, loadObj, loadVRM } from "../vipe-3d-engine/loaders/modelsLoader";
@@ -11,20 +11,24 @@ import { DirectionalLightComponent } from "../vipe-3d-engine/components/light/di
 export class EditorScene {
 
     editableSceneComponent: EditableSceneComponent;
+    firstPersonCameraComponent: FirstPersonCameraComponent;
 
     async createEditorScene() {
+        this.editableSceneComponent = new EditableSceneComponent();
+        this.firstPersonCameraComponent = new FirstPersonCameraComponent();
+
         const gridHelper = new GameObject();
         gridHelper.name = 'GridHelper';
         gridHelper.addComponent(new GridHelperComponent(50, 50, 0x535353, 0x737373));
-        gridHelper.addComponent(new FirstPersonCameraComponent());
+        gridHelper.addComponent(this.firstPersonCameraComponent);
+        gridHelper.addComponent(this.editableSceneComponent);
+
         const directionalLight = new GameObject();
-        directionalLight.position.set(0, 10, 0);
+        directionalLight.position.set(0, 10, 3);
+      
         directionalLight.name = 'DirectionalLight';
         directionalLight.addComponent(new DirectionalLightComponent(0xffffff, 1));
         directionalLight.addComponent(new EditableObjectComponent());
-
-        this.editableSceneComponent = new EditableSceneComponent();
-        gridHelper.addComponent(this.editableSceneComponent);
 
         engine.addGameObjects(gridHelper);
         engine.addGameObjects(directionalLight);
