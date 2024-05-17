@@ -1,3 +1,7 @@
+@use '@angular/material' as mat;
+
+@include mat.core();
+
 *,
 *::before,
 *::after {

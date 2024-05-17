@@ -10,7 +10,8 @@ import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import { FXAAShader } from "three/examples/jsm/shaders/FXAAShader.js";
 import { GammaCorrectionShader } from "three/examples/jsm/shaders/GammaCorrectionShader.js";
 import { DEBUG, EngineBase } from "./engine.base";
-import { GameObject } from "../gameobject";
+
+THREE.Cache.enabled = true;
 
 export enum CollisionGroups {
     Default = 1,

@@ -3,7 +3,8 @@
     <div class="editor">
         <div class="sidebar">
             <h4>Scene objects</h4>
-            <app-game-object *ngFor="let child of engine.gameObjects" [gameObject]="child"></app-game-object>
+            <app-draggable-tree></app-draggable-tree>
+            <app-game-object *ngFor="let child of gameObjects" [gameObject]="child"></app-game-object>
         </div>
         <div #viewer class="canvas-container">
 

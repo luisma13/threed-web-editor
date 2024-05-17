@@ -68,7 +68,10 @@ export abstract class EngineBase {
 
     addGameObjects(...objects: GameObject[]) {
         this.gameObjects.push(...objects);
-        this.scene.add(...objects);
+        const sceneObjects = [...objects.filter((object) => object.parentGameObject === undefined)];
+        if (sceneObjects.length > 0) {
+            this.scene.add(...sceneObjects as THREE.Object3D[]);
+        }
         objects.forEach((gameobject) => {
             if (gameobject.rigidbody)
                 this.addBody(gameobject.rigidbody)
@@ -78,6 +81,9 @@ export abstract class EngineBase {
             });
 
             gameobject.isAddedToScene = true;
+            gameobject.childrenGameObjects.forEach((child) => {
+                this.addGameObjects(child);
+            });
         });
         this.onGameobjectsChanged.next(this.gameObjects);
     }
@@ -115,6 +121,10 @@ export abstract class EngineBase {
                 this.removeGameObjects(child as GameObject);
             });
 
+            gameobject.childrenGameObjects.forEach((child) => {
+                this.removeGameObjects(child);
+            });
+
             this.deepDelete3DObject(gameobject);
         });
 
@@ -133,7 +143,6 @@ export abstract class EngineBase {
             object.traverse((child) => {
                 if (child instanceof THREE.Mesh) {
                     child.castShadow = cast || this.castShadows;
-                    console.log(child.castShadow);
                 }
             });
         }

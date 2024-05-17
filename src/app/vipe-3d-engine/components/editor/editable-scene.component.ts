@@ -9,7 +9,6 @@ import { GameObject } from "../../core/gameobject";
 export class EditableSceneComponent extends Component {
 
     transformControls: TransformControls;
-    isSelectEnabled = true;
     history = [];
     redoStack = [];
 
@@ -18,27 +17,20 @@ export class EditableSceneComponent extends Component {
     selectedObject = new BehaviorSubject(undefined);
     mousePressed = false;
 
-    draggingObject = false;
-
     transformControlsMousedownListener = (event) => {
-        this.draggingObject = true;
-        this.isSelectEnabled = false;
+        engine.draggingObject = true;
         this.saveHistory(this.transformControls.object);
     };
     transoformControlsMouseupListener = (event) => {
-        setTimeout(() => {
-            this.draggingObject = false;
-        }, 100);
-        
-        this.isSelectEnabled = true;
         if (engine.draggingObject) {
             this.saveHistory(this.transformControls.object);
-            engine.draggingObject = false;
+            setTimeout(() => {
+                engine.draggingObject = false;
+            }, 100);
         }
     };
-    transformControlsMousemoveListener = (event) => { engine.draggingObject = event['value']; };
-
-    keyTimers = {};
+    
+    keyTimers = {}; 
 
     keysActions = {
         "1": this.changeTransformMode.bind(this, "translate"),
@@ -62,7 +54,6 @@ export class EditableSceneComponent extends Component {
 
     public start(): void {
         this.transformControls = new TransformControls(engine.camera, engine.renderer.domElement);
-        this.transformControls.addEventListener("dragging-changed", this.transformControlsMousemoveListener);
         this.transformControls.addEventListener("mouseDown", this.transformControlsMousedownListener);
         this.transformControls.addEventListener("mouseUp", this.transoformControlsMouseupListener);
 
@@ -99,7 +90,6 @@ export class EditableSceneComponent extends Component {
     public override lateUpdate(deltaTime: number): void { }
 
     public override onDestroy(): void {
-        this.transformControls.removeEventListener("dragging-changed", this.transformControlsMousemoveListener);
         this.transformControls.removeEventListener("mouseDown", this.transformControlsMousedownListener);
         this.transformControls.removeEventListener("mouseUp", this.transoformControlsMouseupListener);
         this.transformControls.detach();
@@ -172,18 +162,20 @@ export class EditableSceneComponent extends Component {
     }
 
     onClick() {
-        if (this.draggingObject)
+        if (engine.draggingObject)
             return;
 
         const rect = engine.renderer.domElement.getBoundingClientRect();
         const mouse = new THREE.Vector2();
         mouse.x = ((engine.input.mouse.x - rect.left) / rect.width) * 2 - 1;
         mouse.y = -((engine.input.mouse.y - rect.top) / rect.height) * 2 + 1;
+
+        // return if the click is outside the canvas
+        if (mouse.x < -1 || mouse.x > 1 || mouse.y < -1 || mouse.y > 1) return;
+
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(mouse, engine.camera);
         const intersects = raycaster.intersectObjects(engine.gameObjects.filter(go => go.getComponent(EditableObjectComponent)), true);
-
-        if (!this.isSelectEnabled) return;
 
         if (intersects.length == 0) {
             //this.unselectObject();
@@ -202,7 +194,6 @@ export class EditableSceneComponent extends Component {
     }
 
     unselectObject() {
-        this.isSelectEnabled = true;
         this.transformControls.detach();
         engine.outlinePass.selectedObjects = [];
         this.selectedObject.next(undefined);

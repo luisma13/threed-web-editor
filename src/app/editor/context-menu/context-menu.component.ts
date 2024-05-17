@@ -84,7 +84,6 @@ export class ContextMenuComponent {
             return;
         }
         actions[item.action]();
-        this.editorService.contextMenuSelected.next(item);
     }
 
 }

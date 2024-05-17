@@ -10,10 +10,9 @@ export async function loadDefaultEquirectangularHDR() {
 }
 
 export async function loadEquirectangularHDR(url) {
-    rgbLoader.load(url, (texture) => {
+    rgbLoader.loadAsync(url).then((texture) => {
         texture.mapping = THREE.EquirectangularReflectionMapping;
         engine.scene.background = texture;
         engine.scene.environment = texture;
-        console.log("HDR loaded");
     });
 }

@@ -5,6 +5,7 @@ import { CommonModule } from "@angular/common";
 interface MenuItem {
     label: string;
     action?: () => void;
+    disabled?: boolean;
     submenu?: MenuItem[];
 }
 
@@ -61,10 +62,12 @@ export class ToolbarComponent implements OnInit {
                 submenu: [
                     {
                         label: 'Undo',
+                        disabled: true,
                         action: () => this.editorService.editableSceneComponent.undo()
                     },
                     {
                         label: 'Redo',
+                        disabled: true,
                         action: () => this.editorService.editableSceneComponent.redo()
                     }
                 ]
@@ -83,6 +86,9 @@ export class ToolbarComponent implements OnInit {
                 ]
             }
         ];
+
+        this.editorService.editableSceneComponent?.historySubject.subscribe(history => this.menuItems[1].submenu[0].disabled = history.length === 0 || history.length === 1);
+        this.editorService.editableSceneComponent?.redoStackSubject.subscribe(redoStack => this.menuItems[1].submenu[1].disabled = redoStack.length === 0);
     }
 
     toggleSubmenu(menuLabel: string) {

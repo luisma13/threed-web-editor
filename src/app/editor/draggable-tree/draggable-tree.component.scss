@@ -1,0 +1,43 @@
+.mat-tree-node {
+    overflow: visible;
+    cursor: pointer;
+    margin: 5px 0;
+    color: white;
+    background-color: #515050;
+    height: 25px;
+}
+
+.mat-icon {
+    height: 20px;
+    width: 20px;
+    font-size: 20px;
+    line-height: 20px; // DO NOT FORGET IT !
+}
+
+.mat-tree {
+    display: block;
+    background-color: #292929;
+}
+
+.mat-icon {
+    z-index: 0;
+}
+
+.drop-above {
+    border-top: 10px solid #2dbbee;
+    margin-top: -10px;
+}
+
+.drop-below {
+    border-bottom: 10px solid #2dbbee;
+    margin-bottom: -10px;
+}
+
+.drop-center {
+    background-color: darkgray;
+}
+
+.drag-start {
+    background-color: #168ab4;
+    color: honeydew;
+}

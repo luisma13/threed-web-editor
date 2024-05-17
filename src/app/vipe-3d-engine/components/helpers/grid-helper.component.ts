@@ -21,7 +21,6 @@ export class GridHelperComponent extends Component {
     public override set(key, value) {
         this[key] = value;
         this.createOrUpdateGridHelper(this.size, this.divisions, this.color1, this.color2);
-        console.log("set", key, value);
     }
 
     public override start(): void {

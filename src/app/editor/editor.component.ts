@@ -8,11 +8,20 @@ import { EditorService } from './editor.service';
 import { ContextMenuComponent } from './context-menu/context-menu.component';
 import { FormsModule } from '@angular/forms';
 import { ToolbarComponent } from './toolbar/toolbar.component';
+import { DraggableTreeComponent } from './draggable-tree/draggable-tree.component';
 
 @Component({
     selector: 'app-editor',
     standalone: true,
-    imports: [GameObjectComponent, CommonModule, ComponentComponent, ContextMenuComponent, FormsModule, ToolbarComponent],
+    imports: [
+        GameObjectComponent,
+        CommonModule,
+        ComponentComponent,
+        ContextMenuComponent,
+        FormsModule,
+        ToolbarComponent,
+        DraggableTreeComponent
+    ],
     templateUrl: './editor.component.html',
     styleUrl: './editor.component.scss'
 })
@@ -22,6 +31,7 @@ export class EditorComponent {
     @ViewChild('contextMenu', { static: true }) contextMenu: ContextMenuComponent;
 
     engine = engine;
+    gameObjects: GameObject[];
     objectSelected: GameObject;
 
     constructor(
@@ -53,9 +63,11 @@ export class EditorComponent {
 
         this.viewer.nativeElement.ondragover = (event) => event.preventDefault();
         this.viewer.nativeElement.ondrop = (event) => this.onDragged(event);
-    }
 
-    ngAfterContentInit() {
+        engine.onGameobjectsChanged.subscribe(() => {
+            this.gameObjects = engine.gameObjects.filter(gameObject => gameObject.parentGameObject === undefined);
+            console.log(this.gameObjects);
+        });
     }
 
     animate() {

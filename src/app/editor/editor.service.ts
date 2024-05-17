@@ -17,9 +17,8 @@ export class EditorService {
 
     input: HTMLInputElement;
 
-    contextMenuSelected: BehaviorSubject<{ action: string }> = new BehaviorSubject(undefined);
-
-    gridHelperComponent: GridHelperComponent = new GridHelperComponent(50, 50, "#535353", "#737373");
+    // Global Components to manage the editor scene
+    gridHelperComponent: GridHelperComponent = new GridHelperComponent();
     editableSceneComponent: EditableSceneComponent = new EditableSceneComponent();
     firstPersonCameraComponent: FirstPersonCameraComponent = new FirstPersonCameraComponent();
 
@@ -29,13 +28,13 @@ export class EditorService {
 
     async createEditorScene() {
         const gridHelper = new GameObject();
-        gridHelper.name = 'GridHelper';
+        gridHelper.name = 'Environment';
         gridHelper.addComponent(this.gridHelperComponent);
         gridHelper.addComponent(this.firstPersonCameraComponent);
         gridHelper.addComponent(this.editableSceneComponent);
 
         const directionalLight = new GameObject();
-        directionalLight.position.set(0, 10, 3);
+        directionalLight.position.set(10, 10, 0);
         directionalLight.name = 'DirectionalLight';
         directionalLight.addComponent(new DirectionalLightComponent("#ffffff", 1));
         directionalLight.addComponent(new EditableObjectComponent());
@@ -46,10 +45,10 @@ export class EditorService {
         SpotLight.addComponent(new SpotLightComponent());
         SpotLight.addComponent(new EditableObjectComponent());
 
+        gridHelper.addGameObject(SpotLight);
+
         engine.addGameObjects(gridHelper);
         engine.addGameObjects(directionalLight);
-        engine.addGameObjects(SpotLight);
-
         loadDefaultEquirectangularHDR();
     }
 
@@ -80,7 +79,9 @@ export class EditorService {
 
             if (extension === ".fbx" || extension === ".gltf") {
                 const animations = gameObject.animations;
-                if (!animations) return;
+                if (!animations)
+                    return gameObject;
+
                 animations.forEach(clip => {
                     if (clip) {
                         const mixer = new THREE.AnimationMixer(gameObject.children[0]);
@@ -89,20 +90,24 @@ export class EditorService {
                     }
                 });
             }
+
+            return gameObject;
         }
 
-        if (url) {
-            addModelToEngine(url);
-        } else {
-            this.input.accept = extension === ".gltf" ? ".gltf,.glb" : extension;
-            this.input.click();
-            this.input.onchange = async () => {
-                const file = this.input.files[0];
-                if (!file) return;
-                const url = URL.createObjectURL(file);
-                addModelToEngine(url);
-            }
-        }
+        let gameObject: GameObject = (url)
+            ? await addModelToEngine(url)
+            : await new Promise(resolve => {
+                this.input.accept = extension === ".gltf" ? ".gltf,.glb" : extension;
+                this.input.click();
+                this.input.onchange = async () => {
+                    const file = this.input.files[0];
+                    if (!file) return;
+                    const url = URL.createObjectURL(file);
+                    resolve(await addModelToEngine(url));
+                }
+            });
+
+        this.editableSceneComponent.selectedObject.next(gameObject);
     }
 
     exportScene() {

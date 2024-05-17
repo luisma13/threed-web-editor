@@ -3,14 +3,14 @@
     background-color: #292929;
     display: flex;
     align-items: center;
-    padding: 10px;
+    padding: 5px 10px;
     gap: 5px;
     flex-wrap: wrap;
+    border-bottom: 1px solid #393939;
 }
 
 .logo {
     margin-left: auto;
-
 }
 
 button {

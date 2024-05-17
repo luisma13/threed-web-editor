@@ -16,7 +16,6 @@ export class GameObjectComponent {
     @Input() gameObject: GameObject;
     @Input() isSelected: boolean;
     showChildren: boolean = false;
-    children: GameObject[] = [];
 
     constructor(
         private editorService: EditorService,
@@ -24,7 +23,7 @@ export class GameObjectComponent {
     ) { }
 
     ngOnInit() {
-        this.children = this.gameObject.children.filter(child => child instanceof GameObject) as GameObject[];
+        
     }
 
     ngAfterViewInit() {
@@ -35,7 +34,6 @@ export class GameObjectComponent {
                 this.isSelected = false;
             }
             this.changeDetectorRef.detectChanges();
-
             this.gameObject.components.forEach(component => {
                 if (component['setHelperVisibility']) {
                     component['setHelperVisibility'](this.isSelected);
@@ -43,7 +41,11 @@ export class GameObjectComponent {
             });
         });
     }
-    onClick() {
+
+    onClick(event) {
+        console.log(this.gameObject.name)
+        event.preventDefault();
+        event.stopPropagation();
         if (this.isSelected) {
             this.editorService.editableSceneComponent.selectedObject.next(undefined);
         } else {
