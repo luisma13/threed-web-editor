@@ -1,7 +1,9 @@
 <div class="toolbar">
+    <img src="assets/logo.webp" height="40px">
     <ng-container *ngFor="let item of menuItems">
         <ng-template [ngTemplateOutlet]="renderMenuItem" [ngTemplateOutletContext]="{ item: item, isSubmenu: false }"></ng-template>
     </ng-container>
+    <img src="assets/logo-text.webp" height="30px" class="logo">
 </div>
 
 <ng-template #renderMenuItem let-item="item" let-isSubmenu="isSubmenu">

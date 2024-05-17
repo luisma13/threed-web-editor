@@ -8,6 +8,11 @@
     flex-wrap: wrap;
 }
 
+.logo {
+    margin-left: auto;
+
+}
+
 button {
     padding: 5px 10px;
     background-color: #88888800;
@@ -47,5 +52,4 @@ button:hover {
     width: 100%;
     text-align: left;
     padding: 5px 10px;
-    box-sizing: border-box;
 }

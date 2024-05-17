@@ -21,6 +21,8 @@ export class EditableSceneComponent extends Component {
     mouseupListener: any;
     mousemoveListener: any;
 
+    keyTimers = {};
+
     keysActions = {
         "1": this.changeTransformMode.bind(this, "translate"),
         "2": this.changeTransformMode.bind(this, "rotate"),
@@ -77,19 +79,18 @@ export class EditableSceneComponent extends Component {
 
         for (let key in this.keysActions) {
             if (engine.input.keys.get(key)) {
-                if (key === "z" || key === "y") {
-                    if (engine.input.controlLeft)
-                        this.keysActions[key]();
-                    continue;
+                if (!this.keyTimers[key]) {
+                    this.keysActions[key]();
+                    this.keyTimers[key] = setTimeout(() => {
+                        delete this.keyTimers[key];
+                    }, 300);
                 }
-                this.keysActions[key]();
             }
         }
     }
 
-    public override lateUpdate(deltaTime: number): void {
+    public override lateUpdate(deltaTime: number): void {}
 
-    }
     public override onDestroy(): void {
         this.transformControls.removeEventListener("dragging-changed", this.mousemoveListener);
         this.transformControls.removeEventListener("mouseDown", this.mousedownListener);
