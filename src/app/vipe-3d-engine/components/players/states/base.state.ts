@@ -13,8 +13,8 @@ export const SHIFT = "shift";
 export const DIRECTIONS = [W, A, S, D];
 
 export abstract class PlayerBaseState {
-    playerController: PlayerControllerComponent = null;
-    playerPhysics: PlayerPhysicsComponent = null;
+    playerController: PlayerControllerComponent = undefined;
+    playerPhysics: PlayerPhysicsComponent = undefined;
 
     gameobject: GameObject;
     action = "";

@@ -1,4 +1,4 @@
-<div (click)="onClick()" class="row" [style.background-color]="isSelected ? '#535353' : ''">
+<div (click)="onClick()" class="row" [style.background-color]="isSelected ? '#e3e3e3' : ''" [style.color]="isSelected ? 'black' : ''">
     <span (click)="toggleChildren()">
     {{ children.length > 0 && !showChildren ? "+ " : "" }}
     {{ children.length > 0 && showChildren ? "- " : "" }}

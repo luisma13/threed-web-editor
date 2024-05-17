@@ -88,6 +88,7 @@ export class FirstPersonCameraComponent extends Component {
 
             if (engine.input.mouseWheel !== 0) {
                 this.moveSpeed += engine.input.mouseWheel * -0.01;
+                this.moveSpeed = Math.min(20, Math.max(0.1, this.moveSpeed));
             }
             
         }

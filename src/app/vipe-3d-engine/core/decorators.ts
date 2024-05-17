@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import { AttributeType } from "./component";
 
 export function EditorPropertie(metadata: AttributeType) {

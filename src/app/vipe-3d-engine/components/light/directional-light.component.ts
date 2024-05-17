@@ -1,26 +1,27 @@
 import * as THREE from "three";
 import { Component, IHasHelper } from "../../core/component";
 import { engine } from "../../core/engine/engine";
-import { EditorPropertie } from "../../core/decorators";
 
 export class DirectionalLightComponent extends Component implements IHasHelper {
 
-    @EditorPropertie({ type: "boolean", value: true })
     isHelperVisible: boolean = true;
-
-    @EditorPropertie({ type: "color", value: "#ffffff" })
     color: THREE.ColorRepresentation = "#ffffff";
-
-    @EditorPropertie({ type: "number", value: 1 })
     intensity: number = 1;
 
     private light: THREE.DirectionalLight;
     private lightHelper: THREE.DirectionalLightHelper;
 
-    constructor(color?: THREE.ColorRepresentation, intensity?: number) {
+    constructor(color = "#ffffff", intensity = 1) {
         super("DirectionalLightComponent");
         this.color = color;
         this.intensity = intensity;
+        Reflect.defineMetadata("isEditable", { type: "boolean", name: "Helper Visible", value: this.isHelperVisible }, this, "isHelperVisible");
+        Reflect.defineMetadata("isEditable", { type: "color", name: "Color", value: this.color }, this, "color");
+        Reflect.defineMetadata("isEditable", { type: "number", name: "Intensity", value: this.intensity }, this, "intensity");
+    }
+
+    public override set(key, value) {
+        this.light[key] = value;
     }
 
     public setHelperVisibility(isVisible): void {

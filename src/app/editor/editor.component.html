@@ -1,12 +1,5 @@
 <div class="container">
-    <div class="toolbar">
-        <button (click)="exportScene()">Export scene</button>
-        <button (click)="loadScene()">Load scene</button>
-        <button (click)="loadModel('.gltf')">Load GLB</button>
-        <button (click)="loadModel('.fbx')">Load FBX</button>
-        <button (click)="loadModel('.obj')">Load OBJ</button>
-        <button (click)="loadModel('.vrm')">Load VRM</button>
-    </div>
+    <app-toolbar></app-toolbar>
     <div class="editor">
         <div class="sidebar">
             <h4>Scene objects</h4>
@@ -17,8 +10,39 @@
         </div>
         <div class="sidebar">
             <h4>{{objectSelected?.name}}</h4>
+            <!-- move to component -->
+            <div class="transform-container transform-col" *ngIf="objectSelected">
+                <div class="transform-title">Location</div>
+                <div class="transform-row">
+                    <span>X</span>
+                    <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.position.x" >
+                    <span>Y</span>
+                    <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.position.y" >
+                    <span>Z</span>
+                    <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.position.z" >
+                </div>
+                <div class="transform-title">Rotation</div>
+                <div class="transform-row">
+                    <span>X</span>
+                    <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.rotation.x" >
+                    <span>Y</span>
+                    <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.rotation.y" >
+                    <span>Z</span>
+                    <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.position.z" >
+                </div>
+                <div class="transform-title">Scale</div>
+                <div class="transform-row">
+                    <span>X</span>
+                    <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.scale.x" >
+                    <span>Y</span>
+                    <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.scale.y" >
+                    <span>Z</span>
+                    <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.scale.z" >
+                </div>
+            </div>
+            <!-------------------->
             <app-component *ngFor="let child of objectSelected?.components" [component]="child"></app-component>
         </div>
     </div>
-    <app-context-menu #contextMenu [menuItems]="menuItems"></app-context-menu>
+    <app-context-menu #contextMenu></app-context-menu>
 </div>

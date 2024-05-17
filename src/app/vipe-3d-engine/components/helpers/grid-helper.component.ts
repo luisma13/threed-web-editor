@@ -1,27 +1,27 @@
 import * as THREE from "three";
 import { Component } from "../../core/component";
-import { EditorPropertie } from "../../core/decorators";
-import { engine } from "../../core/engine/engine";
 
 export class GridHelperComponent extends Component {
 
     private gridHelper: THREE.GridHelper;
 
-    @EditorPropertie({ type: "number", value: 50 })
-    size: number = 50;
-    @EditorPropertie({ type: "number", value: 10 })
-    divisions: number = 10;
-    @EditorPropertie({ type: "color", value: "#535353" })
-    color1: THREE.ColorRepresentation = "#535353";
-    @EditorPropertie({ type: "color", value: "#535353" })
-    color2: THREE.ColorRepresentation = "#737373";
+    size: number;
+    divisions: number;
+    color1: THREE.ColorRepresentation;
+    color2: THREE.ColorRepresentation;
 
     constructor(size?: number, divisions?: number, color1?: THREE.ColorRepresentation, color2?: THREE.ColorRepresentation) {
         super("GridHelperComponent");
-        this.size = size;
-        this.divisions = divisions;
-        this.color1 = color1;
-        this.color2 = color2;
+        this.size = size || 50;
+        this.divisions = divisions || 10;
+        this.color1 = color1 || "#535353";
+        this.color2 = color2 || "#737373";
+    }
+
+    public override set(key, value) {
+        this[key] = value;
+        this.createOrUpdateGridHelper(this.size, this.divisions, this.color1, this.color2);
+        console.log("set", key, value);
     }
 
     public override start(): void {
@@ -45,7 +45,11 @@ export class GridHelperComponent extends Component {
         this.divisions = divisions;
         this.color1 = color1;
         this.color2 = color2;
-        engine.removeGameObjects(this.gridHelper);
+        Reflect.defineMetadata("isEditable", { type: "number", name: "Size", value: this.size }, this, "size");
+        Reflect.defineMetadata("isEditable", { type: "number", name: "Divisions", value: this.divisions }, this, "divisions");
+        Reflect.defineMetadata("isEditable", { type: "color", name: "Color 1", value: this.color1 }, this, "color1");
+        Reflect.defineMetadata("isEditable", { type: "color", name: "Color 2", value: this.color2 }, this, "color2");
+        this.gameObject.remove(this.gridHelper);
         this.gridHelper = new THREE.GridHelper(size, divisions, color1, color2);
         if (this.gameObject) {
             this.gridHelper.position.copy(this.gameObject.position);

@@ -6,12 +6,7 @@
 .title {
     border-bottom: 2px solid #7b7b7b;
     padding: 5px;
-}
-
-.color {
-    width: 20px;
-    height: 20px;
-    border: 1px solid #7b7b7b;
+    color: #b1b1b1;
 }
 
 .col {
@@ -31,4 +26,22 @@
 span {
     display: inline-flex;
     align-items: center;
+}
+
+.flex-1-1-0 {
+    flex: 1 1 0px;
+}
+
+.input {
+    background: #373737;
+    color: white;
+    text-align: center;
+    border: 1px solid #7b7b7b;
+    flex: 0 1 100px;
+    margin: 0 0 0 auto;
+}
+
+.color {
+    border: none;
+    background: none;
 }

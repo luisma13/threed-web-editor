@@ -45,7 +45,7 @@ export class GameObjectComponent {
     }
     onClick() {
         if (this.isSelected) {
-            this.editorService.editableSceneComponent.selectedObject.next(null);
+            this.editorService.editableSceneComponent.selectedObject.next(undefined);
         } else {
             this.editorService.editableSceneComponent.selectedObject.next(this.gameObject);
         }

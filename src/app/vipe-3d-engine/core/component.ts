@@ -24,4 +24,8 @@ export abstract class Component {
     public abstract update(deltaTime: number): void;
     public abstract lateUpdate(deltaTime: number): void;
     public abstract onDestroy(): void;
+    public set(key, value) { 
+        this[key] = value;
+    }
+
 }

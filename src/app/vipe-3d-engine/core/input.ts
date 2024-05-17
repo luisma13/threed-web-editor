@@ -70,7 +70,7 @@ export class EngineInput {
         this.mouse.y = event.clientY;
     }
 
-    static wheelEventEndTimeout = null;
+    static wheelEventEndTimeout = undefined;
     private static readonly wheel = (event) => {
         this.mouseWheel = event.deltaY;
         clearTimeout(this.wheelEventEndTimeout);

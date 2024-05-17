@@ -1,7 +1,7 @@
 <div class="context-menu" *ngIf="isVisible" [style.top.px]="position.y" [style.left.px]="position.x">
     <ul>
-        <ng-container *ngFor="let item of menuItems">
-            <li (click)="item.subItems ? null : itemSelected(item)" [style.color]="item.disabled ? '#bdbdbd' : ''"
+        <ng-container *ngFor="let item of viewerMenuItems">
+            <li (click)="item.subItems ? undefined : itemSelected(item)" [style.color]="item.disabled ? '#bdbdbd' : ''"
                 *ngIf="!item.subItems">
                 {{ item.label }}
             </li>

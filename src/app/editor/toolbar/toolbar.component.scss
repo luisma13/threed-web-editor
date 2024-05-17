@@ -1,0 +1,51 @@
+.toolbar {
+    width: 100%;
+    background-color: #292929;
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+button {
+    padding: 5px 10px;
+    background-color: #88888800;
+    cursor: pointer;
+    color: white;
+    white-space: nowrap;
+    border: none;
+}
+
+button:hover {
+    background-color: #888888;
+}
+
+.dropdown {
+    position: relative;
+}
+
+.submenu {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    background-color: #444444;
+    border: 1px solid #818181;
+    top: 100%;
+    left: 0;
+    min-width: max-content;
+}
+
+.submenu-right {
+    top: 0;
+    left: 100%;
+}
+
+.submenu button {
+    margin: 2px 0;
+    white-space: nowrap;
+    width: 100%;
+    text-align: left;
+    padding: 5px 10px;
+    box-sizing: border-box;
+}

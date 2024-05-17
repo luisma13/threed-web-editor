@@ -1,8 +1,8 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Component as Component3D, AttributeType } from '../../vipe-3d-engine/core/component';
-import { BrowserModule } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
+import * as THREE from 'three';
 
 @Component({
     selector: 'app-component',
@@ -27,6 +27,13 @@ export class ComponentComponent {
                 this.attributes.push({ ...metadata, name: key });
             }
         }
+    }
+
+    onPropertyChange(event, attribute: AttributeType) {
+        let value = event;
+        if (attribute.type === "color")
+            value = "#" + new THREE.Color(event).getHexString();
+        this.component.set(attribute.name, value);
     }
 
 }

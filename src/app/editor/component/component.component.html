@@ -1,10 +1,14 @@
 <div class="container col">
     <div class="title">{{component.name}}</div>
-    <div *ngFor="let property of attributes" [class]="property.type === 'boolean' || property.type === 'color' ? 'row' : 'col'">
+    <div *ngFor="let property of attributes" [class]="property.type === 'array' ? 'col' : 'row'">
         <span>{{property.name}}</span>
-        <input [type]="property.type === 'string' ? 'text' : 'number'" [(ngModel)]="property.value" *ngIf="property.type === 'string' || property.type === 'number'">
-        <!-- checkbox if property instanceof boolean-->
-        <input type="checkbox" [(ngModel)]="property.value" *ngIf="property.type === 'boolean'">
-        <div class="color" [style.background]="property.value" *ngIf="property.type === 'color'"></div>
+        <!-- Input para string y number -->
+        <input (ngModelChange)="onPropertyChange($event, property)" class="flex-1-1-0 input" [type]="property.type === 'string' ? 'text' : 'number'" [(ngModel)]="property.value"
+            *ngIf="property.type === 'string' || property.type === 'number'">
+        <!-- Checkbox para boolean -->
+        <input (ngModelChange)="onPropertyChange($event, property)" type="checkbox" [(ngModel)]="property.value" *ngIf="property.type === 'boolean'">
+        <!-- para color -->
+        <input (ngModelChange)="onPropertyChange($event, property)" class="color" type="color" [(ngModel)]="property.value" *ngIf="property.type === 'color'" >
+        <input (ngModelChange)="onPropertyChange($event, property)" class="flex-1-1-0 input" type="text" [(ngModel)]="property.value" *ngIf="property.type === 'color'" >
     </div>
 </div>

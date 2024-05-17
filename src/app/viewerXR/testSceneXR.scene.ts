@@ -109,7 +109,7 @@ export function createARVipeRoomScene() {
             if (hitTestResults.length) {
                 const hit = hitTestResults[0];
 
-                if (hit && hit !== null && referenceSpace) {
+                if (hit && hit !== undefined && referenceSpace) {
                     const xrHitPose = hit.getPose(referenceSpace);
 
                     if (xrHitPose) {

@@ -3,6 +3,7 @@ import { BehaviorSubject } from "rxjs";
 import * as THREE from "three";
 import { GameObject } from "../gameobject";
 import { EngineInput } from "../input";
+import "reflect-metadata";
 
 export var DEBUG = new BehaviorSubject<boolean>(false);
 
@@ -31,8 +32,8 @@ export abstract class EngineBase {
         {}
     )
 
-    onGameobjectsChanged: BehaviorSubject<GameObject[]> = new BehaviorSubject(null);
-    onGameObjectSelected: BehaviorSubject<GameObject> = new BehaviorSubject(null);
+    onGameobjectsChanged: BehaviorSubject<GameObject[]> = new BehaviorSubject(undefined);
+    onGameObjectSelected: BehaviorSubject<GameObject> = new BehaviorSubject(undefined);
 
     cannonDebugger: any;
 
@@ -86,9 +87,9 @@ export abstract class EngineBase {
         this.scene?.clear();
         this.gameObjects.length = 0;
 
-        this.scene = null;
-        this.camera = null;
-        this.renderer = null;
+        this.scene = undefined;
+        this.camera = undefined;
+        this.renderer = undefined;
     }
 
     removeGameObjects(...gameobjects: GameObject[] | THREE.Object3D[]) {
@@ -157,7 +158,7 @@ export abstract class EngineBase {
 
     private disposeMaterial(material) {
         Object.values(material).forEach((value: any) => {
-            if (value === null || value === void 0 ? void 0 : value.isTexture) {
+            if (value?.isTexture) {
                 const texture = value;
                 texture.dispose();
             }
@@ -167,7 +168,7 @@ export abstract class EngineBase {
             if (uniforms) {
                 Object.values(uniforms).forEach((uniform: any) => {
                     const value = uniform.value;
-                    if (value === null || value === void 0 ? void 0 : value.isTexture) {
+                    if (value?.isTexture) {
                         const texture = value;
                         texture.dispose();
                     }
