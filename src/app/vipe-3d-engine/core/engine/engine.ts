@@ -10,6 +10,7 @@ import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import { FXAAShader } from "three/examples/jsm/shaders/FXAAShader.js";
 import { GammaCorrectionShader } from "three/examples/jsm/shaders/GammaCorrectionShader.js";
 import { DEBUG, EngineBase } from "./engine.base";
+import { GameObject } from "../gameobject";
 
 export enum CollisionGroups {
     Default = 1,
@@ -29,9 +30,6 @@ class Engine extends EngineBase {
     // to manage timeStep of cannon world physics
     private lastTime: number = 0;
 
-    // to manage editor scene
-    draggingObject: boolean = false;
-
     rendererContainer: HTMLElement;
 
     override init(container?: HTMLElement, backgroundColour: string = "#fff") {
@@ -46,8 +44,8 @@ class Engine extends EngineBase {
         
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.renderer.setSize(width, height);
-        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.0;
+        this.renderer.toneMapping = THREE.LinearToneMapping;
+        this.renderer.toneMappingExposure = 0.5;
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.BasicShadowMap;
 

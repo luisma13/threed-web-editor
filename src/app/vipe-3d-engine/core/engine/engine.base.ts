@@ -37,6 +37,11 @@ export abstract class EngineBase {
 
     cannonDebugger: any;
 
+    castShadows: boolean = true;
+
+    // to manage editor scene
+    draggingObject: boolean = false;
+
     // INPUT
     readonly input = EngineInput;
 
@@ -121,6 +126,25 @@ export abstract class EngineBase {
         });
 
         this.onGameobjectsChanged.next(this.gameObjects);
+    }
+
+    setCastShadows(gameObject?: GameObject | THREE.Object3D, cast?: boolean) {
+        const castShadows = (object: THREE.Object3D) => {
+            object.traverse((child) => {
+                if (child instanceof THREE.Mesh) {
+                    child.castShadow = cast || this.castShadows;
+                    console.log(child.castShadow);
+                }
+            });
+        }
+
+        if (gameObject) {
+            castShadows(gameObject);
+        } else {
+            this.scene.traverse((object) => {
+                castShadows(object);
+            });
+        }
     }
 
     private deepDelete3DObject(gameobject: THREE.Object3D) {

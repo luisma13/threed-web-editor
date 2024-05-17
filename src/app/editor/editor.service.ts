@@ -9,6 +9,8 @@ import { SpotLightComponent } from "../vipe-3d-engine/components/light/spot-ligh
 import { engine } from "../vipe-3d-engine/core/engine/engine";
 import { GameObject } from "../vipe-3d-engine/core/gameobject";
 import { loadGLB, loadFBX, loadObj, loadVRM } from "../vipe-3d-engine/loaders/modelsLoader";
+import { loadDefaultEquirectangularHDR } from "../vipe-3d-engine/loaders/hdrLoader";
+import * as THREE from "three";
 
 @Injectable({ providedIn: 'root' })
 export class EditorService {
@@ -16,13 +18,13 @@ export class EditorService {
     input: HTMLInputElement;
 
     contextMenuSelected: BehaviorSubject<{ action: string }> = new BehaviorSubject(undefined);
-    
+
     gridHelperComponent: GridHelperComponent = new GridHelperComponent(50, 50, "#535353", "#737373");
     editableSceneComponent: EditableSceneComponent = new EditableSceneComponent();
     firstPersonCameraComponent: FirstPersonCameraComponent = new FirstPersonCameraComponent();
 
-    constructor() { 
-        
+    constructor() {
+
     }
 
     async createEditorScene() {
@@ -47,8 +49,10 @@ export class EditorService {
         engine.addGameObjects(gridHelper);
         engine.addGameObjects(directionalLight);
         engine.addGameObjects(SpotLight);
+
+        loadDefaultEquirectangularHDR();
     }
-    
+
     async loadModel(extension: ".gltf" | ".glb" | ".fbx" | ".obj" | ".vrm" | string, url?: string) {
 
         if (extension !== ".gltf" && extension !== ".glb" && extension !== ".fbx" && extension !== ".obj" && extension !== ".vrm") {
@@ -64,12 +68,27 @@ export class EditorService {
                 ".vrm": async (url: string) => new GameObject((await loadVRM(url)).scene)
             }
 
-            let gameObject = await loaders[extension](url);
-            gameObject.name = url.split('/').pop().split('.').shift();
+            let gameObject: GameObject = await loaders[extension](url);
+            gameObject.name = "New GameObject"
             const editableObjectComponent = new EditableObjectComponent();
             gameObject.addComponent(editableObjectComponent);
-            console.log(gameObject);
             engine.addGameObjects(gameObject);
+
+            if (engine.castShadows) {
+                engine.setCastShadows(gameObject)
+            }
+
+            if (extension === ".fbx" || extension === ".gltf") {
+                const animations = gameObject.animations;
+                if (!animations) return;
+                animations.forEach(clip => {
+                    if (clip) {
+                        const mixer = new THREE.AnimationMixer(gameObject.children[0]);
+                        mixer.clipAction(clip).play();
+                        engine.mixers.push(mixer);
+                    }
+                });
+            }
         }
 
         if (url) {

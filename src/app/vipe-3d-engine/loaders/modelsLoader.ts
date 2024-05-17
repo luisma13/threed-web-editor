@@ -5,7 +5,7 @@ import { AnimationClip, ObjectLoader } from "three";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { GLTF, GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 import { EditableObjectComponent } from "../components/editor/editable-object.component.js";
 import { GameObject } from "../core/gameobject.js";
@@ -29,7 +29,7 @@ const dracoLoader = new DRACOLoader(manager)
 
 const ktx2Loader = new KTX2Loader(manager)
     .setTranscoderPath("three/examples/jsm/libs/basis/")
-    // .detectSupport(renderer);
+// .detectSupport(renderer);
 
 const gltfLoader = new GLTFLoader(manager)
     .setCrossOrigin('anonymous')
@@ -68,7 +68,7 @@ export async function loadVRM(modelUrl: string, helperRoot?: THREE.Group): Promi
     return { vrm, scene: vrm.scene };
 }
 
-export async function loadFBX(url) {
+export async function loadFBX(url): Promise<GameObject> {
     const loader = new FBXLoader();
     const asset = await loader.loadAsync(url);
     return new GameObject(asset);
@@ -84,6 +84,7 @@ export async function loadFBXAnimation(animationUrl): Promise<AnimationClip> {
 export async function loadGLB(url): Promise<GameObject> {
     const gltf = await gltfLoader.loadAsync(url);
     const gameObject = new GameObject(gltf.scene);
+    gameObject.animations = gltf.animations;
     return gameObject;
 }
 
