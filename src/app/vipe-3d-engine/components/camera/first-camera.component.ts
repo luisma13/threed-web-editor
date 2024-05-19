@@ -34,8 +34,6 @@ export class FirstPersonCameraComponent extends Component {
     private handleInput(deltaTime: number): void {
         const moveDirection = new THREE.Vector3();
 
-        // console.log({a: engine.input.keys.get('a'), d: engine.input.keys.get('d'), w: engine.input.keys.get('w'), s: engine.input.keys.get('s')});
-
         // space key event
         if (engine.input.keys.get(' ')) {
             this.camera.position.y += this.moveSpeed * deltaTime;
@@ -87,7 +85,7 @@ export class FirstPersonCameraComponent extends Component {
             this.camera.quaternion.copy(this.quaternion);
 
             if (engine.input.mouseWheel !== 0) {
-                this.moveSpeed += engine.input.mouseWheel * -0.01;
+                this.moveSpeed += engine.input.mouseWheel * -0.005;
                 this.moveSpeed = Math.min(20, Math.max(0.1, this.moveSpeed));
             }
             

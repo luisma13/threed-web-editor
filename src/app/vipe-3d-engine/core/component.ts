@@ -16,6 +16,7 @@ export interface AttributeType {
 export abstract class Component {
     public gameObject: GameObject;
     name: string;
+    disabled: boolean = false;
     constructor(name: string, gameObject?: GameObject) {
         this.name = name;
         this.gameObject = gameObject;

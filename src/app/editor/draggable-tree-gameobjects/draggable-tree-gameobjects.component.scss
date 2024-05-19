@@ -4,7 +4,7 @@
     margin: 5px 0;
     color: white;
     background-color: #515050;
-    height: 25px;
+    // height: 25px;
 }
 
 .mat-icon {
@@ -19,17 +19,24 @@
     background-color: #292929;
 }
 
-.mat-icon {
-    z-index: 0;
+.node-holder {
+    display: flex;
+    align-items: center;
+    padding: 0 5px;
+    width: 100%;
+
+    .right-icon {
+        margin-left: auto;
+    }
 }
 
 .drop-above {
-    border-top: 10px solid #2dbbee;
+    border-top: 10px solid #089ed4;
     margin-top: -10px;
 }
 
 .drop-below {
-    border-bottom: 10px solid #2dbbee;
+    border-bottom: 10px solid #089ed4;
     margin-bottom: -10px;
 }
 
@@ -38,6 +45,6 @@
 }
 
 .drag-start {
-    background-color: #168ab4;
+    background-color: #68c8eb;
     color: honeydew;
 }

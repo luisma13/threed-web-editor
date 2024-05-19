@@ -12,7 +12,7 @@
     </ng-container>
     <ng-container *ngIf="item.submenu">
         <div class="dropdown" (mouseenter)="showSubmenu(item.label)" (mouseleave)="hideSubmenu(item.label)">
-            <button>{{ item.label }}</button>
+            <button>{{ item.label }} {{ !item.isRoot && item.submenu ? '>' : ''}}</button>
             <div class="submenu" [ngClass]="{ 'submenu-right': isSubmenu }" *ngIf="submenus[item.label]">
                 <ng-container *ngFor="let subItem of item.submenu">
                     <ng-template [ngTemplateOutlet]="renderMenuItem" [ngTemplateOutletContext]="{ item: subItem, isSubmenu: true }"></ng-template>

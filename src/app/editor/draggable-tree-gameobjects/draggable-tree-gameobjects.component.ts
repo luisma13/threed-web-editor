@@ -1,7 +1,7 @@
 import { SelectionModel } from '@angular/cdk/collections';
 import { FlatTreeControl } from '@angular/cdk/tree';
 import { CommonModule } from '@angular/common';
-import { Component, Injectable, ElementRef, ViewChild } from '@angular/core';
+import { Component, Injectable, ElementRef, ViewChild, ChangeDetectorRef, afterNextRender } from '@angular/core';
 import { MatTreeFlatDataSource, MatTreeFlattener, MatTreeModule } from '@angular/material/tree';
 import { BehaviorSubject } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,105 +9,69 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { GameObject } from '../../vipe-3d-engine/core/gameobject';
+import { engine } from '../../vipe-3d-engine/core/engine/engine';
+import { EditorService } from '../editor.service';
 
 /**
- * Node for to-do item
+ * Node for gameobject item
  */
 export class GameObjectItemNode {
     children: GameObjectItemNode[];
-    item: string;
+    data: GameObject;
 }
 
-/** Flat to-do item node with expandable and level information */
+/** Flat gameobject item node with expandable and level information */
 export class GameObjectItemFlatNode {
-    item: string;
+    data: GameObject;
     level: number;
     expandable: boolean;
 }
 
 /**
- * The Json object for to-do list data.
- */
-const TREE_DATA = {
-    Groceries: {
-        'Almond Meal flour': null,
-        'Organic eggs': null,
-        'Protein Powder': null,
-        Fruits: {
-            Apple: null,
-            Berries: ['Blueberry', 'Raspberry'],
-            Orange: null
-        }
-    },
-    Reminders: [
-        'Cook dinner',
-        'Read the Material Design spec',
-        'Upgrade Application to Angular'
-    ]
-};
-
-/**
  * Checklist database, it can build a tree structured Json object.
- * Each node in Json object represents a to-do item or a category.
+ * Each node in Json object represents a gameobject item.
  * If a node is a category, it has children items and new items can be added under the category.
  */
 @Injectable()
 export class GameObjectsDatabase {
+
     dataChange = new BehaviorSubject<GameObjectItemNode[]>([]);
 
     get data(): GameObjectItemNode[] { return this.dataChange.value; }
 
-    constructor() {
-        this.initialize();
-    }
-
-    initialize() {
-        // Build the tree nodes from Json object. The result is a list of `TodoItemNode` with nested
-        //     file node as children.
-        const data = this.buildFileTree(TREE_DATA, 0);
-
-        // Notify the change.
-        this.dataChange.next(data);
-    }
+    treeChange = new BehaviorSubject<GameObjectItemNode[]>([]);
 
     /**
      * Build the file structure tree. The `value` is the Json object, or a sub-tree of a Json object.
-     * The return value is the list of `TodoItemNode`.
+     * The return value is the list of `GameobjectItemNode`.
      */
-    buildFileTree(obj: object, level: number): GameObjectItemNode[] {
-        return Object.keys(obj).reduce<GameObjectItemNode[]>((accumulator, key) => {
-            const value = obj[key];
+    buildFileTree(objs: GameObject[], level: number): GameObjectItemNode[] {
+        return objs.reduce<GameObjectItemNode[]>((accumulator, gameobject) => {
+            const value = gameobject
             const node = new GameObjectItemNode();
-            node.item = key;
-
-            if (value != null) {
-                if (typeof value === 'object') {
-                    node.children = this.buildFileTree(value, level + 1);
-                } else {
-                    node.item = value;
-                }
+            node.data = gameobject;
+            if (value.childrenGameObjects.length > 0) {
+                node.children = this.buildFileTree(gameobject.childrenGameObjects, level + 1);
             }
-
             return accumulator.concat(node);
         }, []);
     }
 
-    /** Add an item to to-do list */
-    insertItem(parent: GameObjectItemNode, name: string): GameObjectItemNode {
+    /** Add an item to gameobject list */
+    insertItem(parent: GameObjectItemNode, data: GameObject): GameObjectItemNode {
         if (!parent.children) {
             parent.children = [];
         }
-        const newItem = { item: name } as GameObjectItemNode;
+        const newItem = { data } as GameObjectItemNode;
         parent.children.push(newItem);
         this.dataChange.next(this.data);
         return newItem;
     }
 
-    insertItemAbove(node: GameObjectItemNode, name: string): GameObjectItemNode {
+    insertItemAbove(node: GameObjectItemNode, data: GameObject): GameObjectItemNode {
         const parentNode = this.getParentFromNodes(node);
-        const newItem = { item: name } as GameObjectItemNode;
+        const newItem = { data, children: [] } as GameObjectItemNode;
         if (parentNode != null) {
             parentNode.children.splice(parentNode.children.indexOf(node), 0, newItem);
         } else {
@@ -117,9 +81,9 @@ export class GameObjectsDatabase {
         return newItem;
     }
 
-    insertItemBelow(node: GameObjectItemNode, name: string): GameObjectItemNode {
+    insertItemBelow(node: GameObjectItemNode, data: GameObject): GameObjectItemNode {
         const parentNode = this.getParentFromNodes(node);
-        const newItem = { item: name } as GameObjectItemNode;
+        const newItem = { data, children: [] } as GameObjectItemNode;
         if (parentNode != null) {
             parentNode.children.splice(parentNode.children.indexOf(node) + 1, 0, newItem);
         } else {
@@ -157,8 +121,8 @@ export class GameObjectsDatabase {
         return null;
     }
 
-    updateItem(node: GameObjectItemNode, name: string) {
-        node.item = name;
+    updateItem(node: GameObjectItemNode, data: GameObject) {
+        node.data = data;
         this.dataChange.next(this.data);
     }
 
@@ -168,7 +132,7 @@ export class GameObjectsDatabase {
     }
 
     copyPasteItem(from: GameObjectItemNode, to: GameObjectItemNode): GameObjectItemNode {
-        const newItem = this.insertItem(to, from.item);
+        const newItem = this.insertItem(to, from.data);
         if (from.children) {
             from.children.forEach(child => {
                 this.copyPasteItem(child, newItem);
@@ -178,7 +142,7 @@ export class GameObjectsDatabase {
     }
 
     copyPasteItemAbove(from: GameObjectItemNode, to: GameObjectItemNode): GameObjectItemNode {
-        const newItem = this.insertItemAbove(to, from.item);
+        const newItem = this.insertItemAbove(to, from.data);
         if (from.children) {
             from.children.forEach(child => {
                 this.copyPasteItem(child, newItem);
@@ -188,7 +152,7 @@ export class GameObjectsDatabase {
     }
 
     copyPasteItemBelow(from: GameObjectItemNode, to: GameObjectItemNode): GameObjectItemNode {
-        const newItem = this.insertItemBelow(to, from.item);
+        const newItem = this.insertItemBelow(to, from.data);
         if (from.children) {
             from.children.forEach(child => {
                 this.copyPasteItem(child, newItem);
@@ -223,11 +187,11 @@ export class GameObjectsDatabase {
         MatInputModule,
         MatTreeModule
     ],
-    templateUrl: './draggable-tree.component.html',
-    styleUrls: ['./draggable-tree.component.scss'],
-    providers: [GameObjectsDatabase]
+    templateUrl: './draggable-tree-gameobjects.component.html',
+    styleUrls: ['./draggable-tree-gameobjects.component.scss'],
+    providers: []
 })
-export class DraggableTreeComponent {
+export class DraggableTreeGameObjectsComponent {
     /** Map from flat node to nested node. This helps us finding the nested node to be modified */
     flatNodeMap = new Map<GameObjectItemFlatNode, GameObjectItemNode>();
 
@@ -257,37 +221,71 @@ export class DraggableTreeComponent {
     dragNodeExpandOverArea: number;
     @ViewChild('emptyItem') emptyItem: ElementRef;
 
-    constructor(private database: GameObjectsDatabase) {
+    constructor(
+        private database: GameObjectsDatabase,
+        private editorService: EditorService,
+        private cd: ChangeDetectorRef
+    ) {
         this.treeFlattener = new MatTreeFlattener(this.transformer, this.getLevel, this.isExpandable, this.getChildren);
         this.treeControl = new FlatTreeControl<GameObjectItemFlatNode>(this.getLevel, this.isExpandable);
         this.dataSource = new MatTreeFlatDataSource(this.treeControl, this.treeFlattener);
+        this.dataSource.data = this.database.data;
+    }
 
-        database.dataChange.subscribe(data => {
-            this.dataSource.data = [];
-            this.dataSource.data = data;
+    ngOnInit() {
+        this.database.dataChange.subscribe(data => {
+            setTimeout(() => {
+                this.dataSource.data = data;
+            });
+        });
+
+        const createGameObjectItem = (gameObject) => {
+            const parentGameObject = gameObject.parentGameObject;
+            let parentNode = this.database.data.find(node => node.data === parentGameObject);
+            const node = (parentGameObject && parentNode)
+                ? this.database.insertItem(parentNode, gameObject)
+                : this.database.insertItemBelow(this.database.data[this.database.data.length - 1], gameObject);
+            this.updateNodeUI(node);
+            this.updateNodeUI(parentNode);
+        }
+
+        engine.onGameobjectCreated.subscribe((gameObject) => {
+            if (!gameObject) return;
+            createGameObjectItem(gameObject);
+        });
+        engine.onGameobjectHerarchyChanged.subscribe((gameObject) => {
+            if (!gameObject) return;
+            this.database.deleteItem(this.database.data.find(node => node.data === gameObject));
+            createGameObjectItem(gameObject);
+        });
+        engine.onGameobjectRemoved.subscribe((gameObject) => {
+            if (!gameObject) return;
+            this.database.deleteItem(this.database.data.find(node => node.data === gameObject));
         });
     }
 
-    getLevel = (node: GameObjectItemFlatNode) => node.level;
+    getLevel = (node: GameObjectItemFlatNode) => node?.level;
 
     isExpandable = (node: GameObjectItemFlatNode) => node.expandable;
 
     getChildren = (node: GameObjectItemNode): GameObjectItemNode[] => node.children;
 
-    hasChild = (_: number, _nodeData: GameObjectItemFlatNode) => _nodeData.expandable;
+    hasChild = (_: number, _nodeData: GameObjectItemFlatNode) => { return _nodeData.expandable };
 
-    hasNoContent = (_: number, _nodeData: GameObjectItemFlatNode) => _nodeData.item === '';
+    hasNoContent = (_: number, _nodeData: GameObjectItemFlatNode) => _nodeData.data === undefined;
 
     /**
      * Transformer to convert nested node to flat node. Record the nodes in maps for later use.
      */
     transformer = (node: GameObjectItemNode, level: number) => {
         const existingNode = this.nestedNodeMap.get(node);
-        const flatNode = existingNode && existingNode.item === node.item
+
+        const flatNode = existingNode && existingNode.data === node.data
             ? existingNode
-            : new GameObjectItemFlatNode();
-        flatNode.item = node.item;
+            : {} as GameObjectItemFlatNode;
+
         flatNode.level = level;
+        flatNode.data = node.data;
         flatNode.expandable = (node.children && node.children.length > 0);
         this.flatNodeMap.set(flatNode, node);
         this.nestedNodeMap.set(node, flatNode);
@@ -307,8 +305,8 @@ export class DraggableTreeComponent {
         return result && !this.descendantsAllSelected(node);
     }
 
-    /** Toggle the to-do item selection. Select/deselect all the descendants node */
-    todoItemSelectionToggle(node: GameObjectItemFlatNode): void {
+    /** Toggle the gameobject item selection. Select/deselect all the descendants node */
+    gameobjectItemSelectionToggle(node: GameObjectItemFlatNode): void {
         this.checklistSelection.toggle(node);
         const descendants = this.treeControl.getDescendants(node);
         this.checklistSelection.isSelected(node)
@@ -317,24 +315,22 @@ export class DraggableTreeComponent {
     }
 
     /** Select the category so we can insert the new item. */
-    addNewItem(node: GameObjectItemFlatNode) {
-        const parentNode = this.flatNodeMap.get(node);
-        this.database.insertItem(parentNode, '');
+    addNewItem(event, node: GameObjectItemFlatNode) {
+        event.stopPropagation();
+        this.editorService.newGameObject(node.data);
         this.treeControl.expand(node);
     }
 
-    /** Save the node to database */
-    saveNode(node: GameObjectItemFlatNode, itemValue: string) {
-        const nestedNode = this.flatNodeMap.get(node);
-        this.database.updateItem(nestedNode, itemValue);
+    onClick(node: GameObjectItemFlatNode | GameObjectItemNode) {
+        this.editorService.editableSceneComponent?.selectedObject.next(node.data);
     }
 
     handleDragStart(event, node) {
         // Required by Firefox (https://stackoverflow.com/questions/19055264/why-doesnt-html5-drag-and-drop-work-in-firefox)
         event.dataTransfer.setData('foo', 'bar');
-        //event.dataTransfer.setDragImage(this.emptyItem.nativeElement, 0, 0);
         this.dragNode = node;
         this.treeControl.collapse(node);
+        this.cd.detectChanges();
     }
 
     handleDragOver(event, node) {
@@ -344,7 +340,6 @@ export class DraggableTreeComponent {
             if ((Date.now() - this.dragNodeExpandOverTime) > this.dragNodeExpandOverWaitTimeMs) {
                 if (!this.treeControl.isExpanded(node)) {
                     this.treeControl.expand(node);
-                    //this.cd.detectChanges();
                 }
             }
         } else {
@@ -363,8 +358,10 @@ export class DraggableTreeComponent {
         }
     }
 
-    handleDrop(event, node) {
+    handleDrop(event, node: GameObjectItemFlatNode) {
         if (node !== this.dragNode) {
+            const parent = this.database.getParentFromNodes(this.flatNodeMap.get(this.dragNode));
+
             let newItem: GameObjectItemNode;
             if (this.dragNodeExpandOverArea === 1) {
                 newItem = this.database.copyPasteItemAbove(this.flatNodeMap.get(this.dragNode), this.flatNodeMap.get(node));
@@ -375,7 +372,15 @@ export class DraggableTreeComponent {
             }
             this.database.deleteItem(this.flatNodeMap.get(this.dragNode));
             this.treeControl.expandDescendants(this.nestedNodeMap.get(newItem));
+            this.database.treeChange.next(this.database.data);
+
+            this.updateNodeUI(node);
+            this.updateNodeUI(parent);
+
+            const {parentNode} = this.getPositionInfoFromNode(newItem, null, this.database.data);
+            this.syncGameObjectHierarchy(newItem.data, parent?.data, parentNode?.data);
         }
+
         this.handleDragEnd(event, node);
     }
 
@@ -385,6 +390,7 @@ export class DraggableTreeComponent {
         this.dragNodeExpandOverTime = 0;
         this.dragNodeExpandOverArea = NaN;
         event.preventDefault();
+        this.cd.detectChanges();
     }
 
     getStyle(node: GameObjectItemFlatNode) {
@@ -399,14 +405,57 @@ export class DraggableTreeComponent {
                 default:
                     return 'drop-center'
             }
-        } else {
-            return '';
         }
+        return undefined;
     }
-
 
     deleteItem(node: GameObjectItemFlatNode) {
         this.database.deleteItem(this.flatNodeMap.get(node));
+    }
+
+    /**
+     * Return the parent node, the next one node and previous one node if exists
+     */
+    getPositionInfoFromNode(nodeToSearch, parent, nodes) {
+        if (!nodes) return;
+        for (let i = 0; i < nodes.length; i++) {
+            let nextNode = nodes[i + 1];
+            let prevNode = nodes[i - 1];
+            let parentNode = parent;
+            if (nodes[i].data === nodeToSearch.data) {
+                return { foundNode: nodes[i], nextNode, prevNode, parentNode };
+            }
+            const result = this.getPositionInfoFromNode(nodeToSearch, nodes[i], nodes[i].children);
+            if (result) return result;
+        }
+    }
+
+    /**
+     * Recreate the node UI to update the element in the tree
+     */
+    updateNodeUI(nodeToUpdate) {
+        if (!nodeToUpdate) return;
+        const { foundNode , nextNode, prevNode, parentNode } = this.getPositionInfoFromNode(nodeToUpdate, null, this.database.data);
+        if (nextNode)
+            this.database.copyPasteItemAbove(foundNode, nextNode);
+        else if (prevNode)
+            this.database.copyPasteItemBelow(foundNode, prevNode);
+        else if (parentNode)
+            this.database.copyPasteItem(foundNode, parentNode);
+        else
+            this.database.copyPasteItemBelow(this.database.data[this.database.data.length - 1], foundNode);
+
+        this.database.deleteItem(foundNode);
+    };
+
+    syncGameObjectHierarchy(gameObject: GameObject, oldParent: GameObject, newParent: GameObject) {
+        console.log(gameObject, oldParent, newParent, this.database.data);
+
+        if (newParent) {
+            newParent.addGameObject(gameObject, false);
+        } else {
+            gameObject.unparentGameObject();
+        }
     }
 
 }

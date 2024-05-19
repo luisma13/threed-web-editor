@@ -13,7 +13,7 @@ export class GridHelperComponent extends Component {
     constructor(size?: number, divisions?: number, color1?: THREE.ColorRepresentation, color2?: THREE.ColorRepresentation) {
         super("GridHelperComponent");
         this.size = size || 50;
-        this.divisions = divisions || 10;
+        this.divisions = divisions || 50;
         this.color1 = color1 || "#535353";
         this.color2 = color2 || "#737373";
     }

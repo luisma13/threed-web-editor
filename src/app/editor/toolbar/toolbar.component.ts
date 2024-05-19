@@ -7,6 +7,7 @@ interface MenuItem {
     action?: () => void;
     disabled?: boolean;
     submenu?: MenuItem[];
+    isRoot?: boolean;
 }
 
 @Component({
@@ -30,6 +31,7 @@ export class ToolbarComponent implements OnInit {
         this.menuItems = [
             {
                 label: 'File',
+                isRoot: true,
                 submenu: [
                     {
                         label: 'New Scene',
@@ -59,6 +61,7 @@ export class ToolbarComponent implements OnInit {
             },
             {
                 label: 'Edit',
+                isRoot: true,
                 submenu: [
                     {
                         label: 'Undo',
@@ -74,6 +77,7 @@ export class ToolbarComponent implements OnInit {
             },
             {
                 label: 'View',
+                isRoot: true,
                 submenu: [
                     {
                         label: 'Show Grid',

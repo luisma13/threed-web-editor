@@ -9,8 +9,8 @@ import { SpotLightComponent } from "../vipe-3d-engine/components/light/spot-ligh
 import { engine } from "../vipe-3d-engine/core/engine/engine";
 import { GameObject } from "../vipe-3d-engine/core/gameobject";
 import { loadGLB, loadFBX, loadObj, loadVRM } from "../vipe-3d-engine/loaders/modelsLoader";
-import { loadDefaultEquirectangularHDR } from "../vipe-3d-engine/loaders/hdrLoader";
 import * as THREE from "three";
+import { loadDefaultEquirectangularHDR } from "../vipe-3d-engine/loaders/hdrLoader";
 
 @Injectable({ providedIn: 'root' })
 export class EditorService {
@@ -27,14 +27,14 @@ export class EditorService {
     }
 
     async createEditorScene() {
-        const gridHelper = new GameObject();
-        gridHelper.name = 'Environment';
-        gridHelper.addComponent(this.gridHelperComponent);
-        gridHelper.addComponent(this.firstPersonCameraComponent);
-        gridHelper.addComponent(this.editableSceneComponent);
+        const environment = new GameObject();
+        environment.name = 'Environment';
+        environment.addComponent(this.gridHelperComponent);
+        environment.addComponent(this.firstPersonCameraComponent);
+        environment.addComponent(this.editableSceneComponent);
 
         const directionalLight = new GameObject();
-        directionalLight.position.set(10, 10, 0);
+        directionalLight.position.set(10, 10, 10);
         directionalLight.name = 'DirectionalLight';
         directionalLight.addComponent(new DirectionalLightComponent("#ffffff", 1));
         directionalLight.addComponent(new EditableObjectComponent());
@@ -45,11 +45,23 @@ export class EditorService {
         SpotLight.addComponent(new SpotLightComponent());
         SpotLight.addComponent(new EditableObjectComponent());
 
-        gridHelper.addGameObject(SpotLight);
-
-        engine.addGameObjects(gridHelper);
+        engine.addGameObjects(environment);
+        engine.addGameObjects(SpotLight);
         engine.addGameObjects(directionalLight);
-        loadDefaultEquirectangularHDR();
+
+        // loadDefaultEquirectangularHDR();
+    }
+
+    newGameObject(parent?: GameObject) {
+        const gameObject = new GameObject();
+        gameObject.name = "New GameObject";
+        if (parent)
+            parent.addGameObject(gameObject);
+        else
+            engine.addGameObjects(gameObject);
+
+        this.editableSceneComponent.selectedObject.next(gameObject);
+        return gameObject;
     }
 
     async loadModel(extension: ".gltf" | ".glb" | ".fbx" | ".obj" | ".vrm" | string, url?: string) {

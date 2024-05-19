@@ -32,8 +32,11 @@ export abstract class EngineBase {
         {}
     )
 
-    onGameobjectsChanged: BehaviorSubject<GameObject[]> = new BehaviorSubject(undefined);
+    // onGameobjectsChanged: BehaviorSubject<GameObject[]> = new BehaviorSubject(undefined);
     onGameObjectSelected: BehaviorSubject<GameObject> = new BehaviorSubject(undefined);
+    onGameobjectCreated: BehaviorSubject<GameObject> = new BehaviorSubject(undefined);
+    onGameobjectRemoved: BehaviorSubject<GameObject> = new BehaviorSubject(undefined);
+    onGameobjectHerarchyChanged: BehaviorSubject<GameObject> = new BehaviorSubject(undefined);
 
     cannonDebugger: any;
 
@@ -81,11 +84,11 @@ export abstract class EngineBase {
             });
 
             gameobject.isAddedToScene = true;
+            this.onGameobjectCreated.next(gameobject);
             gameobject.childrenGameObjects.forEach((child) => {
                 this.addGameObjects(child);
             });
         });
-        this.onGameobjectsChanged.next(this.gameObjects);
     }
 
     findGameObjectByName(name: string) {
@@ -117,6 +120,8 @@ export abstract class EngineBase {
                 });
             }
 
+            this.onGameobjectRemoved.next(gameobject);
+
             gameobject.children.forEach((child) => {
                 this.removeGameObjects(child as GameObject);
             });
@@ -134,8 +139,6 @@ export abstract class EngineBase {
             }
             gameobject = undefined;
         });
-
-        this.onGameobjectsChanged.next(this.gameObjects);
     }
 
     setCastShadows(gameObject?: GameObject | THREE.Object3D, cast?: boolean) {

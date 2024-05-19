@@ -1,26 +1,26 @@
 import { ChangeDetectorRef, Component, ElementRef, HostListener, ViewChild, afterNextRender } from '@angular/core';
 import { engine } from '../vipe-3d-engine/core/engine/engine';
 import { GameObject } from '../vipe-3d-engine/core/gameobject';
-import { GameObjectComponent } from './gameobject/gameobject.component';
 import { CommonModule } from '@angular/common';
 import { ComponentComponent } from './component/component.component';
 import { EditorService } from './editor.service';
 import { ContextMenuComponent } from './context-menu/context-menu.component';
 import { FormsModule } from '@angular/forms';
 import { ToolbarComponent } from './toolbar/toolbar.component';
-import { DraggableTreeComponent } from './draggable-tree/draggable-tree.component';
+import { DraggableTreeGameObjectsComponent } from './draggable-tree-gameobjects/draggable-tree-gameobjects.component';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
     selector: 'app-editor',
     standalone: true,
     imports: [
-        GameObjectComponent,
         CommonModule,
         ComponentComponent,
         ContextMenuComponent,
         FormsModule,
         ToolbarComponent,
-        DraggableTreeComponent
+        DraggableTreeGameObjectsComponent,
+        MatIconModule
     ],
     templateUrl: './editor.component.html',
     styleUrl: './editor.component.scss'
@@ -31,7 +31,6 @@ export class EditorComponent {
     @ViewChild('contextMenu', { static: true }) contextMenu: ContextMenuComponent;
 
     engine = engine;
-    gameObjects: GameObject[];
     objectSelected: GameObject;
 
     constructor(
@@ -56,23 +55,28 @@ export class EditorComponent {
         this.editorService.createEditorScene();
         this.editorService.editableSceneComponent?.selectedObject.subscribe(object => {
             if (object === this.objectSelected) return;
+
             this.objectSelected = object;
             this.editorService.editableSceneComponent?.selectObject(object);
+
+            for (const obj of engine.gameObjects)
+                for (const component of obj.components) {
+                    if (component['setHelperVisibility']) {
+                        component['setHelperVisibility'](obj === object);
+                    }
+                }
+
             this.changeDetector.detectChanges();
         });
 
         this.viewer.nativeElement.ondragover = (event) => event.preventDefault();
         this.viewer.nativeElement.ondrop = (event) => this.onDragged(event);
-
-        engine.onGameobjectsChanged.subscribe(() => {
-            this.gameObjects = engine.gameObjects.filter(gameObject => gameObject.parentGameObject === undefined);
-            console.log(this.gameObjects);
-        });
     }
 
     animate() {
         engine.update();
         requestAnimationFrame(this.animate);
+
         if (engine.draggingObject) {
             this.changeDetector.detectChanges();
         }
@@ -94,4 +98,5 @@ export class EditorComponent {
         }
         await this.editorService.loadModel(extension, url);
     }
+
 }

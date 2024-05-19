@@ -11,8 +11,6 @@ import { FXAAShader } from "three/examples/jsm/shaders/FXAAShader.js";
 import { GammaCorrectionShader } from "three/examples/jsm/shaders/GammaCorrectionShader.js";
 import { DEBUG, EngineBase } from "./engine.base";
 
-THREE.Cache.enabled = true;
-
 export enum CollisionGroups {
     Default = 1,
     Characters = 2,

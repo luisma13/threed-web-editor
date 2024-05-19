@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { Component } from './component';
 import * as CANNON from "cannon-es";
 import { engine } from './engine/engine';
-import e from 'express';
 
 export class GameObject extends THREE.Object3D {
 
@@ -25,12 +24,36 @@ export class GameObject extends THREE.Object3D {
         this.components = [];
     }
 
-    public addGameObject(gameObject: GameObject): GameObject {
+    public addGameObject(gameObject: GameObject, sendEvent = true): GameObject {
+        if (gameObject.parentGameObject === this) {
+            return this;
+        }
+
+        // Remove from previous parent
+        if (gameObject.parentGameObject) {
+            gameObject.unparentGameObject();
+        }
+
+        // Add to new parent
         gameObject.parentGameObject = this;
         this.childrenGameObjects.push(gameObject);
         this.add(gameObject);
-        if(this.isAddedToScene) {
+        if (this.isAddedToScene && !gameObject.isAddedToScene) {
             engine.addGameObjects(gameObject);
+        }
+        
+        if (sendEvent) {
+            engine.onGameobjectHerarchyChanged.next(gameObject)
+        }
+        
+        return this;
+    }
+
+    public unparentGameObject(): GameObject {
+        if (this.parentGameObject) {
+            this.parentGameObject.childrenGameObjects.slice(this.parentGameObject.childrenGameObjects.indexOf(this), 1);
+            this.parentGameObject.remove(this);
+            this.parentGameObject = null;
         }
         return this;
     }
@@ -72,13 +95,15 @@ export class GameObject extends THREE.Object3D {
 
     public update(deltaTime: number): void {
         for (const component of this.components) {
-            component.update(deltaTime);
+            if (!component.disabled)
+                component.update(deltaTime);
         }
     }
 
     public lateUpdate(deltaTime: number): void {
         for (const component of this.components) {
-            component.lateUpdate(deltaTime);
+            if (!component.disabled)
+                component.lateUpdate(deltaTime);
         }
     }
 

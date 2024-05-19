@@ -4,12 +4,11 @@
         <div class="sidebar">
             <h4>Scene objects</h4>
             <app-draggable-tree></app-draggable-tree>
-            <app-game-object *ngFor="let child of gameObjects" [gameObject]="child"></app-game-object>
         </div>
         <div #viewer class="canvas-container">
 
         </div>
-        <div class="sidebar">
+        <div class="sidebar" cdkDropList>
             <h4>{{objectSelected?.name}}</h4>
             <!-- move to component -->
             <div class="transform-container transform-col" *ngIf="objectSelected">
@@ -29,7 +28,7 @@
                     <span>Y</span>
                     <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.rotation.y" >
                     <span>Z</span>
-                    <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.position.z" >
+                    <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.rotation.z" >
                 </div>
                 <div class="transform-title">Scale</div>
                 <div class="transform-row">
