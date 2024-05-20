@@ -1,0 +1,45 @@
+:host {
+    display: block;
+}
+
+.row {
+    margin: 0px;
+    width: 100%;
+    cursor: pointer;
+    color: white;
+    display: flex;
+    flex-direction: column;
+}
+
+.title {
+    padding: 5px;
+    border-bottom: 1px solid #7b7b7b;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+}
+
+.drop-above {
+    border-top: 3px solid #089ed4;
+    margin-top: 3px;
+}
+
+.drop-below {
+    border-bottom: 3px solid #089ed4;
+    margin-bottom: -3px;
+}
+
+.drop-center {
+    background-color: #089ed4;
+}
+
+.drag-start {
+    background-color: #68c8eb;
+    color: honeydew;
+}
+
+.drop-none {
+    background-color: none;
+    border-bottom: 1px solid #7b7b7b;
+}

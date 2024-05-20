@@ -5,12 +5,13 @@
 }
 
 .title {
-    border-bottom: 2px solid #7b7b7b;
-    border-right: 2px solid #7b7b7b;
+        /* border-bottom: 2px solid #7b7b7b; */
+    /* border-right: 2px solid #292929; */
+    border: 1px solid #6b6b6b;
     padding: 5px;
-    color: #b1b1b1;
+    color: #ffffff;
     cursor: move;
-    background: #292929;
+    /* background: #292929; */
 }
 
 .col {

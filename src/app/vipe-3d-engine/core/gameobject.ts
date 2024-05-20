@@ -37,23 +37,26 @@ export class GameObject extends THREE.Object3D {
         // Add to new parent
         gameObject.parentGameObject = this;
         this.childrenGameObjects.push(gameObject);
-        this.add(gameObject);
+        this.attach(gameObject);
         if (this.isAddedToScene && !gameObject.isAddedToScene) {
             engine.addGameObjects(gameObject);
         }
         
-        if (sendEvent) {
+        if (this.isAddedToScene && sendEvent) {
             engine.onGameobjectHerarchyChanged.next(gameObject)
         }
-        
+
         return this;
     }
 
-    public unparentGameObject(): GameObject {
+    public unparentGameObject(sendEvent = true): GameObject {
         if (this.parentGameObject) {
-            this.parentGameObject.childrenGameObjects.slice(this.parentGameObject.childrenGameObjects.indexOf(this), 1);
-            this.parentGameObject.remove(this);
+            this.parentGameObject.childrenGameObjects.splice(this.parentGameObject.childrenGameObjects.indexOf(this), 1);
             this.parentGameObject = null;
+            engine.scene.attach(this);
+            if (this.isAddedToScene && sendEvent) {
+                engine.onGameobjectHerarchyChanged.next(this);
+            }
         }
         return this;
     }

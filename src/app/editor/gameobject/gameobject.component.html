@@ -1,0 +1,23 @@
+<div (click)="onClick($event)" class="row" [id]="gameObject?.uuid"
+    [style.padding-left]="isRoot ? '0px' : '15px'">
+    <div class="title" #title (dragstart)="handleDragStart($event, gameObject);"
+        (dragover)="handleDragOver($event, gameObject);" (dragend)="handleDragEnd($event, gameObject);"
+        (drop)="handleDrop($event, gameObject);" draggable="true" [ngClass]="getStyle(gameObject)"
+        [style.background-color]="isSelected ? '#50a9df' : ''" [style.color]="isSelected ? 'white' : ''"
+        [style.font-weight]="isSelected ? 'bold' : ''">
+
+        <div *ngIf="gameObject.childrenGameObjects.length === 0" style="width: 24px;">
+
+        </div>
+        <mat-icon (click)="toggleChildren()" *ngIf="gameObject.childrenGameObjects.length > 0"
+            class="mat-icon-rtl-mirror">
+            {{showChildren ? 'expand_more' : 'chevron_right'}}
+        </mat-icon>
+
+        <span> {{ gameObject?.name || gameObject?.type }}</span>
+    </div>
+
+    <div *ngIf="showChildren">
+        <app-game-object *ngFor="let child of gameObject.childrenGameObjects" [gameObject]="child"></app-game-object>
+    </div>
+</div>

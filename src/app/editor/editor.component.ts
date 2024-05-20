@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, ElementRef, HostListener, ViewChild, afterNextRender } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, HostListener, NgModule, ViewChild, afterNextRender } from '@angular/core';
 import { engine } from '../vipe-3d-engine/core/engine/engine';
 import { GameObject } from '../vipe-3d-engine/core/gameobject';
 import { CommonModule } from '@angular/common';
@@ -7,8 +7,10 @@ import { EditorService } from './editor.service';
 import { ContextMenuComponent } from './context-menu/context-menu.component';
 import { FormsModule } from '@angular/forms';
 import { ToolbarComponent } from './toolbar/toolbar.component';
-import { DraggableTreeGameObjectsComponent } from './draggable-tree-gameobjects/draggable-tree-gameobjects.component';
 import { MatIconModule } from '@angular/material/icon';
+import { GameObjectsDraggableComponent } from './gameobject-draggables/gameobjects-draggables.component';
+
+export class EditorModule { }
 
 @Component({
     selector: 'app-editor',
@@ -19,8 +21,8 @@ import { MatIconModule } from '@angular/material/icon';
         ContextMenuComponent,
         FormsModule,
         ToolbarComponent,
-        DraggableTreeGameObjectsComponent,
-        MatIconModule
+        MatIconModule,
+        GameObjectsDraggableComponent
     ],
     templateUrl: './editor.component.html',
     styleUrl: './editor.component.scss'
@@ -32,6 +34,7 @@ export class EditorComponent {
 
     engine = engine;
     objectSelected: GameObject;
+
 
     constructor(
         private editorService: EditorService,
@@ -52,9 +55,16 @@ export class EditorComponent {
         input.style.display = 'none';
 
         this.editorService.input = input;
+
         this.editorService.createEditorScene();
         this.editorService.editableSceneComponent?.selectedObject.subscribe(object => {
             if (object === this.objectSelected) return;
+
+            this.editorService.editableSceneComponent.selectedObject.subscribe(object => {
+                for (const go of this.editorService.gameObjectsHtmlElements) {
+                    go.isSelected = go.gameObject === object;
+                }
+            });
 
             this.objectSelected = object;
             this.editorService.editableSceneComponent?.selectObject(object);

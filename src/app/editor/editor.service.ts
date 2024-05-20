@@ -10,12 +10,16 @@ import { engine } from "../vipe-3d-engine/core/engine/engine";
 import { GameObject } from "../vipe-3d-engine/core/gameobject";
 import { loadGLB, loadFBX, loadObj, loadVRM } from "../vipe-3d-engine/loaders/modelsLoader";
 import * as THREE from "three";
+import { GameObjectComponent } from "./gameobject/gameobject.component";
 import { loadDefaultEquirectangularHDR } from "../vipe-3d-engine/loaders/hdrLoader";
 
 @Injectable({ providedIn: 'root' })
 export class EditorService {
 
     input: HTMLInputElement;
+
+    gameObjectsHtmlElements: GameObjectComponent[] = [];
+
 
     // Global Components to manage the editor scene
     gridHelperComponent: GridHelperComponent = new GridHelperComponent();
@@ -50,13 +54,23 @@ export class EditorService {
         engine.addGameObjects(directionalLight);
 
         // loadDefaultEquirectangularHDR();
+
+        // Create cube
+        for (let i = 0; i < 5; i++) {
+            const cube = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshStandardMaterial({ color: 0x000 }));
+            const cubeObject = new GameObject(cube);
+            cubeObject.name = "Cube " + i;
+            cubeObject.position.set(i + 0.5, 0.25, 0);
+            cubeObject.addComponent(new EditableObjectComponent());
+            engine.addGameObjects(cubeObject);
+        }
     }
 
     newGameObject(parent?: GameObject) {
         const gameObject = new GameObject();
         gameObject.name = "New GameObject";
         if (parent)
-            parent.addGameObject(gameObject);
+            parent.addGameObject(gameObject, false);
         else
             engine.addGameObjects(gameObject);
 
