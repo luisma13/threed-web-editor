@@ -21,7 +21,6 @@ export class ColliderCameraComponent extends Component {
         if (engine.input.mouseWheel !== 0) {
             this.previousDistanceObjectToCamera += engine.input.mouseWheel * 0.001;
             this.previousDistanceObjectToCamera = THREE.MathUtils.clamp(this.previousDistanceObjectToCamera, 1, 10);
-            console.log("Distance: ", this.previousDistanceObjectToCamera);
         }
         
         // Convertir THREE.Vector3 a CANNON.Vec3

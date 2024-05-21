@@ -10,6 +10,7 @@ export class GameObject extends THREE.Object3D {
     public components: Component[];
     public rigidbody: CANNON.Body;
     public childrenGameObjects: GameObject[] = [];
+    public isEnabled: boolean = true;
 
     constructor(threeObject?: THREE.Object3D, body?: CANNON.Body) {
         super();
@@ -97,6 +98,7 @@ export class GameObject extends THREE.Object3D {
     }
 
     public update(deltaTime: number): void {
+        if (!this.isEnabled) return;
         for (const component of this.components) {
             if (!component.disabled)
                 component.update(deltaTime);
@@ -104,6 +106,7 @@ export class GameObject extends THREE.Object3D {
     }
 
     public lateUpdate(deltaTime: number): void {
+        if (!this.isEnabled) return;
         for (const component of this.components) {
             if (!component.disabled)
                 component.lateUpdate(deltaTime);

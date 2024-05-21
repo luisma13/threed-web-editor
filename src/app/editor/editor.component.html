@@ -1,43 +1,34 @@
 <div class="container">
     <app-toolbar></app-toolbar>
     <div class="editor">
-        <div class="sidebar">
-            <h4>Scene objects</h4>
+        <div class="sidebar sidebar-left">
+            <h4>Scene Hierarchy</h4>
             <!-- <app-draggable-tree></app-draggable-tree> -->
             <app-game-objects-draggable></app-game-objects-draggable>
         </div>
         <div #viewer class="canvas-container">
 
         </div>
-        <div class="sidebar" cdkDropList>
+        <div class="sidebar sidebar-right sidebar-gap" cdkDropList>
             <h4>{{objectSelected?.name}}</h4>
             <!-- move to component -->
             <div class="transform-container transform-col" *ngIf="objectSelected">
-                <div class="transform-title">Location</div>
                 <div class="transform-row">
-                    <span>X</span>
+                    <div class="transform-title flex-1-1-0" >Location</div>
                     <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.position.x" >
-                    <span>Y</span>
                     <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.position.y" >
-                    <span>Z</span>
                     <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.position.z" >
                 </div>
-                <div class="transform-title">Rotation</div>
                 <div class="transform-row">
-                    <span>X</span>
+                    <div class="transform-title flex-1-1-0" >Rotation</div>
                     <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.rotation.x" >
-                    <span>Y</span>
                     <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.rotation.y" >
-                    <span>Z</span>
                     <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.rotation.z" >
                 </div>
-                <div class="transform-title">Scale</div>
                 <div class="transform-row">
-                    <span>X</span>
+                    <div class="transform-title flex-1-1-0" >Scale</div>
                     <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.scale.x" >
-                    <span>Y</span>
                     <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.scale.y" >
-                    <span>Z</span>
                     <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.scale.z" >
                 </div>
             </div>

@@ -12,13 +12,24 @@
     color: #ffffff;
     display: flex;
     flex-direction: column;
-    gap: 5px;
     padding: 0 10px;
     overflow-y: auto;
-    overflow-x: hidden;
+    overflow-x: auto;
     border-left: 1px solid #000000;
     height: 100%;
     transition: width 0.5s;
+}
+
+.sidebar-left {
+    border-right: 1px solid #2dc4fc;
+}
+
+.sidebar-right {
+    border-left: 1px solid #2dc4fc;
+}
+
+.sidebar-gap {
+    gap: 5px;
 }
 
 .sidebar>h4 {
@@ -55,29 +66,22 @@ canvas {
     padding: 5px;
     color: #b1b1b1;
     font-size: 12px;
+    min-width: 60px;
 }
 
 .transform-container {
     margin: 0px;
-    padding: 10px 5px;
+    padding: 10px 0;
 }
 
 .transform-row {
     display: flex;
     gap: 5px;
-    align-items: stretch;
-    padding: 5px 5px;
-}
-
-.transform-col {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    padding: 5px 5px;
+    padding: 5px 0;
 }
 
 .flex-1-1-0 {
-    flex: 1 1 0px;
+    flex: 1 1 auto;
 }
 
 .input {

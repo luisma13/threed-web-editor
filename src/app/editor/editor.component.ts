@@ -35,7 +35,6 @@ export class EditorComponent {
     engine = engine;
     objectSelected: GameObject;
 
-
     constructor(
         private editorService: EditorService,
         private changeDetector: ChangeDetectorRef
@@ -45,7 +44,6 @@ export class EditorComponent {
 
     async initScene() {
         engine.init(this.viewer.nativeElement, "#c3c3c3");
-        this.viewer.nativeElement.appendChild(engine.renderer.domElement);
 
         this.animate = this.animate.bind(this);
         this.animate();
@@ -61,7 +59,7 @@ export class EditorComponent {
             if (object === this.objectSelected) return;
 
             this.editorService.editableSceneComponent.selectedObject.subscribe(object => {
-                for (const go of this.editorService.gameObjectsHtmlElements) {
+                for (const go of GameObjectsDraggableComponent.gameObjectsHtmlElements) {
                     go.isSelected = go.gameObject === object;
                 }
             });

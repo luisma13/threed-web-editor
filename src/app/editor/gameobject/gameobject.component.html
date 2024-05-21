@@ -6,10 +6,10 @@
         [style.background-color]="isSelected ? '#50a9df' : ''" [style.color]="isSelected ? 'white' : ''"
         [style.font-weight]="isSelected ? 'bold' : ''">
 
-        <div *ngIf="gameObject.childrenGameObjects.length === 0" style="width: 24px;">
+        <div *ngIf="gameObject?.childrenGameObjects.length === 0" style="width: 24px;">
 
         </div>
-        <mat-icon (click)="toggleChildren()" *ngIf="gameObject.childrenGameObjects.length > 0"
+        <mat-icon (click)="toggleChildren()" *ngIf="gameObject?.childrenGameObjects.length > 0"
             class="mat-icon-rtl-mirror">
             {{showChildren ? 'expand_more' : 'chevron_right'}}
         </mat-icon>
@@ -18,6 +18,6 @@
     </div>
 
     <div *ngIf="showChildren">
-        <app-game-object *ngFor="let child of gameObject.childrenGameObjects" [gameObject]="child"></app-game-object>
+        <app-game-object *ngFor="let child of gameObject?.childrenGameObjects" [gameObject]="child"></app-game-object>
     </div>
 </div>

@@ -1,5 +1,4 @@
 import { Injectable } from "@angular/core";
-import { BehaviorSubject } from "rxjs";
 import { EditableSceneComponent } from "../vipe-3d-engine/components/editor/editable-scene.component";
 import { FirstPersonCameraComponent } from "../vipe-3d-engine/components/camera/first-camera.component";
 import { EditableObjectComponent } from "../vipe-3d-engine/components/editor/editable-object.component";
@@ -10,16 +9,14 @@ import { engine } from "../vipe-3d-engine/core/engine/engine";
 import { GameObject } from "../vipe-3d-engine/core/gameobject";
 import { loadGLB, loadFBX, loadObj, loadVRM } from "../vipe-3d-engine/loaders/modelsLoader";
 import * as THREE from "three";
-import { GameObjectComponent } from "./gameobject/gameobject.component";
-import { loadDefaultEquirectangularHDR } from "../vipe-3d-engine/loaders/hdrLoader";
+import { PlayerComponent } from "../vipe-3d-engine/components/players/player.component";
+import { PlayerPhysicsComponent } from "../vipe-3d-engine/components/players/player-physics.component";
+import { PlayerControllerComponent } from "../vipe-3d-engine/components/players/player-controller.component";
 
 @Injectable({ providedIn: 'root' })
 export class EditorService {
 
     input: HTMLInputElement;
-
-    gameObjectsHtmlElements: GameObjectComponent[] = [];
-
 
     // Global Components to manage the editor scene
     gridHelperComponent: GridHelperComponent = new GridHelperComponent();
@@ -31,6 +28,7 @@ export class EditorService {
     }
 
     async createEditorScene() {
+        engine.PHYSICS_ENABLED = false;
         const environment = new GameObject();
         environment.name = 'Environment';
         environment.addComponent(this.gridHelperComponent);
@@ -64,6 +62,21 @@ export class EditorService {
             cubeObject.addComponent(new EditableObjectComponent());
             engine.addGameObjects(cubeObject);
         }
+
+        // load VRM
+        const { vrm } = await loadVRM("https://vipe.mypinata.cloud/ipfs/QmZGG9Rezixdw9jjGCWFD39CHLYqmaffPkfw19ihnYsXBU/default_356.vrm");
+
+        const player = new GameObject();
+        player.isEnabled = false;
+        engine.addGameObjects(player);
+
+        const playerComponent = new PlayerComponent(player);
+        await playerComponent.changeAvatar(vrm);
+
+        player.addComponent(playerComponent);
+        player.addComponent(new PlayerPhysicsComponent());
+        player.addComponent(new PlayerControllerComponent());
+        player.addComponent(new EditableObjectComponent());
     }
 
     newGameObject(parent?: GameObject) {

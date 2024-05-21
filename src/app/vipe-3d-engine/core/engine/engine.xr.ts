@@ -49,17 +49,20 @@ class EngineXR extends EngineBase {
             gameObject.update(deltaTime);
         }
 
-        this.world?.step(1 / 60, deltaTime, 3);
+        if (this.PHYSICS_ENABLED)
+            this.world?.step(1 / 60, deltaTime, 3);
 
         for (const gameObject of this.gameObjects) {
             gameObject.lateUpdate(deltaTime);
         }
-
+        
         this.mixers?.forEach(mixer => mixer.update(deltaTime));
 
         if (DEBUG.getValue())
             this.cannonDebugger.update();
 
+        this.renderer.render(this.scene, this.camera);
+        
         this.lastTime = time;
     }
 

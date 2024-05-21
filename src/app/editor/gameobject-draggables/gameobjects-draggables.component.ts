@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, Input } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { EditorService } from '../editor.service';
@@ -17,6 +17,11 @@ export class GameObjectsDraggableComponent {
 
     gameObjects: GameObject[] = [];
 
+    // Shared between all GameObjectComponent instances
+    static gameObjectsHtmlElements: GameObjectComponent[] = [];
+    static dragGameObject: GameObject;
+    static dragGameobjectExpandOverGameobject: any;
+
     constructor(
         private editorService: EditorService,
         private changeDetectorRef: ChangeDetectorRef
@@ -26,13 +31,14 @@ export class GameObjectsDraggableComponent {
 
     ngOnInit() {
         this.editorService.editableSceneComponent?.selectedObject.subscribe(object => {
-            this.editorService.gameObjectsHtmlElements.forEach(element => {
+            GameObjectsDraggableComponent.gameObjectsHtmlElements.forEach(element => {
                 element.isSelected = object === element.gameObject;
             });
         });
         engine.onGameobjectCreated.subscribe((gameobject) => {
             if (gameobject?.parentGameObject ?? false) return;
             this.gameObjects.push(gameobject);
+            setTimeout(() => this.changeDetectorRef.detectChanges());
         });
         engine.onGameobjectRemoved.subscribe((gameobject) => {
             if (gameobject?.parentGameObject ?? false) return;

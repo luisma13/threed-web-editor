@@ -4,6 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { EditorService } from '../editor.service';
 import { GameObject } from '../../vipe-3d-engine/core/gameobject';
 import { engine } from '../../vipe-3d-engine/core/engine/engine';
+import { GameObjectsDraggableComponent } from '../gameobject-draggables/gameobjects-draggables.component';
 
 @Component({
     standalone: true,
@@ -17,6 +18,9 @@ export class GameObjectComponent {
     @ViewChild('title', { static: true }) title: ElementRef;
     @Input() gameObject: GameObject;
     @Input() isRoot: boolean;
+    @Input() gameObjectsHtmlElements: GameObjectComponent[];
+    @Input() dragGameObject: GameObject;
+    @Input() dragGameobjectExpandOverGameobject: GameObject;
     @Output() onSortRoot: EventEmitter<{ position: "below" | "above", onDroppedGameobject: GameObject, movedGameObject }> = new EventEmitter();
     isSelected: boolean;
     showChildren: boolean = false;
@@ -26,17 +30,13 @@ export class GameObjectComponent {
     dragGameobjectExpandOverTime: number;
     dragGameobjectExpandOverArea: number;
 
-    // Shared between all GameObjectComponent instances
-    static dragGameObject: GameObject;
-    static dragGameobjectExpandOverGameobject: any;
-
     constructor(
         private editorService: EditorService,
         private changeDetectorRef: ChangeDetectorRef
     ) { }
 
     ngOnInit() {
-        this.editorService.gameObjectsHtmlElements.push(this);
+        GameObjectsDraggableComponent.gameObjectsHtmlElements.push(this);
     }
 
     ngOnDestroy() {
@@ -64,7 +64,7 @@ export class GameObjectComponent {
     handleDragStart(event, gameObject) {
         // Required by Firefox (https://stackoverflow.com/questions/19055264/why-doesnt-html5-drag-and-drop-work-in-firefox)
         event.dataTransfer.setData('foo', 'bar');
-        GameObjectComponent.dragGameObject = gameObject;
+        GameObjectsDraggableComponent.dragGameObject = gameObject;
     }
 
     handleDragOver(event, gameobject: GameObject) {
@@ -76,9 +76,9 @@ export class GameObjectComponent {
         const onGameobject = engine.gameObjects.find((go) => go.uuid === uuid);
 
         // Handle node expand
-        if (GameObjectComponent.dragGameobjectExpandOverGameobject && onGameobject === GameObjectComponent.dragGameobjectExpandOverGameobject) {
+        if (GameObjectsDraggableComponent.dragGameobjectExpandOverGameobject && onGameobject === GameObjectsDraggableComponent.dragGameobjectExpandOverGameobject) {
             if ((Date.now() - this.dragGameobjectExpandOverTime) > this.dragGameobjectExpandOverWaitTimeMs) {
-                for (const go of this.editorService.gameObjectsHtmlElements) {
+                for (const go of GameObjectsDraggableComponent.gameObjectsHtmlElements) {
                     if (go.gameObject === onGameobject) {
                         go.showChildren = true;
                         break;
@@ -86,12 +86,12 @@ export class GameObjectComponent {
                 }
             }
         } else {
-            GameObjectComponent.dragGameobjectExpandOverGameobject = onGameobject;
+            GameObjectsDraggableComponent.dragGameobjectExpandOverGameobject = onGameobject;
             this.dragGameobjectExpandOverTime = new Date().getTime();
         }
 
-        for (const go of this.editorService.gameObjectsHtmlElements) {
-            if (go.gameObject !== onGameobject && go.gameObject !== GameObjectComponent.dragGameObject) {
+        for (const go of GameObjectsDraggableComponent.gameObjectsHtmlElements) {
+            if (go.gameObject !== onGameobject && go.gameObject !== GameObjectsDraggableComponent.dragGameObject) {
                 go.cleanDragStyles();
             }
         }
@@ -125,23 +125,23 @@ export class GameObjectComponent {
             const parent = onGameobject.parentGameObject;
 
             if (!parent) {
-                GameObjectComponent.dragGameObject.unparentGameObject();
-                this.onSortRoot.emit({ position, onDroppedGameobject: onGameobject, movedGameObject: GameObjectComponent.dragGameObject });
+                GameObjectsDraggableComponent.dragGameObject.unparentGameObject();
+                this.onSortRoot.emit({ position, onDroppedGameobject: onGameobject, movedGameObject: GameObjectsDraggableComponent.dragGameObject });
                 return;
             }
 
-            parent.addGameObject(GameObjectComponent.dragGameObject);
-            const indexDrag = parent.childrenGameObjects.indexOf(GameObjectComponent.dragGameObject);
+            parent.addGameObject(GameObjectsDraggableComponent.dragGameObject);
+            const indexDrag = parent.childrenGameObjects.indexOf(GameObjectsDraggableComponent.dragGameObject);
             const indexOnGameobject = parent.childrenGameObjects.indexOf(onGameobject);
             parent.childrenGameObjects.splice(indexDrag, 1);
-            parent.childrenGameObjects.splice(position === "above" ? indexOnGameobject : indexOnGameobject + 1, 0, GameObjectComponent.dragGameObject);
+            parent.childrenGameObjects.splice(position === "above" ? indexOnGameobject : indexOnGameobject + 1, 0, GameObjectsDraggableComponent.dragGameObject);
         }
 
-        if (onGameobject && onGameobject !== GameObjectComponent.dragGameObject) {
+        if (onGameobject && onGameobject !== GameObjectsDraggableComponent.dragGameObject) {
             const actions = {
                 "above": () => insertOnParent("above"),
                 "below": () => insertOnParent("below"),
-                "center": () => onGameobject.addGameObject(GameObjectComponent.dragGameObject)
+                "center": () => onGameobject.addGameObject(GameObjectsDraggableComponent.dragGameObject)
             }
             actions[this.dragGameobjectExpandOverArea === 0 ? "center" : this.dragGameobjectExpandOverArea === 1 ? "above" : "below"]();
         }
@@ -149,8 +149,8 @@ export class GameObjectComponent {
     }
 
     handleDragEnd(event, gameObject) {
-        GameObjectComponent.dragGameObject = null;
-        GameObjectComponent.dragGameobjectExpandOverGameobject = null;
+        GameObjectsDraggableComponent.dragGameObject = null;
+        GameObjectsDraggableComponent.dragGameobjectExpandOverGameobject = null;
         this.dragGameobjectExpandOverTime = 0;
         this.dragGameobjectExpandOverArea = NaN;
         event.preventDefault();
@@ -158,9 +158,9 @@ export class GameObjectComponent {
     }
 
     getStyle(gameObject) {
-        if (GameObjectComponent.dragGameObject === gameObject) {
+        if (GameObjectsDraggableComponent.dragGameObject === gameObject) {
             return 'drag-start';
-        } else if (GameObjectComponent.dragGameobjectExpandOverGameobject === gameObject) {
+        } else if (GameObjectsDraggableComponent.dragGameobjectExpandOverGameobject === gameObject) {
             switch (this.dragGameobjectExpandOverArea) {
                 case 1:
                     return 'drop-above';

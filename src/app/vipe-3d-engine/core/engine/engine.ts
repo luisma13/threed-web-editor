@@ -40,7 +40,7 @@ class Engine extends EngineBase {
             antialias: true,
             powerPreference: "high-performance"
         });
-        
+
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.renderer.setSize(width, height);
         this.renderer.toneMapping = THREE.LinearToneMapping;
@@ -111,6 +111,11 @@ class Engine extends EngineBase {
         this.scene.background = new THREE.Color(backgroundColour);
 
         this.input.init();
+
+        if (container) {
+            container.appendChild(this.renderer.domElement);
+            this.onResize();
+        }
     }
 
     override update() {
@@ -121,12 +126,13 @@ class Engine extends EngineBase {
             gameObject.update(deltaTime);
         }
 
-        this.world?.step(1 / 60, deltaTime, 3);
+        if (this.PHYSICS_ENABLED)
+            this.world?.step(1 / 60, deltaTime, 3);
 
         for (const gameObject of this.gameObjects) {
             gameObject.lateUpdate(deltaTime);
         }
-
+        
         this.mixers?.forEach(mixer => mixer.update(deltaTime));
 
         if (DEBUG.getValue())
