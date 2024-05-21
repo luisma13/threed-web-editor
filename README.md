@@ -1,5 +1,17 @@
 # Three D Web Editor
 
+![image info](./Editor.png)
+
+# Working Features for editor v0.1
+
+- 3D Lib Layer over ThreeJs with Component / Gameobject system like Unity
+- Toolbar with submenus
+- Context menu with submenus
+- Undo/redo transform changes
+- Load models into scene
+- 3D components UI attributes binding on right sidebar
+- Draggable Tree for sort and change 3D Gameobjects hierarchy
+
 # TODO for editor v0.1
 
 - Update editor actions history to be implemented on HistoryService. Will save commands like loadModelCommand, RemoveCommand, MoveCommand, etc.

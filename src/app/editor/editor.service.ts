@@ -12,6 +12,7 @@ import * as THREE from "three";
 import { PlayerComponent } from "../vipe-3d-engine/components/players/player.component";
 import { PlayerPhysicsComponent } from "../vipe-3d-engine/components/players/player-physics.component";
 import { PlayerControllerComponent } from "../vipe-3d-engine/components/players/player-controller.component";
+import { loadDefaultEquirectangularHDR } from "../vipe-3d-engine/loaders/hdrLoader";
 
 @Injectable({ providedIn: 'root' })
 export class EditorService {
@@ -51,17 +52,17 @@ export class EditorService {
         engine.addGameObjects(SpotLight);
         engine.addGameObjects(directionalLight);
 
-        // loadDefaultEquirectangularHDR();
+        loadDefaultEquirectangularHDR();
 
         // Create cube
-        for (let i = 0; i < 5; i++) {
-            const cube = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshStandardMaterial({ color: 0x000 }));
-            const cubeObject = new GameObject(cube);
-            cubeObject.name = "Cube " + i;
-            cubeObject.position.set(i + 0.5, 0.25, 0);
-            cubeObject.addComponent(new EditableObjectComponent());
-            engine.addGameObjects(cubeObject);
-        }
+        // for (let i = 0; i < 5; i++) {
+        //     const cube = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshStandardMaterial({ color: 0x000 }));
+        //     const cubeObject = new GameObject(cube);
+        //     cubeObject.name = "Cube " + i;
+        //     cubeObject.position.set(i + 0.5, 0.25, 0);
+        //     cubeObject.addComponent(new EditableObjectComponent());
+        //     engine.addGameObjects(cubeObject);
+        // }
 
         // load VRM
         const { vrm } = await loadVRM("https://vipe.mypinata.cloud/ipfs/QmZGG9Rezixdw9jjGCWFD39CHLYqmaffPkfw19ihnYsXBU/default_356.vrm");
