@@ -9,6 +9,7 @@ import { FormsModule } from '@angular/forms';
 import { ToolbarComponent } from './toolbar/toolbar.component';
 import { MatIconModule } from '@angular/material/icon';
 import { GameObjectsDraggableComponent } from './gameobject-draggables/gameobjects-draggables.component';
+import { HistoryService } from './history/history.service';
 
 export class EditorModule { }
 
@@ -35,8 +36,11 @@ export class EditorComponent {
     engine = engine;
     objectSelected: GameObject;
 
+    keyTimers = {}
+
     constructor(
         private editorService: EditorService,
+        private historyService: HistoryService,
         private changeDetector: ChangeDetectorRef
     ) {
         afterNextRender(() => this.initScene());
@@ -85,6 +89,24 @@ export class EditorComponent {
         engine.update();
         requestAnimationFrame(this.animate);
 
+        if (engine.input.controlLeft && engine.input.keys.get('z')) {
+            if (!this.keyTimers['z']) {
+                this.historyService.undo();
+                this.keyTimers['z'] = setTimeout(() => {
+                    delete this.keyTimers['z'];
+                }, 300);
+            }
+        }
+
+        if (engine.input.controlLeft && engine.input.keys.get('y')) {
+            if (!this.keyTimers['y']) {
+                this.historyService.redo();
+                this.keyTimers['y'] = setTimeout(() => {
+                    delete this.keyTimers['y'];
+                }, 300);
+            }
+        }
+
         if (engine.draggingObject) {
             this.changeDetector.detectChanges();
         }
@@ -104,7 +126,7 @@ export class EditorComponent {
         if (extension === ".glb") {
             extension = ".gltf";
         }
-        await this.editorService.loadModel(extension, url);
+        await this.editorService.addModelToScene(extension, url);
     }
 
 }

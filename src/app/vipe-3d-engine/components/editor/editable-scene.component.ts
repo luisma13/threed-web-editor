@@ -9,43 +9,32 @@ import { GameObject } from "../../core/gameobject";
 export class EditableSceneComponent extends Component {
 
     transformControls: TransformControls;
-    history = [];
-    redoStack = [];
-
-    historySubject = new BehaviorSubject(this.history);
-    redoStackSubject = new BehaviorSubject(this.redoStack);
     selectedObject = new BehaviorSubject(undefined);
     mousePressed = false;
 
-    transformControlsMousedownListener = (event) => {
+    onChangeListener: BehaviorSubject<{ transform: { position, rotation, scale }, gameObject: GameObject }> = new BehaviorSubject(undefined);
+
+    transformControlsMousedownListener = () => {
         engine.draggingObject = true;
-        this.saveHistory(this.transformControls.object);
+        this.onChange(this.transformControls.object as GameObject);
     };
-    transoformControlsMouseupListener = (event) => {
+    
+    transoformControlsMouseupListener = () => {
         if (engine.draggingObject) {
-            this.saveHistory(this.transformControls.object);
+            this.onChange(this.transformControls.object as GameObject);
             setTimeout(() => {
                 engine.draggingObject = false;
             }, 100);
         }
     };
-    
-    keyTimers = {}; 
+
+    keyTimers = {};
 
     keysActions = {
         "1": this.changeTransformMode.bind(this, "translate"),
         "2": this.changeTransformMode.bind(this, "rotate"),
         "3": this.changeTransformMode.bind(this, "scale"),
-        "Escape": this.unselectObject.bind(this),
-        "Delete": () => {
-            if (this.transformControls.object) {
-                // engine.removeGameObjects(this.transformControls.object as GameObject);
-                // this.saveHistory(this.transformControls.object);
-                // this.unselectObject();
-            }
-        },
-        "z": this.undo.bind(this),
-        "y": this.redo.bind(this)
+        "Escape": this.unselectObject.bind(this)
     };
 
     constructor() {
@@ -103,62 +92,26 @@ export class EditableSceneComponent extends Component {
         this.transformControls.attach(object);
     }
 
-    saveHistory(object) {
+    onChange(object: GameObject) {
         if (!object)
             return;
 
         const currentState = {
-            position: object.position.clone(),
-            rotation: object.rotation.clone(),
-            scale: object.scale.clone(),
-            object: object
+            transform: {
+                position: object.position.clone(),
+                rotation: object.rotation.clone(),
+                scale: object.scale.clone(),
+            },
+            gameObject: object
         };
 
-        if (!this.history.length || !this.isStateSimilar(this.history[this.history.length - 1], currentState)) {
-            this.history.push(currentState);
-            this.historySubject.next(this.history);
-            this.redoStack = [];
-            this.redoStackSubject.next(this.redoStack);
-        }
+        this.onChangeListener.next(currentState);
     }
 
     isStateSimilar(state1, state2) {
         return state1.position.equals(state2.position) &&
             state1.rotation.equals(state2.rotation) &&
             state1.scale.equals(state2.scale);
-    }
-
-    undo() {
-        if (this.history.length > 1) {
-            const state = this.history.pop();
-            this.redoStack.push(state);
-            const lastState = this.history[this.history.length - 1];
-            this.applyState(lastState);
-        }
-    }
-
-    redo() {
-        if (this.redoStack.length > 0) {
-            const state = this.redoStack.pop();
-            this.history.push(state);
-            this.applyState(state);
-        }
-    }
-
-    applyState(state) {
-        if (!state.object)
-            return;
-
-        this.transformControls.attach(state.object);
-        engine.outlinePass.selectedObjects = [state.object];
-        this.selectedObject.next(state.object);
-
-        state.object.position.copy(state.position);
-        state.object.rotation.copy(state.rotation);
-        state.object.scale.copy(state.scale);
-
-        this.historySubject.next(this.history);
-        this.redoStackSubject.next(this.redoStack);
     }
 
     onClick() {

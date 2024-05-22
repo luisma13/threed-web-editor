@@ -23,7 +23,7 @@ export abstract class EngineBase {
     // PHYSICS OBJECTS
     world: CANNON.World;
 
-    PHYSICS_ENABLED = false;
+    PHYSICS_ENABLED = true;
     readonly PHYSIC_MATERIAL = new CANNON.Material({
         friction: 0, restitution: 0
     })

@@ -52,7 +52,7 @@ export class EditorService {
         engine.addGameObjects(SpotLight);
         engine.addGameObjects(directionalLight);
 
-        loadDefaultEquirectangularHDR();
+        // loadDefaultEquirectangularHDR();
 
         // Create cube
         // for (let i = 0; i < 5; i++) {
@@ -68,6 +68,7 @@ export class EditorService {
         const { vrm } = await loadVRM("https://vipe.mypinata.cloud/ipfs/QmZGG9Rezixdw9jjGCWFD39CHLYqmaffPkfw19ihnYsXBU/default_356.vrm");
 
         const player = new GameObject();
+        player.name = "Player"
         player.isEnabled = false;
         engine.addGameObjects(player);
 
@@ -92,11 +93,11 @@ export class EditorService {
         return gameObject;
     }
 
-    async loadModel(extension: ".gltf" | ".glb" | ".fbx" | ".obj" | ".vrm" | string, url?: string) {
+    async addModelToScene(extension: ".gltf" | ".glb" | ".fbx" | ".obj" | ".vrm" | string, url?: string) {
 
         if (extension !== ".gltf" && extension !== ".glb" && extension !== ".fbx" && extension !== ".obj" && extension !== ".vrm") {
             console.error("Invalid file format");
-            return;
+            return undefined;
         }
 
         const addModelToEngine = async (url) => {
@@ -148,6 +149,7 @@ export class EditorService {
             });
 
         this.editableSceneComponent.selectedObject.next(gameObject);
+        return gameObject;
     }
 
     exportScene() {

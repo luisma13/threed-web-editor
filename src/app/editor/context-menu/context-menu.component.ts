@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, HostListener, Input } from '@angular/core';
 import { EditorService } from '../editor.service';
+import { HistoryService } from '../history/history.service';
 
 @Component({
     standalone: true,
@@ -17,7 +18,10 @@ export class ContextMenuComponent {
     position = { x: 0, y: 0 };
     
 
-    constructor(private editorService: EditorService) {
+    constructor(
+        private editorService: EditorService,
+        private historyService: HistoryService
+    ) {
 
     }
 
@@ -43,8 +47,7 @@ export class ContextMenuComponent {
     }
 
     async ngAfterViewInit() {
-        this.editorService.editableSceneComponent?.historySubject.subscribe(history => this.viewerMenuItems[0].disabled = history.length === 0 || history.length === 1);
-        this.editorService.editableSceneComponent?.redoStackSubject.subscribe(redoStack => this.viewerMenuItems[1].disabled = redoStack.length === 0);
+        
     }
 
     @HostListener('document:contextmenu', ['$event'])
@@ -74,13 +77,13 @@ export class ContextMenuComponent {
             return;
         this.isVisible = false;
         const actions = {
-            'undo': () => this.editorService.editableSceneComponent?.undo(),
-            'redo': () => this.editorService.editableSceneComponent?.redo(),
+            'undo': () => this.historyService.undo(),
+            'redo': () => this.historyService?.redo(),
             'export:scene': () => this.editorService.exportScene(),
             'import:scene': () => this.editorService.loadScene()
         };
         if (item.action.includes('load')) {
-            this.editorService.loadModel(item.action.split(':')[1]);
+            this.editorService.addModelToScene(item.action.split(':')[1]);
             return;
         }
         actions[item.action]();

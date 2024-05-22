@@ -53,6 +53,11 @@ export class EngineInput {
     }
 
     private static readonly keyup = (event) => {
+        this.controlLeft = event.ctrlKey;
+        this.shiftLeft = event.shiftKey;
+        this.controlRight = event.ctrlKey;
+        this.shiftRight = event.shiftKey;
+        
         // save letters only in lowercase
         if (event.key.length === 1 && event.key.match(/[a-z]/i)) {
             this.keys.set(event.key.toLowerCase(), false);

@@ -35,25 +35,28 @@ export class GameObjectsDraggableComponent {
                 element.isSelected = object === element.gameObject;
             });
         });
+        
         engine.onGameobjectCreated.subscribe((gameobject) => {
             if (gameobject?.parentGameObject ?? false) return;
             this.gameObjects.push(gameobject);
             setTimeout(() => this.changeDetectorRef.detectChanges());
         });
+
         engine.onGameobjectRemoved.subscribe((gameobject) => {
             if (gameobject?.parentGameObject ?? false) return;
             this.gameObjects.splice(this.gameObjects.indexOf(gameobject), 1);
         });
+
         engine.onGameobjectHerarchyChanged.subscribe((gameobject) => {
             if (!gameobject) return;
 
             const index = this.gameObjects.indexOf(gameobject);
-            // remove from root
+            // remove from root if already added and has no parent
             if (index !== -1 && gameobject?.parentGameObject) {
                 this.gameObjects.splice(index, 1);
             } 
             
-            // add to root
+            // add to root if not already added and has no parent
             if (!gameobject?.parentGameObject) {
                 this.gameObjects.push(gameobject);
             }

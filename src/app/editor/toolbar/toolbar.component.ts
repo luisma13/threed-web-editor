@@ -1,6 +1,7 @@
 import { Component, OnInit } from "@angular/core";
 import { EditorService } from "../editor.service";
 import { CommonModule } from "@angular/common";
+import { HistoryService } from "../history/history.service";
 
 interface MenuItem {
     label: string;
@@ -24,7 +25,8 @@ export class ToolbarComponent implements OnInit {
     submenus: { [key: string]: boolean } = {};
 
     constructor(
-        public editorService: EditorService
+        public editorService: EditorService,
+        private historyService: HistoryService
     ) { }
 
     ngOnInit() {
@@ -50,11 +52,11 @@ export class ToolbarComponent implements OnInit {
                         submenu: [
                             {
                                 label: 'Load GLB',
-                                action: () => this.editorService.loadModel('.gltf')
+                                action: () => this.editorService.addModelToScene('.gltf')
                             },
-                            { label: 'Load FBX', action: () => this.editorService.loadModel('.fbx') },
-                            { label: 'Load OBJ', action: () => this.editorService.loadModel('.obj') },
-                            { label: 'Load VRM', action: () => this.editorService.loadModel('.vrm') },
+                            { label: 'Load FBX', action: () => this.editorService.addModelToScene('.fbx') },
+                            { label: 'Load OBJ', action: () => this.editorService.addModelToScene('.obj') },
+                            { label: 'Load VRM', action: () => this.editorService.addModelToScene('.vrm') },
                         ]
                     }
                 ]
@@ -66,12 +68,12 @@ export class ToolbarComponent implements OnInit {
                     {
                         label: 'Undo',
                         disabled: true,
-                        action: () => this.editorService.editableSceneComponent.undo()
+                        action: () => this.historyService.undo()
                     },
                     {
                         label: 'Redo',
                         disabled: true,
-                        action: () => this.editorService.editableSceneComponent.redo()
+                        action: () => this.historyService.redo()
                     }
                 ]
             },
@@ -90,9 +92,6 @@ export class ToolbarComponent implements OnInit {
                 ]
             }
         ];
-
-        this.editorService.editableSceneComponent?.historySubject.subscribe(history => this.menuItems[1].submenu[0].disabled = history.length === 0 || history.length === 1);
-        this.editorService.editableSceneComponent?.redoStackSubject.subscribe(redoStack => this.menuItems[1].submenu[1].disabled = redoStack.length === 0);
     }
 
     toggleSubmenu(menuLabel: string) {
