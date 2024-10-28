@@ -36,7 +36,7 @@ export async function createTestScene() {
     });
 
     // load VRM
-    const { vrm } = await loadVRM("https://vipe.mypinata.cloud/ipfs/QmZGG9Rezixdw9jjGCWFD39CHLYqmaffPkfw19ihnYsXBU/default_356.vrm");
+    const { vrm } = await loadVRM("assets/hechie.vrm");
 
     const player = new GameObject();
     engine.addGameObjects(player);

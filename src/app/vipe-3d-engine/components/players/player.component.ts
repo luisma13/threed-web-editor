@@ -2,8 +2,8 @@ import { VRM, VRMUtils } from "@pixiv/three-vrm";
 import * as THREE from "three";
 import { Component } from "../../core/component";
 import { engine } from "../../core/engine/engine";
-import { loadMixamoAnimation } from "../../loaders/mixamoAnimLoader";
 import { GameObject } from "../../core/gameobject";
+import { retargetAnimForVRM } from "../../loaders/mixamoAnimLoader-PRO";
 
 interface OnAvatarChangeEvent {
     (newAvatar: VRM, url: string): void;
@@ -84,14 +84,14 @@ export class PlayerComponent extends Component {
     }
 
     private async fillAnimationsMap() {
-        const idle = await loadMixamoAnimation("assets/anims/idle.fbx", this.vrm);
-        const idleWider = await loadMixamoAnimation("assets/anims/idleWiderArms.fbx", this.vrm);
-        const walk = await loadMixamoAnimation("assets/anims/walk.fbx", this.vrm);
-        const run = await loadMixamoAnimation("assets/anims/run.fbx", this.vrm);
-        const jump = await loadMixamoAnimation("assets/anims/jump.fbx", this.vrm);
-        const falling = await loadMixamoAnimation("assets/anims/falling.fbx", this.vrm);
-        const fallingHigh = await loadMixamoAnimation("assets/anims/falling-high.fbx", this.vrm);
-        const throwAnim = await loadMixamoAnimation("assets/anims/throw.fbx", this.vrm);
+        const idle = await retargetAnimForVRM("assets/anims/idle.fbx", this.vrm);
+        const idleWider = await retargetAnimForVRM("assets/anims/idleWiderArms.fbx", this.vrm);
+        const walk = await retargetAnimForVRM("assets/anims/walk.fbx", this.vrm);
+        const run = await retargetAnimForVRM("assets/anims/run.fbx", this.vrm);
+        const jump = await retargetAnimForVRM("assets/anims/jump.fbx", this.vrm);
+        const falling = await retargetAnimForVRM("assets/anims/falling.fbx", this.vrm);
+        const fallingHigh = await retargetAnimForVRM("assets/anims/falling-high.fbx", this.vrm);
+        const throwAnim = await retargetAnimForVRM("assets/anims/throw.fbx", this.vrm);
         this.animationsMap.set("Idle", this.mixer.clipAction(idle));
         this.animationsMap.set("IdleWider", this.mixer.clipAction(idleWider));
         this.animationsMap.set("Walk", this.mixer.clipAction(walk));
@@ -100,11 +100,16 @@ export class PlayerComponent extends Component {
         this.animationsMap.set("Fall", this.mixer.clipAction(falling));
         this.animationsMap.set("FallHigh", this.mixer.clipAction(fallingHigh));
         this.animationsMap.set("Throw", this.mixer.clipAction(throwAnim));
+        console.log(this.animationsMap);
     }
 
     public async addUserAnimToMap(animName: string, url: string) {
-        const anim = await loadMixamoAnimation(url, this.vrm);
-        this.animationsMap.set(animName, this.mixer.clipAction(anim));
+        try {
+            const anim = await retargetAnimForVRM(url, this.vrm);
+            this.animationsMap.set(animName, this.mixer.clipAction(anim));
+        } catch (e) {
+            console.error(e);
+        }
     }
 
     public update(deltaTime: number): void {

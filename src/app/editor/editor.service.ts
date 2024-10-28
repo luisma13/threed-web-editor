@@ -65,20 +65,23 @@ export class EditorService {
         // }
 
         // load VRM
-        const { vrm } = await loadVRM("https://vipe.mypinata.cloud/ipfs/QmZGG9Rezixdw9jjGCWFD39CHLYqmaffPkfw19ihnYsXBU/default_356.vrm");
+        const { vrm } = await loadVRM("assets/hechie.vrm");
 
         const player = new GameObject();
         player.name = "Player"
-        player.isEnabled = false;
+        player.isEnabled = true;
         engine.addGameObjects(player);
 
         const playerComponent = new PlayerComponent(player);
         await playerComponent.changeAvatar(vrm);
 
-        player.addComponent(playerComponent);
-        player.addComponent(new PlayerPhysicsComponent());
-        player.addComponent(new PlayerControllerComponent());
-        player.addComponent(new EditableObjectComponent());
+        // await playerComponent.addUserAnimToMap("Test", "assets/Idle_Aiming_1H_Art_Flipped.fbx")
+        playerComponent.changeAnim("Idle");
+
+        // player.addComponent(playerComponent);
+        // player.addComponent(new PlayerPhysicsComponent());
+        // player.addComponent(new PlayerControllerComponent());
+        // player.addComponent(new EditableObjectComponent());
     }
 
     newGameObject(parent?: GameObject) {

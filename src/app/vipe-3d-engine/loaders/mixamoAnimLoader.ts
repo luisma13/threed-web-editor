@@ -10,7 +10,7 @@ import { mixamoVRMRigMap } from "./mixamoVRMRigMap";
  * @param vrm A target VRM
  * @returns {Promise<THREE.AnimationClip>} The converted AnimationClip
  */
-export async function loadMixamoAnimation(url: string, vrm: VRM): Promise<THREE.AnimationClip> {
+export async function retargetAnimForVRM(url: string, vrm: VRM): Promise<THREE.AnimationClip> {
     const loader = new FBXLoader(); // A loader which loads FBX
     const asset = await loader.loadAsync(url);
 
