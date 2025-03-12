@@ -1,5 +1,5 @@
-import { engine } from "../../../vipe-3d-engine/core/engine/engine";
-import { GameObject } from "../../../vipe-3d-engine/core/gameobject";
+import { engine } from "../../../simple-engine/core/engine/engine";
+import { GameObject } from "../../../simple-engine/core/gameobject";
 import { EditorService } from "../../editor.service";
 import { Action } from "./actions";
 

@@ -2,6 +2,7 @@ import { Injectable } from "@angular/core";
 import { EditorService } from "../editor.service";
 import { Action, TransformData } from "./actions/actions";
 import { ChangeTransformAction } from "./actions/change-transform.action";
+import { BehaviorSubject } from "rxjs";
 
 @Injectable({ providedIn: 'root' })
 export class HistoryService {
@@ -9,6 +10,10 @@ export class HistoryService {
     historyActions: Action<any>[] = [];
     redoActions: Action<any>[] = [];
     lastTransformState: { gameObject: any, transform: TransformData };
+
+    // Observables para el estado de undo/redo
+    canUndo = new BehaviorSubject<boolean>(false);
+    canRedo = new BehaviorSubject<boolean>(false);
 
     constructor(private editorService: EditorService) {
         this.editorService.editableSceneComponent.onChangeListener.subscribe((data) => {
@@ -30,6 +35,7 @@ export class HistoryService {
     addAction(action: Action<any>) {
         this.historyActions.push(action);
         this.redoActions = [];
+        this.updateCanUndoRedo();
     }
 
     undo() {
@@ -39,6 +45,7 @@ export class HistoryService {
         const lastAction = this.historyActions[this.historyActions.length - 1];
         if (!lastAction) return;
         lastAction.executeUndo(this.editorService);
+        this.updateCanUndoRedo();
     }
 
     redo() {
@@ -46,6 +53,14 @@ export class HistoryService {
         if (!action) return;
         this.historyActions.push(action);
         action.executeRedo(this.editorService);
+        this.updateCanUndoRedo();
     }
 
+    /**
+     * Actualiza el estado de los observables canUndo y canRedo
+     */
+    private updateCanUndoRedo() {
+        this.canUndo.next(this.historyActions.length > 0);
+        this.canRedo.next(this.redoActions.length > 0);
+    }
 }

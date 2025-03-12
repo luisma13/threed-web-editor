@@ -1,3 +1,10 @@
-<div class="gameobjects">
-    <app-game-object (onSortRoot)="onSortedRootGameobject($event)" [isRoot]="true" *ngFor="let gameObject of gameObjects" [gameObject]="gameObject"></app-game-object>
+<div class="gameobjects-container">
+    <div class="gameobjects-list">
+        <app-game-object 
+            (onSortRoot)="onSortedRootGameobject($event)" 
+            [isRoot]="true" 
+            *ngFor="let gameObject of gameObjects" 
+            [gameObject]="gameObject">
+        </app-game-object>
+    </div>
 </div>

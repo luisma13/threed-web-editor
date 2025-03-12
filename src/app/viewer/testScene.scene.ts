@@ -1,12 +1,12 @@
 import * as CANNON from "cannon-es";
 import * as THREE from "three";
-import { PlayerControllerComponent } from "../vipe-3d-engine/components/players/player-controller.component";
-import { PlayerPhysicsComponent } from "../vipe-3d-engine/components/players/player-physics.component";
-import { PlayerComponent } from "../vipe-3d-engine/components/players/player.component";
-import { engine } from "../vipe-3d-engine/core/engine/engine";
-import { GameObject } from "../vipe-3d-engine/core/gameobject";
-import { loadGLTF, loadVRM } from "../vipe-3d-engine/loaders/modelsLoader";
-import { ColliderCameraComponent } from "../vipe-3d-engine/components/camera/collider-camera.component";
+import { PlayerControllerComponent } from "../simple-engine/components/players/player-controller.component";
+import { PlayerPhysicsComponent } from "../simple-engine/components/players/player-physics.component";
+import { PlayerComponent } from "../simple-engine/components/players/player.component";
+import { engine } from "../simple-engine/core/engine/engine";
+import { GameObject } from "../simple-engine/core/gameobject";
+import { loadGLTF, loadVRM } from "../simple-engine/loaders/modelsLoader";
+import { ColliderCameraComponent } from "../simple-engine/components/camera/collider-camera.component";
 
 export async function createTestScene() {
 
@@ -36,7 +36,7 @@ export async function createTestScene() {
     });
 
     // load VRM
-    const { vrm } = await loadVRM("assets/hechie.vrm");
+    const { vrm } = await loadVRM("assets/avatar.vrm");
 
     const player = new GameObject();
     engine.addGameObjects(player);

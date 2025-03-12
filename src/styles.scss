@@ -1,7 +1,9 @@
-@use '@angular/material' as mat;
+@use 'theme-styles';
 
-@include mat.core();
+// Aplicar los estilos del tema
+@include theme-styles.theme-styles();
 
+// Estilos globales
 *,
 *::before,
 *::after {
@@ -14,13 +16,22 @@
 }
 
 ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-    background-color: #f7f7f7;
+    width: 8px;
+    height: 8px;
+    background-color: var(--background-color);
 }
 
 ::-webkit-scrollbar-thumb {
-    background-color: #6c6c6c;
+    background-color: rgba(128, 128, 128, 0.5);
+    border-radius: 4px;
+    &:hover {
+        background-color: rgba(128, 128, 128, 0.7);
+    }
+}
+
+::-webkit-scrollbar-track {
+    background-color: var(--background-color);
+    border-radius: 4px;
 }
 
 html {
@@ -35,25 +46,110 @@ body {
     padding: 0px;
     margin: 0px;
     overflow: hidden auto;
+    background-color: var(--background-color);
+    color: var(--text-color);
 }
 
 body,
 html {
     font-family: "Roboto", sans-serif;
     font-size: 16px;
-    line-height: 1;
+    line-height: 1.5;
     padding: 0px;
     margin: 0px;
-    color: #1a1a1a;
 }
 
 a {
-    color: #000;
+    color: var(--primary-color);
     text-decoration: none;
-    background-color: transparent;
+    transition: color 0.2s ease;
+    
+    &:hover {
+        color: var(--primary-dark-color);
+        text-decoration: underline;
+    }
 }
 
 #ARButton {
     border: 1px solid gray !important;
-    color: black !important;
+    color: var(--text-color) !important;
+}
+
+// Estilos para las notificaciones
+.success-snackbar {
+    background-color: #4caf50;
+    color: white;
+    border-radius: 4px;
+    box-shadow: 0 3px 5px -1px rgba(0,0,0,.2), 0 6px 10px 0 rgba(0,0,0,.14), 0 1px 18px 0 rgba(0,0,0,.12);
+}
+
+.error-snackbar {
+    background-color: #f44336;
+    color: white;
+    border-radius: 4px;
+    box-shadow: 0 3px 5px -1px rgba(0,0,0,.2), 0 6px 10px 0 rgba(0,0,0,.14), 0 1px 18px 0 rgba(0,0,0,.12);
+}
+
+// Clases de utilidad
+.mat-elevation-z1 { box-shadow: var(--shadow-sm); }
+.mat-elevation-z2 { box-shadow: var(--shadow-md); }
+.mat-elevation-z3 { box-shadow: var(--shadow-lg); }
+
+.rounded { border-radius: var(--border-radius); }
+.rounded-lg { border-radius: calc(var(--border-radius) * 2); }
+.rounded-full { border-radius: 9999px; }
+
+.transition { transition: var(--transition); }
+
+// Botones personalizados
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    border-radius: var(--border-radius);
+    font-weight: 500;
+    transition: var(--transition);
+    cursor: pointer;
+    border: none;
+    outline: none;
+    
+    &:hover {
+        box-shadow: var(--shadow-sm);
+    }
+    
+    &:active {
+        transform: translateY(1px);
+    }
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+    
+    &:hover {
+        background-color: var(--primary-dark-color);
+    }
+}
+
+.btn-accent {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+.btn-outline {
+    background-color: transparent;
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+    
+    &:hover {
+        background-color: rgba(var(--primary-color-rgb), 0.1);
+    }
+}
+
+.btn-icon {
+    padding: 8px;
+    border-radius: 50%;
+    min-width: 36px;
+    min-height: 36px;
 }

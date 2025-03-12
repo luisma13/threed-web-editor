@@ -1,39 +1,164 @@
-<div class="container">
+<div class="editor-container">
     <app-toolbar></app-toolbar>
-    <div class="editor">
-        <div class="sidebar sidebar-left">
-            <h4>Scene Hierarchy</h4>
-            <!-- <app-draggable-tree></app-draggable-tree> -->
+    <div class="editor-content">
+        <!-- Panel de jerarquía -->
+        <div class="editor-sidebar editor-sidebar-left mat-elevation-z1">
+            <div class="editor-panel">
+                <div class="editor-panel-header">
+                    <mat-icon>account_tree</mat-icon>
+                    <span>Scene Hierarchy</span>
+                </div>
+                <div class="editor-panel-content">
             <app-game-objects-draggable></app-game-objects-draggable>
-        </div>
-        <div #viewer class="canvas-container">
-
-        </div>
-        <div class="sidebar sidebar-right sidebar-gap" cdkDropList>
-            <h4>{{objectSelected?.name}}</h4>
-            <!-- move to component -->
-            <div class="transform-container transform-col" *ngIf="objectSelected">
-                <div class="transform-row">
-                    <div class="transform-title flex-1-1-0" >Location</div>
-                    <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.position.x" >
-                    <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.position.y" >
-                    <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.position.z" >
-                </div>
-                <div class="transform-row">
-                    <div class="transform-title flex-1-1-0" >Rotation</div>
-                    <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.rotation.x" >
-                    <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.rotation.y" >
-                    <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.rotation.z" >
-                </div>
-                <div class="transform-row">
-                    <div class="transform-title flex-1-1-0" >Scale</div>
-                    <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.scale.x" >
-                    <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.scale.y" >
-                    <input step="0.5" class="flex-1-1-0 input" type="number" [(ngModel)]="objectSelected.scale.z" >
                 </div>
             </div>
-            <!-------------------->
-            <app-component *ngFor="let child of objectSelected?.components" [component]="child"></app-component>
+        </div>
+
+        <!-- Viewport 3D -->
+        <div #viewer class="editor-viewport">
+            <!-- El canvas se renderiza aquí -->
+        </div>
+        
+        <!-- Panel de propiedades -->
+        <div class="editor-sidebar editor-sidebar-right mat-elevation-z1" cdkDropList>
+            <div class="editor-panel">
+                <div class="editor-panel-header">
+                    <mat-icon>tune</mat-icon>
+                    <span>{{objectSelected?.name || 'Properties'}}</span>
+                </div>
+                
+                <!-- Propiedades de transformación -->
+                <div *ngIf="objectSelected">
+                    <mat-expansion-panel expanded class="property-panel transform-panel">
+                        <mat-expansion-panel-header>
+                            <mat-panel-title>
+                                <mat-icon class="transform-icon">transform</mat-icon>
+                                <span>Transform</span>
+                            </mat-panel-title>
+                        </mat-expansion-panel-header>
+                        
+                        <div class="property-group">
+                            <div class="property-row transform-row">
+                                <div class="property-label">Position</div>
+                                <div class="property-inputs">
+                                    <div class="axis-input">
+                                        <span class="axis-label">X</span>
+                                        <mat-form-field appearance="outline" class="transform-field">
+                                            <input matInput type="number" step="0.1" [(ngModel)]="objectSelected.position.x">
+                                            <div class="number-controls">
+                                                <button class="number-up" (click)="incrementValue(objectSelected, 'position', 'x')"></button>
+                                                <button class="number-down" (click)="decrementValue(objectSelected, 'position', 'x')"></button>
+                                            </div>
+                                        </mat-form-field>
+                                    </div>
+                                    <div class="axis-input">
+                                        <span class="axis-label">Y</span>
+                                        <mat-form-field appearance="outline" class="transform-field">
+                                            <input matInput type="number" step="0.1" [(ngModel)]="objectSelected.position.y">
+                                            <div class="number-controls">
+                                                <button class="number-up" (click)="incrementValue(objectSelected, 'position', 'y')"></button>
+                                                <button class="number-down" (click)="decrementValue(objectSelected, 'position', 'y')"></button>
+                                            </div>
+                                        </mat-form-field>
+                                    </div>
+                                    <div class="axis-input">
+                                        <span class="axis-label">Z</span>
+                                        <mat-form-field appearance="outline" class="transform-field">
+                                            <input matInput type="number" step="0.1" [(ngModel)]="objectSelected.position.z">
+                                            <div class="number-controls">
+                                                <button class="number-up" (click)="incrementValue(objectSelected, 'position', 'z')"></button>
+                                                <button class="number-down" (click)="decrementValue(objectSelected, 'position', 'z')"></button>
+                                            </div>
+                                        </mat-form-field>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="property-row transform-row">
+                                <div class="property-label">Rotation</div>
+                                <div class="property-inputs">
+                                    <div class="axis-input">
+                                        <span class="axis-label">X</span>
+                                        <mat-form-field appearance="outline" class="transform-field">
+                                            <input matInput type="number" step="0.1" [(ngModel)]="objectSelected.rotation.x">
+                                            <div class="number-controls">
+                                                <button class="number-up" (click)="incrementValue(objectSelected, 'rotation', 'x')"></button>
+                                                <button class="number-down" (click)="decrementValue(objectSelected, 'rotation', 'x')"></button>
+                                            </div>
+                                        </mat-form-field>
+                                    </div>
+                                    <div class="axis-input">
+                                        <span class="axis-label">Y</span>
+                                        <mat-form-field appearance="outline" class="transform-field">
+                                            <input matInput type="number" step="0.1" [(ngModel)]="objectSelected.rotation.y">
+                                            <div class="number-controls">
+                                                <button class="number-up" (click)="incrementValue(objectSelected, 'rotation', 'y')"></button>
+                                                <button class="number-down" (click)="decrementValue(objectSelected, 'rotation', 'y')"></button>
+                                            </div>
+                                        </mat-form-field>
+                                    </div>
+                                    <div class="axis-input">
+                                        <span class="axis-label">Z</span>
+                                        <mat-form-field appearance="outline" class="transform-field">
+                                            <input matInput type="number" step="0.1" [(ngModel)]="objectSelected.rotation.z">
+                                            <div class="number-controls">
+                                                <button class="number-up" (click)="incrementValue(objectSelected, 'rotation', 'z')"></button>
+                                                <button class="number-down" (click)="decrementValue(objectSelected, 'rotation', 'z')"></button>
+                                            </div>
+                                        </mat-form-field>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="property-row transform-row">
+                                <div class="property-label">Scale</div>
+                                <div class="property-inputs">
+                                    <div class="axis-input">
+                                        <span class="axis-label">X</span>
+                                        <mat-form-field appearance="outline" class="transform-field">
+                                            <input matInput type="number" step="0.1" [(ngModel)]="objectSelected.scale.x">
+                                            <div class="number-controls">
+                                                <button class="number-up" (click)="incrementValue(objectSelected, 'scale', 'x')"></button>
+                                                <button class="number-down" (click)="decrementValue(objectSelected, 'scale', 'x')"></button>
+                                            </div>
+                                        </mat-form-field>
+                                    </div>
+                                    <div class="axis-input">
+                                        <span class="axis-label">Y</span>
+                                        <mat-form-field appearance="outline" class="transform-field">
+                                            <input matInput type="number" step="0.1" [(ngModel)]="objectSelected.scale.y">
+                                            <div class="number-controls">
+                                                <button class="number-up" (click)="incrementValue(objectSelected, 'scale', 'y')"></button>
+                                                <button class="number-down" (click)="decrementValue(objectSelected, 'scale', 'y')"></button>
+                                            </div>
+                                        </mat-form-field>
+                                    </div>
+                                    <div class="axis-input">
+                                        <span class="axis-label">Z</span>
+                                        <mat-form-field appearance="outline" class="transform-field">
+                                            <input matInput type="number" step="0.1" [(ngModel)]="objectSelected.scale.z">
+                                            <div class="number-controls">
+                                                <button class="number-up" (click)="incrementValue(objectSelected, 'scale', 'z')"></button>
+                                                <button class="number-down" (click)="decrementValue(objectSelected, 'scale', 'z')"></button>
+                                            </div>
+                                        </mat-form-field>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </mat-expansion-panel>
+                </div>
+                
+                <!-- Componentes -->
+                <div class="components-container">
+                    <ng-container *ngFor="let child of objectSelected?.components">
+                        <app-component 
+                            *ngIf="!isEditorComponent(child)"
+                            [component]="child">
+                        </app-component>
+                    </ng-container>
+                </div>
+            </div>
         </div>
     </div>
     <app-context-menu #contextMenu></app-context-menu>

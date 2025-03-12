@@ -1,0 +1,126 @@
+@use '@angular/material' as mat;
+@use 'sass:map';
+
+// Definir una paleta de colores personalizada
+$primary-palette: (
+  50: #e3f2fd,
+  100: #bbdefb,
+  200: #90caf9,
+  300: #64b5f6,
+  400: #42a5f5,
+  500: #2196f3,
+  600: #1e88e5,
+  700: #1976d2,
+  800: #1565c0,
+  900: #0d47a1,
+  contrast: (
+    50: rgba(0, 0, 0, 0.87),
+    100: rgba(0, 0, 0, 0.87),
+    200: rgba(0, 0, 0, 0.87),
+    300: rgba(0, 0, 0, 0.87),
+    400: rgba(0, 0, 0, 0.87),
+    500: white,
+    600: white,
+    700: white,
+    800: white,
+    900: white,
+  )
+);
+
+$accent-palette: (
+  50: #fce4ec,
+  100: #f8bbd0,
+  200: #f48fb1,
+  300: #f06292,
+  400: #ec407a,
+  500: #e91e63,
+  600: #d81b60,
+  700: #c2185b,
+  800: #ad1457,
+  900: #880e4f,
+  contrast: (
+    50: rgba(0, 0, 0, 0.87),
+    100: rgba(0, 0, 0, 0.87),
+    200: rgba(0, 0, 0, 0.87),
+    300: rgba(0, 0, 0, 0.87),
+    400: rgba(0, 0, 0, 0.87),
+    500: white,
+    600: white,
+    700: white,
+    800: white,
+    900: white,
+  )
+);
+
+// Define typography config once
+$typography-config: mat.define-typography-config();
+
+// Definir el tema personalizado
+$my-primary: mat.define-palette($primary-palette, 700);
+$my-accent: mat.define-palette($accent-palette, 500);
+$my-warn: mat.define-palette(mat.$red-palette);
+
+// Tema claro
+$light-theme: mat.define-light-theme((
+  color: (
+    primary: $my-primary,
+    accent: $my-accent,
+    warn: $my-warn,
+  ),
+  typography: $typography-config,
+  density: 0,
+));
+
+// Tema oscuro
+$dark-theme: mat.define-dark-theme((
+  color: (
+    primary: $my-primary,
+    accent: $my-accent,
+    warn: $my-warn,
+  ),
+  typography: $typography-config,
+  density: 0,
+));
+
+// Función para aplicar variables CSS según el tema
+@mixin theme-variables($theme) {
+  $color-config: mat.get-color-config($theme);
+  $primary-palette: map.get($color-config, 'primary');
+  $accent-palette: map.get($color-config, 'accent');
+  $warn-palette: map.get($color-config, 'warn');
+  $is-dark: map.get($color-config, 'is-dark');
+
+  @if $is-dark {
+    --primary-color: #{mat.get-color-from-palette($primary-palette, 300)};
+    --primary-light-color: #{mat.get-color-from-palette($primary-palette, 100)};
+    --primary-dark-color: #{mat.get-color-from-palette($primary-palette, 500)};
+    --primary-color-rgb: 100, 181, 246;
+    --accent-color: #{mat.get-color-from-palette($accent-palette, 300)};
+    --warn-color: #{mat.get-color-from-palette($warn-palette, 300)};
+    --text-color: rgba(255, 255, 255, 0.87);
+    --text-light-color: rgba(255, 255, 255, 0.6);
+    --background-color: #121212;
+    --card-background: #1e1e1e;
+    --border-color: rgba(255, 255, 255, 0.12);
+    --hover-color: rgba(255, 255, 255, 0.08);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.24), 0 1px 2px rgba(0,0,0,0.36);
+    --shadow-md: 0 3px 6px rgba(0,0,0,0.32), 0 3px 6px rgba(0,0,0,0.46);
+    --shadow-lg: 0 10px 20px rgba(0,0,0,0.38), 0 6px 6px rgba(0,0,0,0.46);
+  } @else {
+    --primary-color: #{mat.get-color-from-palette($primary-palette, 500)};
+    --primary-light-color: #{mat.get-color-from-palette($primary-palette, 300)};
+    --primary-dark-color: #{mat.get-color-from-palette($primary-palette, 700)};
+    --primary-color-rgb: 25, 118, 210;
+    --accent-color: #{mat.get-color-from-palette($accent-palette, 500)};
+    --warn-color: #{mat.get-color-from-palette($warn-palette, 500)};
+    --text-color: rgba(0, 0, 0, 0.87);
+    --text-light-color: rgba(0, 0, 0, 0.6);
+    --background-color: #f5f5f5;
+    --card-background: #ffffff;
+    --border-color: rgba(0, 0, 0, 0.12);
+    --hover-color: rgba(0, 0, 0, 0.04);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+    --shadow-md: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+    --shadow-lg: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+  }
+} 

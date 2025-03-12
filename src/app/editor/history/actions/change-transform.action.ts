@@ -1,4 +1,4 @@
-import { GameObject } from "../../../vipe-3d-engine/core/gameobject";
+import { GameObject } from "../../../simple-engine/core/gameobject";
 import { EditorService } from "../../editor.service";
 import { Action, TransformData } from "./actions";
 

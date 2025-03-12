@@ -1,94 +1,292 @@
-.container {
+.editor-container {
     display: flex;
     flex-direction: column;
     height: 100vh;
     overflow: hidden;
+    background-color: var(--background-color);
 }
 
-.sidebar {
-    width: 400px;
-    max-width: 30%;
-    background-color: #292929;
-    color: #ffffff;
+.editor-content {
+    display: flex;
+    height: calc(100vh - 56px);
+    overflow: hidden;
+}
+
+.editor-sidebar {
+    width: 320px;
+    background-color: var(--card-background);
     display: flex;
     flex-direction: column;
-    padding: 0 10px;
     overflow-y: auto;
-    overflow-x: auto;
-    border-left: 1px solid #000000;
+    overflow-x: hidden;
     height: 100%;
-    transition: width 0.5s;
+    transition: width 0.3s ease;
+    
+    &.editor-sidebar-left {
+        border-right: 1px solid var(--border-color);
+    }
+    
+    &.editor-sidebar-right {
+        border-left: 1px solid var(--border-color);
+    }
 }
 
-.sidebar-left {
-    border-right: 1px solid #2dc4fc;
-}
-
-.sidebar-right {
-    border-left: 1px solid #2dc4fc;
-}
-
-.sidebar-gap {
-    gap: 5px;
-}
-
-.sidebar>h4 {
-    padding: 10px;
-    background-color: #292929;
-}
-
-.editor {
-    display: flex;
-    height: 100%;
-}
-
-.canvas-container {
-    width: 100%;
-    height: 100%;
+.editor-viewport {
+    flex: 1;
     position: relative;
+    background-color: #1e1e1e;
+    background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 20px 20px;
 }
 
-button {
-    padding: 2px 5px;
-    border-radius: 5px;
-    background-color: #888888;
-    cursor: pointer;
-    color: #ffffff;
-}
-
-canvas {
-    max-width: 100%;
+.editor-panel {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0;
     height: 100%;
+    
+    .editor-panel-header {
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+        background-color: var(--primary-color);
+        color: white;
+        font-weight: 500;
+        
+        mat-icon {
+            margin-right: 8px;
+        }
+    }
+    
+    .editor-panel-content {
+        padding: 16px;
+        flex: 1;
+        overflow-y: auto;
+    }
 }
 
-.transform-title {
-    border-bottom: 2px solid #7b7b7b;
-    padding: 5px;
-    color: #b1b1b1;
-    font-size: 12px;
-    min-width: 60px;
+.property-panel {
+    margin-bottom: 16px;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    
+    ::ng-deep .mat-expansion-panel-header {
+        padding: 0 12px;
+        height: 40px;
+    }
+    
+    ::ng-deep .mat-expansion-panel-body {
+        padding: 12px;
+    }
 }
 
-.transform-container {
-    margin: 0px;
-    padding: 10px 0;
+.property-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.property-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.property-label {
+    font-weight: 500;
+    color: var(--text-color);
+    font-size: 16px;
+}
+
+.property-inputs {
+    display: flex;
+    gap: 10px;
+    
+    ::ng-deep .mat-mdc-form-field {
+        flex: 1;
+        
+        .mat-mdc-form-field-infix {
+            width: auto;
+            min-height: auto;
+            padding: 8px 0;
+        }
+        
+        .mat-mdc-text-field-wrapper {
+            padding: 0 6px;
+        }
+        
+        .mat-mdc-form-field-subscript-wrapper {
+            display: none;
+        }
+        
+        .mat-mdc-form-field-flex {
+            height: 36px;
+        }
+        
+        .mat-mdc-floating-label {
+            font-size: 12px;
+        }
+        
+        input.mat-mdc-input-element {
+            font-size: 12px;
+            line-height: 16px;
+        }
+    }
+}
+
+.components-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.transform-panel {
+    ::ng-deep .mat-expansion-panel-body {
+        padding: 10px 14px;
+    }
 }
 
 .transform-row {
+    margin-bottom: 8px;
+    
+    .property-label {
+        margin-bottom: 4px;
+    }
+}
+
+.axis-input {
     display: flex;
-    gap: 5px;
-    padding: 5px 0;
+    align-items: center;
+    flex: 1;
+    position: relative;
+    
+    &::after {
+        content: "";
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 12px;
+        height: 16px;
+        background-color: transparent;
+        pointer-events: none;
+    }
 }
 
-.flex-1-1-0 {
-    flex: 1 1 auto;
-}
-
-.input {
-    background: #373737;
-    color: white;
+.axis-label {
+    width: 16px;
+    height: 16px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-color);
+    margin-right: 6px;
     text-align: center;
-    border: 1px solid #7b7b7b;
-    flex: 0 1 60px;
-    margin: 0 0 0 auto;
+}
+
+.transform-icon {
+    font-size: 18px;
+    height: 18px;
+    width: 18px;
+    margin-right: 6px;
+}
+
+.transform-field {
+    flex: 1;
+    position: relative;
+    
+    ::ng-deep {
+        .mdc-notched-outline__leading,
+        .mdc-notched-outline__trailing,
+        .mdc-notched-outline__notch {
+            border-width: 1px !important;
+        }
+        
+        .mat-mdc-form-field-flex {
+            height: 36px;
+        }
+        
+        .mat-mdc-form-field-infix {
+            padding: 6px 0;
+            min-height: unset;
+        }
+        
+        input.mat-mdc-input-element {
+            margin-top: 0;
+            padding: 0;
+            font-size: 14px;
+            line-height: 22px;
+            font-weight: 400;
+            text-align: center;
+        }
+    }
+}
+
+/* Controles numéricos personalizados */
+.number-controls {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+    display: flex;
+    flex-direction: column;
+    z-index: 2;
+    
+    button {
+        flex: 1;
+        border: none;
+        background-color: transparent;
+        cursor: pointer;
+        padding: 0;
+        margin: 0;
+        outline: none;
+        position: relative;
+        
+        &:hover {
+            background-color: var(--hover-color);
+        }
+        
+        &:active {
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+        
+        &.number-up::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -70%);
+            width: 0;
+            height: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-bottom: 4px solid var(--text-color);
+        }
+        
+        &.number-down::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -30%);
+            width: 0;
+            height: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 4px solid var(--text-color);
+        }
+    }
+}
+
+/* Estilo personalizado para los inputs numéricos */
+::ng-deep input[type="number"] {
+    /* Ocultar las flechas predeterminadas */
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    -moz-appearance: textfield; /* Firefox */
 }

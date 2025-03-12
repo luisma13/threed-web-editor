@@ -1,6 +1,6 @@
 import { Component, ElementRef, ViewChild, afterNextRender, HostListener } from '@angular/core';
 import { createARVipeRoomScene } from './testSceneXR.scene';
-import { engineXR } from '../vipe-3d-engine/core/engine/engine.xr';
+import { engineXR } from '../simple-engine/core/engine/engine.xr';
 
 @Component({
     selector: 'app-viewer-xr',

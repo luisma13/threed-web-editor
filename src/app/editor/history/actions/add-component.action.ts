@@ -1,4 +1,4 @@
-import { GameObject } from "../../../vipe-3d-engine/core/gameobject";
+import { GameObject } from "../../../simple-engine/core/gameobject";
 import { Action } from "./actions";
 
 export class AddComponentAction extends Action<{ gameObject: GameObject, component: any }> {

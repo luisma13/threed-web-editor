@@ -1,14 +1,58 @@
-<div class="container col">
-    <div class="title">{{component.name}}</div>
-    <div *ngFor="let property of attributes" [class]="property.type === 'array' ? 'col' : 'row'">
-        <span>{{property.name}}</span>
-        <!-- Input para string y number -->
-        <input (ngModelChange)="onPropertyChange($event, property)" class="flex-1-1-0 input" [type]="property.type === 'string' ? 'text' : 'number'" [(ngModel)]="property.value"
-            *ngIf="property.type === 'string' || property.type === 'number'">
+<mat-expansion-panel class="component-panel" [expanded]="attributes.length > 0" (contextmenu)="onContextMenu($event)">
+  <mat-expansion-panel-header>
+    <mat-panel-title>
+      <mat-icon>extension</mat-icon>
+      <span>{{component.name}}</span>
+    </mat-panel-title>
+  </mat-expansion-panel-header>
+  
+  <div class="component-properties">
+    <ng-container *ngFor="let property of attributes">
+      <div class="property-item" [ngClass]="{'property-array': property.type === 'array'}">
+        <!-- Etiqueta de la propiedad -->
+        <div class="property-name">{{property.name}}</div>
+        
+        <!-- Input para string -->
+        <mat-form-field *ngIf="property.type === 'string'" appearance="outline" class="property-field">
+          <input matInput 
+                 [ngModel]="property.value" 
+                 (ngModelChange)="onPropertyChange($event, property)">
+        </mat-form-field>
+        
+        <!-- Input para number -->
+        <mat-form-field *ngIf="property.type === 'number'" appearance="outline" class="property-field">
+          <input matInput 
+                 type="number" 
+                 step="0.1" 
+                 [ngModel]="property.value" 
+                 (ngModelChange)="onPropertyChange($event, property)">
+        </mat-form-field>
+        
         <!-- Checkbox para boolean -->
-        <input (ngModelChange)="onPropertyChange($event, property)" type="checkbox" [(ngModel)]="property.value" *ngIf="property.type === 'boolean'">
-        <!-- para color -->
-        <input (ngModelChange)="onPropertyChange($event, property)" class="color" type="color" [(ngModel)]="property.value" *ngIf="property.type === 'color'" >
-        <input (ngModelChange)="onPropertyChange($event, property)" class="flex-1-1-0 input" type="text" [(ngModel)]="property.value" *ngIf="property.type === 'color'" >
+        <mat-checkbox *ngIf="property.type === 'boolean'" 
+                     [checked]="property.value" 
+                     (change)="onPropertyChange($event.checked, property)"
+                     class="property-checkbox">
+        </mat-checkbox>
+        
+        <!-- Color picker para color -->
+        <div *ngIf="property.type === 'color'" class="color-property">
+          <input type="color" 
+                 [ngModel]="property.value" 
+                 (ngModelChange)="onPropertyChange($event, property)"
+                 class="color-picker">
+          <mat-form-field appearance="outline" class="property-field">
+            <input matInput 
+                   [ngModel]="property.value" 
+                   (ngModelChange)="onPropertyChange($event, property)">
+          </mat-form-field>
+        </div>
+      </div>
+    </ng-container>
+    
+    <!-- Mensaje cuando no hay propiedades -->
+    <div *ngIf="attributes.length === 0" class="no-properties-message">
+      Este componente no tiene propiedades editables.
     </div>
-</div>
+  </div>
+</mat-expansion-panel>

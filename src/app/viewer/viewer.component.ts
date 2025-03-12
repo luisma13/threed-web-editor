@@ -1,5 +1,5 @@
 import { Component, ElementRef, ViewChild, afterNextRender, HostListener } from '@angular/core';
-import { engine } from '../vipe-3d-engine/core/engine/engine';
+import { engine } from '../simple-engine/core/engine/engine';
 import { createTestScene } from './testScene.scene';
 
 @Component({

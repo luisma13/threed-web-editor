@@ -1,9 +1,9 @@
 import * as THREE from "three";
 import { Object3D } from "three";
 import { ARButton } from "three/examples/jsm/webxr/ARButton.js";
-import { engineXR } from "../vipe-3d-engine/core/engine/engine.xr";
-import { GameObject } from "../vipe-3d-engine/core/gameobject";
-import { loadGLTF } from "../vipe-3d-engine/loaders/modelsLoader";
+import { engineXR } from "../simple-engine/core/engine/engine.xr";
+import { GameObject } from "../simple-engine/core/gameobject";
+import { loadGLTF } from "../simple-engine/loaders/modelsLoader";
 
 let hitTestSource: XRHitTestSource;
 let hitTestSourceRequested = false;

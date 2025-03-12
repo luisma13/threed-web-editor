@@ -1,19 +1,34 @@
-<div class="context-menu" *ngIf="isVisible" [style.top.px]="position.y" [style.left.px]="position.x">
-    <ul>
-        <ng-container *ngFor="let item of viewerMenuItems">
-            <li (click)="item.subItems ? undefined : itemSelected(item)" [style.color]="item.disabled ? '#bdbdbd' : ''"
-                *ngIf="!item.subItems">
-                {{ item.label }}
-            </li>
-            <li *ngIf="item.subItems">
-                {{ item.label }} >
-                <ul class="submenu">
-                    <li *ngFor="let subItem of item.subItems" (click)="itemSelected(subItem)"
-                        [style.color]="item.disabled ? '#bdbdbd' : ''">
-                        {{ subItem.label }}
-                    </li>
-                </ul>
-            </li>
-        </ng-container>
-    </ul>
+<div class="context-menu" *ngIf="isVisible" [style.left.px]="x" [style.top.px]="y">
+  <div *ngIf="contextType" class="context-menu-header">{{ contextTypeTitle }}</div>
+  <ul>
+    <ng-container *ngFor="let item of currentMenuItems">
+      <li *ngIf="item.type === 'separator'" class="separator"></li>
+      <li *ngIf="item.type !== 'separator'" 
+          [class.disabled]="item.disabled" 
+          (click)="!item.disabled && !item.items && onItemClick(item)">
+        <span *ngIf="item.icon" class="menu-icon">
+          <i class="fas fa-{{ item.icon }}"></i>
+        </span>
+        {{ item.label }}
+        <span *ngIf="item.items" class="submenu-indicator">
+          <i class="fas fa-chevron-right"></i>
+        </span>
+        <div *ngIf="item.items" class="submenu">
+          <ul>
+            <ng-container *ngFor="let subItem of item.items">
+              <li *ngIf="subItem.type === 'separator'" class="separator"></li>
+              <li *ngIf="subItem.type !== 'separator'"
+                  [class.disabled]="subItem.disabled"
+                  (click)="!subItem.disabled && onItemClick(subItem, $event)">
+                <span *ngIf="subItem.icon" class="menu-icon">
+                  <i class="fas fa-{{ subItem.icon }}"></i>
+                </span>
+                {{ subItem.label }}
+              </li>
+            </ng-container>
+          </ul>
+        </div>
+      </li>
+    </ng-container>
+  </ul>
 </div>

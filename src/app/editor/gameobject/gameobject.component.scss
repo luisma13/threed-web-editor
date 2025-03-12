@@ -1,45 +1,81 @@
 :host {
     display: block;
+    width: 100%;
 }
 
-.row {
-    margin: 0px;
+.gameobject-row {
     width: 100%;
     cursor: pointer;
-    color: white;
     display: flex;
     flex-direction: column;
 }
 
-.title {
-    padding: 5px;
-    border-bottom: 1px solid #7b7b7b;
+.gameobject-title {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--border-color);
     min-height: 40px;
     display: flex;
     align-items: center;
     font-size: 14px;
+    transition: background-color 0.2s ease;
+    border-radius: 4px;
+    
+    &:hover {
+        background-color: var(--hover-color);
+    }
+    
+    &.selected {
+        background-color: var(--primary-color);
+        color: white;
+        font-weight: 500;
+    }
 }
 
+.icon-placeholder {
+    width: 40px;
+    height: 24px;
+}
+
+.expand-button {
+    margin: 0;
+    padding: 0;
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+    color: var(--text-color);
+}
+
+.gameobject-name {
+    margin-left: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.children-container {
+    margin-left: 8px;
+}
+
+// Drag and drop styles
 .drop-above {
-    border-top: 3px solid #089ed4;
-    margin-top: 3px;
+    border-top: 2px solid var(--primary-color);
+    margin-top: 2px;
 }
 
 .drop-below {
-    border-bottom: 3px solid #089ed4;
-    margin-bottom: -3px;
+    border-bottom: 2px solid var(--primary-color);
+    margin-bottom: -2px;
 }
 
 .drop-center {
-    background-color: #089ed4;
+    background-color: rgba(var(--primary-color-rgb), 0.3);
 }
 
 .drag-start {
-    background-color: #68c8eb;
-    color: honeydew;
+    background-color: rgba(var(--primary-color-rgb), 0.2);
+    opacity: 0.7;
 }
 
 .drop-none {
-    background-color: none;
-    border-bottom: 1px solid #7b7b7b;
+    border-bottom: 1px solid var(--border-color);
 }
