@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, ElementRef, HostListener, NgModule, ViewChild, afterNextRender } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, HostListener, NgModule, ViewChild, afterNextRender, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { engine } from '../simple-engine/core/engine/engine';
 import { GameObject } from '../simple-engine/core/gameobject';
 import { CommonModule } from '@angular/common';
@@ -15,7 +15,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { DragDropModule } from '@angular/cdk/drag-drop';
+import { DragDropModule, CdkDragMove } from '@angular/cdk/drag-drop';
 import { FirstPersonCameraComponent } from '../simple-engine/components/camera/first-camera.component';
 import { ContextMenuService } from './context-menu/context-menu.service';
 import { ResourceManagerComponent } from './resource-manager/resource-manager.component';
@@ -43,7 +43,8 @@ export class EditorModule { }
         ResourceManagerComponent
     ],
     templateUrl: './editor.component.html',
-    styleUrl: './editor.component.scss'
+    styleUrl: './editor.component.scss',
+    schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class EditorComponent {
 
@@ -54,6 +55,22 @@ export class EditorComponent {
     objectSelected: GameObject;
 
     keyTimers = {}
+
+    // Variables para el manejo de los divisores ajustables
+    private isDraggingDivider = false;
+    private dividerType: 'horizontal' | 'vertical-left' | 'vertical-right' = 'horizontal';
+    private hierarchyPanel: HTMLElement | null = null;
+    private resourcesPanel: HTMLElement | null = null;
+    private leftSidebar: HTMLElement | null = null;
+    private rightSidebar: HTMLElement | null = null;
+    private initialHierarchyHeight = 0;
+    private initialResourcesHeight = 0;
+    private initialLeftSidebarWidth = 0;
+    private initialRightSidebarWidth = 0;
+    private sidebarHeight = 0;
+    private viewportWidth = 0;
+    private initialMouseX = 0;
+    private initialMouseY = 0;
 
     constructor(
         private editorService: EditorService,
@@ -140,6 +157,9 @@ export class EditorComponent {
                 this.selectDefaultGameObject();
             }, 500);
         }
+
+        // Inicializar los paneles ajustables
+        this.initResizablePanels();
     }
     
     /**
@@ -266,12 +286,33 @@ export class EditorComponent {
     incrementValue(object: any, property: string, axis: string, amount: number = 0.1) {
         if (object && object[property] && object[property][axis] !== undefined) {
             object[property][axis] += amount;
+            this.onTransformChange();
         }
     }
 
     decrementValue(object: any, property: string, axis: string, amount: number = 0.1) {
         if (object && object[property] && object[property][axis] !== undefined) {
             object[property][axis] -= amount;
+            this.onTransformChange();
+        }
+    }
+
+    /**
+     * Maneja los cambios en las propiedades de transformación
+     */
+    onTransformChange() {
+        if (this.objectSelected) {
+            // Actualizar la posición, rotación y escala del objeto seleccionado
+            this.objectSelected.updateMatrix();
+            this.objectSelected.updateMatrixWorld(true);
+            
+            // Notificar a los componentes que necesiten actualizarse
+            if (this.editorService.editableSceneComponent) {
+                this.editorService.editableSceneComponent.onChange(this.objectSelected);
+            }
+            
+            // Forzar la actualización de la UI
+            this.changeDetector.detectChanges();
         }
     }
 
@@ -341,5 +382,314 @@ export class EditorComponent {
     ngAfterViewInit() {
         // Registrar el menú contextual en el servicio
         this.contextMenuService.registerContextMenu(this.contextMenu);
+    }
+
+    /**
+     * Inicializa los paneles ajustables
+     */
+    private initResizablePanels() {
+        // Obtener referencias a los paneles
+        this.hierarchyPanel = document.querySelector('.hierarchy-panel');
+        this.resourcesPanel = document.querySelector('.resources-panel');
+        this.leftSidebar = document.querySelector('.editor-sidebar-left');
+        this.rightSidebar = document.querySelector('.editor-sidebar-right');
+        
+        if (!this.hierarchyPanel || !this.resourcesPanel || !this.leftSidebar || !this.rightSidebar) {
+            console.error('No se pudieron encontrar los elementos del panel');
+            return;
+        }
+        
+        // Cargar las alturas y anchos guardados o usar los predeterminados
+        this.loadPanelDimensions();
+    }
+    
+    /**
+     * Carga las dimensiones de los paneles desde el almacenamiento local
+     */
+    private loadPanelDimensions() {
+        if (!this.hierarchyPanel || !this.resourcesPanel || !this.leftSidebar || !this.rightSidebar) return;
+        
+        try {
+            // Obtener las dimensiones guardadas
+            const savedDimensions = localStorage.getItem('editorPanelDimensions');
+            
+            if (savedDimensions) {
+                const dimensions = JSON.parse(savedDimensions);
+                
+                // Obtener el contenedor del sidebar y del editor
+                const sidebarElement = this.hierarchyPanel.parentElement;
+                const editorContent = document.querySelector('.editor-content');
+                if (!sidebarElement || !editorContent) return;
+                
+                // Obtener las dimensiones totales disponibles
+                const totalHeight = sidebarElement.offsetHeight;
+                const totalWidth = editorContent.clientWidth;
+                
+                // Aplicar las dimensiones guardadas, asegurándose de que sean válidas
+                if (dimensions.hierarchyHeight && dimensions.resourcesHeight) {
+                    this.applyPanelHeights(dimensions.hierarchyHeight, dimensions.resourcesHeight, totalHeight);
+                }
+                
+                if (dimensions.leftSidebarWidth && dimensions.rightSidebarWidth) {
+                    this.applyPanelWidths(dimensions.leftSidebarWidth, dimensions.rightSidebarWidth, totalWidth);
+                }
+                
+                return;
+            }
+        } catch (error) {
+            console.error('Error al cargar las dimensiones de los paneles:', error);
+        }
+        
+        // Si no hay dimensiones guardadas o hay un error, usar las predeterminadas
+        this.applyDefaultDimensions();
+    }
+    
+    /**
+     * Aplica las alturas de los paneles
+     */
+    private applyPanelHeights(hierarchyHeight: number, resourcesHeight: number, totalHeight: number) {
+        // Verificar que las alturas no excedan el espacio disponible
+        const minHeight = 100; // Altura mínima en píxeles
+        const dividerHeight = 8; // Altura del divisor
+        
+        // Calcular las alturas ajustadas
+        let adjustedHierarchyHeight = Math.max(minHeight, hierarchyHeight);
+        let adjustedResourcesHeight = Math.max(minHeight, resourcesHeight);
+        
+        // Ajustar si las alturas combinadas exceden el espacio disponible
+        const totalRequiredHeight = adjustedHierarchyHeight + adjustedResourcesHeight + dividerHeight;
+        if (totalRequiredHeight > totalHeight) {
+            // Reducir proporcionalmente ambas alturas
+            const ratio = (totalHeight - dividerHeight) / (adjustedHierarchyHeight + adjustedResourcesHeight);
+            adjustedHierarchyHeight = Math.max(minHeight, Math.floor(adjustedHierarchyHeight * ratio));
+            adjustedResourcesHeight = Math.max(minHeight, Math.floor(adjustedResourcesHeight * ratio));
+        }
+        
+        // Aplicar las alturas ajustadas
+        this.hierarchyPanel.style.flex = 'none';
+        this.hierarchyPanel.style.height = `${adjustedHierarchyHeight}px`;
+        this.resourcesPanel.style.height = `${adjustedResourcesHeight}px`;
+        
+        // Actualizar las alturas iniciales
+        this.initialHierarchyHeight = adjustedHierarchyHeight;
+        this.initialResourcesHeight = adjustedResourcesHeight;
+        this.sidebarHeight = totalHeight;
+    }
+    
+    /**
+     * Aplica los anchos de los paneles
+     */
+    private applyPanelWidths(leftSidebarWidth: number, rightSidebarWidth: number, totalWidth: number) {
+        // Verificar que los anchos no excedan el espacio disponible
+        const minWidth = 200; // Ancho mínimo en píxeles
+        const minViewportWidth = 400; // Ancho mínimo para el viewport
+        
+        // Calcular los anchos ajustados
+        let adjustedLeftWidth = Math.max(minWidth, leftSidebarWidth);
+        let adjustedRightWidth = Math.max(minWidth, rightSidebarWidth);
+        
+        // Asegurarse de que quede espacio para el viewport
+        const availableWidth = totalWidth - adjustedLeftWidth - adjustedRightWidth;
+        if (availableWidth < minViewportWidth) {
+            // Reducir proporcionalmente ambos anchos
+            const excessWidth = minViewportWidth - availableWidth;
+            const ratio = excessWidth / (adjustedLeftWidth + adjustedRightWidth);
+            adjustedLeftWidth = Math.max(minWidth, Math.floor(adjustedLeftWidth * (1 - ratio)));
+            adjustedRightWidth = Math.max(minWidth, Math.floor(adjustedRightWidth * (1 - ratio)));
+        }
+        
+        // Aplicar los anchos ajustados
+        this.leftSidebar.style.width = `${adjustedLeftWidth}px`;
+        this.rightSidebar.style.width = `${adjustedRightWidth}px`;
+        
+        // Actualizar los anchos iniciales
+        this.initialLeftSidebarWidth = adjustedLeftWidth;
+        this.initialRightSidebarWidth = adjustedRightWidth;
+        this.viewportWidth = totalWidth - adjustedLeftWidth - adjustedRightWidth;
+    }
+    
+    /**
+     * Aplica dimensiones predeterminadas a los paneles
+     */
+    private applyDefaultDimensions() {
+        // Obtener el contenedor del sidebar y del editor
+        const sidebarElement = this.hierarchyPanel.parentElement;
+        const editorContent = document.querySelector('.editor-content');
+        if (!sidebarElement || !editorContent) return;
+        
+        // Calcular alturas predeterminadas
+        const totalHeight = sidebarElement.offsetHeight;
+        const dividerHeight = 8;
+        this.initialHierarchyHeight = Math.floor((totalHeight - dividerHeight) * 0.7); // 70% para la jerarquía
+        this.initialResourcesHeight = totalHeight - this.initialHierarchyHeight - dividerHeight; // El resto para recursos
+        
+        // Aplicar las alturas predeterminadas
+        this.hierarchyPanel.style.flex = 'none';
+        this.hierarchyPanel.style.height = `${this.initialHierarchyHeight}px`;
+        this.resourcesPanel.style.height = `${this.initialResourcesHeight}px`;
+        
+        this.sidebarHeight = totalHeight;
+        
+        // Calcular anchos predeterminados
+        const totalWidth = editorContent.clientWidth;
+        this.initialLeftSidebarWidth = 300; // Ancho predeterminado del sidebar izquierdo
+        this.initialRightSidebarWidth = 300; // Ancho predeterminado del sidebar derecho
+        
+        // Aplicar los anchos predeterminados
+        this.leftSidebar.style.width = `${this.initialLeftSidebarWidth}px`;
+        this.rightSidebar.style.width = `${this.initialRightSidebarWidth}px`;
+        
+        this.viewportWidth = totalWidth - this.initialLeftSidebarWidth - this.initialRightSidebarWidth;
+    }
+
+    /**
+     * Guarda las dimensiones de los paneles en el almacenamiento local
+     */
+    private savePanelDimensions() {
+        if (!this.hierarchyPanel || !this.resourcesPanel || !this.leftSidebar || !this.rightSidebar) return;
+        
+        try {
+            // Guardar las dimensiones actuales
+            const dimensions = {
+                hierarchyHeight: this.hierarchyPanel.offsetHeight,
+                resourcesHeight: this.resourcesPanel.offsetHeight,
+                leftSidebarWidth: this.leftSidebar.offsetWidth,
+                rightSidebarWidth: this.rightSidebar.offsetWidth
+            };
+            
+            localStorage.setItem('editorPanelDimensions', JSON.stringify(dimensions));
+        } catch (error) {
+            console.error('Error al guardar las dimensiones de los paneles:', error);
+        }
+    }
+    
+    /**
+     * Inicia el arrastre del divisor
+     * @param e Evento del mouse
+     * @param type Tipo de divisor ('horizontal', 'vertical-left', 'vertical-right')
+     */
+    public startDividerDrag(e: MouseEvent, type: 'horizontal' | 'vertical-left' | 'vertical-right') {
+        e.preventDefault();
+        this.isDraggingDivider = true;
+        this.dividerType = type;
+        
+        // Guardar la posición inicial del mouse
+        this.initialMouseX = e.clientX;
+        this.initialMouseY = e.clientY;
+        
+        // Guardar las dimensiones iniciales según el tipo de divisor
+        if (type === 'horizontal' && this.hierarchyPanel && this.resourcesPanel) {
+            this.initialHierarchyHeight = this.hierarchyPanel.offsetHeight;
+            this.initialResourcesHeight = this.resourcesPanel.offsetHeight;
+            this.sidebarHeight = this.hierarchyPanel.offsetHeight + this.resourcesPanel.offsetHeight;
+        } else if (type === 'vertical-left' && this.leftSidebar) {
+            this.initialLeftSidebarWidth = this.leftSidebar.offsetWidth;
+        } else if (type === 'vertical-right' && this.rightSidebar) {
+            this.initialRightSidebarWidth = this.rightSidebar.offsetWidth;
+        }
+        
+        // Añadir eventos temporales para el arrastre
+        document.addEventListener('mousemove', this.onDividerDrag);
+        document.addEventListener('mouseup', this.stopDividerDrag);
+    }
+    
+    /**
+     * Maneja el arrastre del divisor
+     */
+    private onDividerDrag = (e: MouseEvent) => {
+        if (!this.isDraggingDivider) return;
+        
+        // Manejar el arrastre según el tipo de divisor
+        if (this.dividerType === 'horizontal') {
+            this.handleHorizontalDrag(e);
+        } else if (this.dividerType === 'vertical-left') {
+            this.handleVerticalLeftDrag(e);
+        } else if (this.dividerType === 'vertical-right') {
+            this.handleVerticalRightDrag(e);
+        }
+    }
+    
+    /**
+     * Maneja el arrastre horizontal (ajuste de altura)
+     */
+    private handleHorizontalDrag(e: MouseEvent) {
+        if (!this.hierarchyPanel || !this.resourcesPanel) return;
+        
+        // Obtener el contenedor del sidebar
+        const sidebarElement = this.hierarchyPanel.parentElement;
+        if (!sidebarElement) return;
+        
+        // Calcular la posición relativa del ratón dentro del sidebar
+        const sidebarRect = sidebarElement.getBoundingClientRect();
+        const relativeY = Math.max(0, Math.min(e.clientY - sidebarRect.top, sidebarRect.height));
+        
+        // Calcular las nuevas alturas
+        const minHeight = 100; // Altura mínima en píxeles
+        const maxHierarchyHeight = sidebarRect.height - minHeight - 8; // Restar la altura del divisor
+        
+        // Limitar la altura del panel de jerarquía entre minHeight y maxHierarchyHeight
+        let newHierarchyHeight = Math.max(minHeight, Math.min(relativeY, maxHierarchyHeight));
+        
+        // La altura del panel de recursos es el resto del espacio disponible menos la altura del divisor
+        let newResourcesHeight = sidebarRect.height - newHierarchyHeight - 8; // 8px es la altura del divisor
+        
+        // Aplicar las nuevas alturas
+        this.hierarchyPanel.style.flex = 'none';
+        this.hierarchyPanel.style.height = `${newHierarchyHeight}px`;
+        this.resourcesPanel.style.height = `${newResourcesHeight}px`;
+    }
+    
+    /**
+     * Maneja el arrastre vertical del sidebar izquierdo (ajuste de ancho)
+     */
+    private handleVerticalLeftDrag(e: MouseEvent) {
+        if (!this.leftSidebar) return;
+        
+        // Calcular el desplazamiento del mouse
+        const deltaX = e.clientX - this.initialMouseX;
+        
+        // Calcular el nuevo ancho
+        const minWidth = 200; // Ancho mínimo en píxeles
+        const maxWidth = window.innerWidth - 600; // Ancho máximo (dejar espacio para el viewport y el sidebar derecho)
+        
+        // Limitar el ancho entre minWidth y maxWidth
+        let newWidth = Math.max(minWidth, Math.min(this.initialLeftSidebarWidth + deltaX, maxWidth));
+        
+        // Aplicar el nuevo ancho
+        this.leftSidebar.style.width = `${newWidth}px`;
+    }
+    
+    /**
+     * Maneja el arrastre vertical del sidebar derecho (ajuste de ancho)
+     */
+    private handleVerticalRightDrag(e: MouseEvent) {
+        if (!this.rightSidebar) return;
+        
+        // Calcular el desplazamiento del mouse
+        const deltaX = e.clientX - this.initialMouseX;
+        
+        // Calcular el nuevo ancho (negativo porque se arrastra desde la izquierda)
+        const minWidth = 200; // Ancho mínimo en píxeles
+        const maxWidth = window.innerWidth - 600; // Ancho máximo (dejar espacio para el viewport y el sidebar izquierdo)
+        
+        // Limitar el ancho entre minWidth y maxWidth
+        let newWidth = Math.max(minWidth, Math.min(this.initialRightSidebarWidth - deltaX, maxWidth));
+        
+        // Aplicar el nuevo ancho
+        this.rightSidebar.style.width = `${newWidth}px`;
+    }
+    
+    /**
+     * Detiene el arrastre del divisor
+     */
+    private stopDividerDrag = () => {
+        this.isDraggingDivider = false;
+        
+        // Eliminar los eventos temporales
+        document.removeEventListener('mousemove', this.onDividerDrag);
+        document.removeEventListener('mouseup', this.stopDividerDrag);
+        
+        // Guardar las dimensiones actuales
+        this.savePanelDimensions();
     }
 }

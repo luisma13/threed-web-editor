@@ -1,0 +1,62 @@
+<mat-expansion-panel expanded>
+    <mat-expansion-panel-header>
+        <mat-panel-title>
+            <mat-icon>view_in_ar</mat-icon>
+            <span>Cached Models ({{ cachedModels.length }})</span>
+        </mat-panel-title>
+    </mat-expansion-panel-header>
+
+    <!-- Canvas auxiliar oculto para renderizar las previsualizaciones -->
+    <canvas #auxiliaryCanvas style="display: none; position: absolute; pointer-events: none;"></canvas>
+
+    <div class="model-list">
+        <div *ngIf="cachedModels.length === 0" class="empty-state">
+            <mat-icon>category</mat-icon>
+            <p>No models in cache. Load a model to see it here.</p>
+        </div>
+        
+        <div *ngFor="let model of cachedModels" class="model-card" 
+             [class.selected]="selectedModel === model.uuid"
+             (click)="selectModel(model.uuid)">
+            <div class="model-preview">
+                <div class="model-icon" [ngClass]="getModelTypeClass(model.modelType)">
+                    <!-- Imagen de previsualización si está disponible -->
+                    <img *ngIf="getModelPreview(model.uuid)" [src]="getModelPreview(model.uuid)" class="preview-image" alt="Model preview">
+                    <!-- Icono de respaldo si la previsualización no está disponible -->
+                    <mat-icon *ngIf="!getModelPreview(model.uuid)" aria-hidden="false">{{ getModelTypeIcon(model.modelType) }}</mat-icon>
+                </div>
+            </div>
+            <div class="model-info">
+                <div class="model-name" [matTooltip]="model.name">{{ model.name }}</div>
+                <div class="model-details">
+                    <span class="model-type">{{ model.modelType }}</span>
+                    <span class="model-stats">
+                        <span class="stat" matTooltip="Geometries">
+                            <mat-icon class="tiny-icon" aria-hidden="false">category</mat-icon>
+                            <span>{{ model.geometries.length }}</span>
+                        </span>
+                        <span class="stat" matTooltip="Materials">
+                            <mat-icon class="tiny-icon" aria-hidden="false">palette</mat-icon>
+                            <span>{{ model.materials.length }}</span>
+                        </span>
+                        <span class="stat" matTooltip="References">
+                            <mat-icon class="tiny-icon" aria-hidden="false">link</mat-icon>
+                            <span>{{ model.refCount }}</span>
+                        </span>
+                    </span>
+                </div>
+            </div>
+            <div class="model-actions">
+                <button mat-icon-button matTooltip="Add to scene" (click)="addToScene(model.uuid, $event)">
+                    <mat-icon aria-hidden="false">add_circle_outline</mat-icon>
+                </button>
+                <button mat-icon-button matTooltip="Clone model" (click)="cloneModel(model.uuid, $event)">
+                    <mat-icon aria-hidden="false">content_copy</mat-icon>
+                </button>
+                <button mat-icon-button matTooltip="View details" (click)="viewModelDetails(model.uuid, $event)">
+                    <mat-icon aria-hidden="false">info</mat-icon>
+                </button>
+            </div>
+        </div>
+    </div>
+</mat-expansion-panel> 

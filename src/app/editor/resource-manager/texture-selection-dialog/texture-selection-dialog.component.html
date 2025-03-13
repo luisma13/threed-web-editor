@@ -18,7 +18,10 @@
         </div>
         <mat-selection-list #textureList [multiple]="false">
             <mat-list-option *ngFor="let texture of data.textures" [value]="texture">
-                {{ texture }}
+                <div class="texture-list-item">
+                    <img *ngIf="getTexturePreviewUrl(texture)" [src]="getTexturePreviewUrl(texture)" class="texture-thumbnail" alt="Texture preview">
+                    <span>{{ texture }}</span>
+                </div>
             </mat-list-option>
         </mat-selection-list>
         <p *ngIf="data.textures.length === 0">No textures available</p>

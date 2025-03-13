@@ -8,46 +8,25 @@
 
 .editor-content {
     display: flex;
-    height: calc(100vh - 56px);
+    position: relative;
+    height: calc(100vh - 64px);
     overflow: hidden;
 }
 
 .editor-sidebar {
-    width: 300px;
-    background-color: #1e1e1e;
+    position: relative;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
-
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    overflow: hidden;
+    
     &.editor-sidebar-left {
-        border-right: 1px solid #333;
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-
-        .hierarchy-panel {
-            flex: 1;
-            overflow: auto;
-            min-height: 0;
-            display: flex;
-            flex-direction: column;
-
-            .editor-panel-content {
-                flex: 1;
-                overflow: auto;
-            }
-        }
-
-        .resources-panel {
-            height: 300px;
-            min-height: 300px;
-            overflow: auto;
-            border-top: 1px solid #333;
-        }
+        width: 300px;
     }
-
+    
     &.editor-sidebar-right {
-        border-left: 1px solid #333;
+        width: 300px;
     }
 }
 
@@ -55,10 +34,7 @@
     flex: 1;
     position: relative;
     background-color: #1e1e1e;
-    background-image: 
-        linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-    background-size: 20px 20px;
+    overflow: hidden;
 }
 
 .editor-panel {
@@ -87,70 +63,117 @@
 }
 
 .property-panel {
-    margin-bottom: 16px;
-    border-radius: var(--border-radius);
-    overflow: hidden;
+    margin-bottom: 8px;
+    background-color: #333333;
     
-    ::ng-deep .mat-expansion-panel-header {
+    .mat-expansion-panel-header {
         padding: 0 12px;
-        height: 40px;
+        height: 36px;
     }
     
-    ::ng-deep .mat-expansion-panel-body {
-        padding: 12px;
+    .mat-expansion-panel-body {
+        padding: 8px 12px;
     }
 }
 
 .property-group {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
 }
 
 .property-row {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
 }
 
 .property-label {
-    font-weight: 500;
-    color: var(--text-color);
-    font-size: 16px;
+    font-size: 12px;
+    color: #aaaaaa;
+    margin-bottom: 4px;
 }
 
 .property-inputs {
     display: flex;
-    gap: 10px;
+    gap: 8px;
+}
+
+.axis-input {
+    display: flex;
+    align-items: center;
+    flex: 1;
     
-    ::ng-deep .mat-mdc-form-field {
+    .axis-label {
+        width: 16px;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 500;
+        margin-right: 4px;
+        color: #e0e0e0;
+    }
+}
+
+.transform-field {
+    width: 100%;
+    
+    ::ng-deep .mat-mdc-form-field-infix {
+        padding: 8px 0;
+        min-height: auto;
+    }
+    
+    ::ng-deep .mat-mdc-text-field-wrapper {
+        padding: 0 8px;
+    }
+    
+    ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+        display: none;
+    }
+}
+
+.number-controls {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    width: 16px;
+    
+    button {
         flex: 1;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         
-        .mat-mdc-form-field-infix {
-            width: auto;
-            min-height: auto;
-            padding: 8px 0;
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.1);
         }
         
-        .mat-mdc-text-field-wrapper {
-            padding: 0 6px;
+        &:active {
+            background-color: rgba(255, 255, 255, 0.2);
         }
-        
-        .mat-mdc-form-field-subscript-wrapper {
-            display: none;
+    }
+    
+    .number-up {
+        &::after {
+            content: '';
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-bottom: 4px solid #aaaaaa;
         }
-        
-        .mat-mdc-form-field-flex {
-            height: 36px;
-        }
-        
-        .mat-mdc-floating-label {
-            font-size: 12px;
-        }
-        
-        input.mat-mdc-input-element {
-            font-size: 12px;
-            line-height: 16px;
+    }
+    
+    .number-down {
+        &::after {
+            content: '';
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 4px solid #aaaaaa;
         }
     }
 }
@@ -158,7 +181,7 @@
 .components-container {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 8px;
 }
 
 .transform-panel {
@@ -175,40 +198,12 @@
     }
 }
 
-.axis-input {
-    display: flex;
-    align-items: center;
-    flex: 1;
-    position: relative;
-    
-    &::after {
-        content: "";
-        position: absolute;
-        right: 8px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 12px;
-        height: 16px;
-        background-color: transparent;
-        pointer-events: none;
-    }
-}
-
-.axis-label {
-    width: 16px;
-    height: 16px;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-color);
-    margin-right: 6px;
-    text-align: center;
-}
-
 .transform-icon {
-    font-size: 18px;
-    height: 18px;
-    width: 18px;
-    margin-right: 6px;
+    color: #64b5f6;
+    margin-right: 8px;
+    font-size: 16px;
+    height: 16px;
+    width: 16px;
 }
 
 .transform-field {
@@ -242,59 +237,51 @@
     }
 }
 
-/* Controles numéricos personalizados */
-.number-controls {
-    position: absolute;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    width: 20px;
+/* Estilos comunes para todos los divisores */
+.resizable-divider {
+    background-color: #333333;
+    position: relative;
+    z-index: 10;
+    user-select: none;
+    touch-action: none;
     display: flex;
-    flex-direction: column;
-    z-index: 2;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
     
-    button {
-        flex: 1;
-        border: none;
-        background-color: transparent;
-        cursor: pointer;
-        padding: 0;
-        margin: 0;
-        outline: none;
-        position: relative;
+    &:hover {
+        background-color: #444444;
+    }
+    
+    &:active {
+        background-color: #555555;
+    }
+    
+    /* Divisor horizontal (para ajustar alturas) */
+    &:not(.vertical-divider-left):not(.vertical-divider-right) {
+        height: 8px;
+        width: 100%;
+        cursor: ns-resize;
         
-        &:hover {
-            background-color: var(--hover-color);
+        .divider-handle {
+            width: 30px;
+            height: 4px;
+            background-color: #666666;
+            border-radius: 2px;
         }
+    }
+    
+    /* Divisores verticales (para ajustar anchos) */
+    &.vertical-divider-left, &.vertical-divider-right {
+        width: 8px;
+        height: 100%;
+        cursor: ew-resize;
         
-        &:active {
-            background-color: rgba(0, 0, 0, 0.1);
-        }
-        
-        &.number-up::before {
-            content: "";
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -70%);
-            width: 0;
-            height: 0;
-            border-left: 4px solid transparent;
-            border-right: 4px solid transparent;
-            border-bottom: 4px solid var(--text-color);
-        }
-        
-        &.number-down::before {
-            content: "";
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -30%);
-            width: 0;
-            height: 0;
-            border-left: 4px solid transparent;
-            border-right: 4px solid transparent;
-            border-top: 4px solid var(--text-color);
+        .divider-handle {
+            height: 30px;
+            width: 4px;
+            background-color: #666666;
+            border-radius: 2px;
         }
     }
 }
@@ -308,4 +295,56 @@
         margin: 0;
     }
     -moz-appearance: textfield; /* Firefox */
+}
+
+// Estilos específicos para los paneles de jerarquía y recursos
+.hierarchy-panel, .resources-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-bottom: 1px solid #3a3a3a;
+}
+
+.hierarchy-panel {
+    flex: 1;
+    min-height: 100px;
+    
+    .panel-content {
+        overflow-y: auto;
+        height: 100%;
+    }
+}
+
+.resources-panel {
+    min-height: 100px;
+    
+    .panel-content {
+        overflow-y: auto;
+        height: 100%;
+    }
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: #333333;
+    border-bottom: 1px solid #444444;
+    
+    mat-icon {
+        margin-right: 8px;
+        font-size: 18px;
+        height: 18px;
+        width: 18px;
+    }
+    
+    span {
+        font-size: 14px;
+        font-weight: 500;
+    }
+}
+
+.panel-content {
+    flex: 1;
+    padding: 8px;
 }

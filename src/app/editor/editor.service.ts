@@ -16,16 +16,22 @@ import { PlayerControllerComponent } from "../simple-engine/components/players/p
 import { loadDefaultEquirectangularHDR } from "../simple-engine/loaders/hdrLoader";
 import { SceneExportService } from "./scene-export.service";
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import { ComponentInfo } from './component-selector/component-selector-dialog.component';
 import { Component } from "../simple-engine/core/component";
 import { BoxComponent } from "../simple-engine/components/geometry/box.component";
 import { BoxColliderComponent } from "../simple-engine/components/geometry/box-collider.component";
 import { ComponentRegistry } from '../simple-engine/utils/component-registry';
 import { SceneSerializer } from '../simple-engine/utils/scene-serializer';
-import { ResourceService } from './resource-manager/resource.service';
+import { ResourceService, ResourceInfo } from './resource-manager/resource.service';
 import { MaterialManager } from '../simple-engine/managers/material-manager';
+import { ModelCacheService } from './resource-manager/model-cache.service';
+import { AddModelAction, RemoveModelAction } from './history/actions/model-action';
+import { EditorEventsService } from './shared/editor-events.service';
+import { ModelComponent } from "../simple-engine/components/geometry/model.component";
 
 @Injectable({ providedIn: 'root' })
 export class EditorService {
@@ -59,7 +65,9 @@ export class EditorService {
     constructor(
         private sceneExportService: SceneExportService,
         @Inject(PLATFORM_ID) private platformId: Object,
-        private resourceService: ResourceService
+        private resourceService: ResourceService,
+        private modelCacheService: ModelCacheService,
+        private editorEventsService: EditorEventsService
     ) {
         // Solo crear el input si estamos en el navegador
         if (isPlatformBrowser(this.platformId)) {
@@ -74,6 +82,9 @@ export class EditorService {
             
             // Make the ResourceService available globally for components
             (window as any)['resourceService'] = this.resourceService;
+            
+            // Make the EditorEventsService available globally for components
+            (window as any)['editorEventsService'] = this.editorEventsService;
         }
     }
     
@@ -293,93 +304,259 @@ export class EditorService {
         this.input.click();
     }
 
-    async addModelToScene(extension: string, url?: string) {
-        if (!url) {
-            return new Promise<void>((resolve) => {
-                this.input.onchange = async (event) => {
-                    const file = (event.target as HTMLInputElement).files[0];
-                    const fileUrl = URL.createObjectURL(file);
-                    await this.loadModel(extension, fileUrl);
-                    resolve();
-                };
-                this.input.click();
-            });
+    /**
+     * Carga un modelo con caché y lo añade a la escena
+     * @param url URL del modelo
+     * @param modelType Tipo de modelo
+     * @returns Promise con el GameObject creado
+     */
+    async loadModelWithCache(url: string, modelType: string): Promise<GameObject | undefined> {
+        try {
+            // Comprobar si el modelo ya está en caché
+            const cachedModel = this.modelCacheService.getModelByUrl(url);
+            let modelUuid: string;
+            
+            if (cachedModel) {
+                modelUuid = cachedModel.uuid;
         } else {
-            await this.loadModel(extension, url);
+                // Cargar el modelo
+                const result = await this.loadModel(url, modelType);
+                if (!result) {
+                    return undefined;
+                }
+
+                const { object, animations } = result;
+
+                // Extraer el nombre del archivo de la URL
+                const urlParts = url.split('/');
+                const fileName = urlParts[urlParts.length - 1];
+                const name = fileName.split('.')[0];
+
+                // Añadir el modelo al caché
+                modelUuid = this.modelCacheService.addModel(object, url, modelType, name);
+                
+                // Guardar las animaciones en el caché
+                if (animations && animations.length > 0) {
+                    this.modelCacheService.addModelAnimations(modelUuid, animations);
+                }
+            }
+
+            // Añadir el modelo a la escena desde el caché
+            return this.addModelToSceneFromCache(modelUuid);
+        } catch (error) {
+            console.error('Error loading model with cache:', error);
+            return undefined;
         }
     }
 
-    private async loadModel(extension: string, url: string) {
-        let model: THREE.Object3D;
-        switch (extension) {
-            case '.gltf':
-                model = await this.loadGLTF(url);
-                break;
-            case '.fbx':
-                model = await this.loadFBX(url);
-                break;
-            case '.obj':
-                model = await this.loadOBJ(url);
-                break;
-            case '.vrm':
-                // Usar GLTFLoader para VRM si VRMLoader no está disponible
-                model = await this.loadGLTF(url);
-                break;
+    /**
+     * Deletes a GameObject and releases its model from the cache if applicable
+     * @param gameObject GameObject to delete
+     * @param addToHistory Whether to add the action to history for undo/redo
+     * @param removeFromCache Whether to remove the model from the cache (defaults to false)
+     */
+    deleteGameObject(gameObject: GameObject, addToHistory: boolean = true, removeFromCache: boolean = false): void {
+        if (!gameObject) return;
+        
+        // Check if this GameObject has a cached model
+        const modelUuid = gameObject.userData?.['modelUuid'];
+        
+        // Store model info before deletion if needed for history
+        let modelInfo = null;
+        if (modelUuid && addToHistory) {
+            modelInfo = this.modelCacheService.getModel(modelUuid);
         }
-
-        if (model) {
-            // Crear un nuevo GameObject con el nombre del archivo
-            const fileName = url.split('/').pop().split('.')[0];
-            const gameObject = new GameObject();
-            gameObject.name = fileName;
+        
+        // Si hay información del modelo, decrementar los contadores de referencia
+        if (modelInfo) {
+            // Decrementar el contador de referencias del modelo
+            this.modelCacheService.releaseModel(modelUuid, removeFromCache);
             
-            // Añadir el modelo 3D al GameObject
-            gameObject.add(model);
+            // Decrementar el contador de referencias de los materiales asociados
+            if (modelInfo.materials && modelInfo.materials.length > 0) {
+                modelInfo.materials.forEach(materialUuid => {
+                    const materialInfo = this.resourceService.materials.get(materialUuid);
+                    if (materialInfo && materialInfo.refCount > 0) {
+                        materialInfo.refCount--;
+                    }
+                });
+                // Notificar cambios en los materiales
+                this.resourceService.materialsSubject.next(new Map(this.resourceService.materials));
+            }
             
-            // Añadir el GameObject a la escena
-            engine.addGameObjects(gameObject);
-
-            // Seleccionar el objeto recién creado
-            if (this.editableSceneComponent) {
-                this.editableSceneComponent.selectedObject.next(gameObject);
+            // Decrementar el contador de referencias de las texturas asociadas
+            if (modelInfo.textures && modelInfo.textures.length > 0) {
+                modelInfo.textures.forEach(textureUuid => {
+                    const textureInfo = this.resourceService.textures.get(textureUuid);
+                    if (textureInfo && textureInfo.refCount > 0) {
+                        textureInfo.refCount--;
+                    }
+                });
+                // Notificar cambios en las texturas
+                this.resourceService.texturesSubject.next(new Map(this.resourceService.textures));
             }
         }
+        
+        // Si el objeto está seleccionado, deseleccionarlo
+        if (this.editableSceneComponent.selectedObject.value === gameObject) {
+            this.editableSceneComponent.unselectObject();
+        }
+        
+        // Guardar referencia al padre antes de eliminarlo
+        const parent = gameObject.parent;
+        const parentGameObject = gameObject.parentGameObject;
+        
+        // Eliminar también los hijos recursivamente primero
+        // Importante: Hacer esto antes de eliminar el objeto de la escena
+        if (gameObject.children && gameObject.children.length > 0) {
+            // Crear una copia del array de hijos para evitar problemas al modificar el array original
+            const children = [...gameObject.children];
+            for (const child of children) {
+                if (child instanceof GameObject) {
+                    this.deleteGameObject(child, false); // No añadir los hijos al historial
+                }
+            }
+        }
+        
+        // Si tiene un padre GameObject, eliminarlo de la lista de hijos del padre
+        if (parentGameObject) {
+            const childIndex = parentGameObject.childrenGameObjects.indexOf(gameObject);
+            if (childIndex !== -1) {
+                parentGameObject.childrenGameObjects.splice(childIndex, 1);
+            }
+        }
+        
+        // Eliminar el GameObject de la escena
+        if (parent) {
+            parent.remove(gameObject);
+        }
+        
+        // Eliminar el GameObject de la lista de GameObjects del motor
+        const index = engine.gameObjects.indexOf(gameObject);
+        if (index !== -1) {
+            engine.gameObjects.splice(index, 1);
+            
+            // Emitir el evento onGameobjectRemoved para que la jerarquía se actualice
+            engine.onGameobjectRemoved.next(gameObject);
+        }
+        
+        // Limpiar referencias circulares
+        if (gameObject.childrenGameObjects) {
+            gameObject.childrenGameObjects = [];
+        }
+        gameObject.parentGameObject = null;
+        
+        // Si tenía un padre, notificar que la jerarquía del padre ha cambiado
+        if (parentGameObject) {
+            // Emitir evento de cambio en la jerarquía para que el padre actualice su lista de hijos
+            engine.onGameobjectHerarchyChanged.next(parentGameObject);
+        }
+        
+        // If it has a cached model and we should add to history, create a RemoveModelAction
+        if (modelUuid && addToHistory && modelInfo) {
+            const removeModelAction = new RemoveModelAction({
+                modelUuid: modelUuid,
+                gameObject: gameObject,
+                url: modelInfo.url,
+                modelType: modelInfo.modelType,
+                name: modelInfo.name
+            }, this.modelCacheService);
+            
+            // Emit the action through the events service
+            this.editorEventsService.emitAction(removeModelAction);
+        }
     }
 
-    private loadGLTF(url: string): Promise<THREE.Object3D> {
-        return new Promise((resolve, reject) => {
-            const loader = new GLTFLoader();
-            loader.load(url, (gltf) => {
-                resolve(gltf.scene);
-            }, undefined, (error) => {
-                console.error('Error loading GLTF model:', error);
-                reject(error);
-            });
-        });
-    }
-
-    private loadFBX(url: string): Promise<THREE.Object3D> {
-        return new Promise((resolve, reject) => {
-            const loader = new FBXLoader();
-            loader.load(url, (fbx) => {
-                resolve(fbx);
-            }, undefined, (error) => {
-                console.error('Error loading FBX model:', error);
-                reject(error);
-            });
-        });
-    }
-
-    private loadOBJ(url: string): Promise<THREE.Object3D> {
-        return new Promise((resolve, reject) => {
-            const loader = new OBJLoader();
-            loader.load(url, (obj) => {
-                resolve(obj);
-            }, undefined, (error) => {
-                console.error('Error loading OBJ model:', error);
-                reject(error);
-            });
-        });
+    /**
+     * Adds a model to the scene
+     * @param extension File extension or model type
+     * @param url Optional URL to load the model from
+     * @returns Promise with the created GameObject
+     */
+    async addModelToScene(extension: string, url?: string): Promise<GameObject | undefined> {
+        try {
+            if (!url) {
+                // Create a file input element
+                const input = document.createElement('input');
+                input.type = 'file';
+                
+                // Set accepted file types based on extension
+        switch (extension) {
+            case '.gltf':
+                        input.accept = '.gltf,.glb';
+                        break;
+                    case '.glb':
+                        input.accept = '.glb';
+                break;
+            case '.fbx':
+                        input.accept = '.fbx';
+                break;
+            case '.obj':
+                        input.accept = '.obj';
+                break;
+            case '.vrm':
+                        input.accept = '.vrm';
+                break;
+                    default:
+                        input.accept = '.gltf,.glb,.fbx,.obj,.vrm';
+                }
+                
+                // Create a promise to handle the file selection
+                return new Promise<GameObject | undefined>((resolve) => {
+                    input.onchange = async (event) => {
+                        const files = (event.target as HTMLInputElement).files;
+                        const file = files ? files[0] : null;
+                        
+                        if (file) {
+                            const fileUrl = URL.createObjectURL(file);
+                            try {
+                                // Determine the file extension from the file name
+                                const fileName = file.name;
+                                const fileExtension = '.' + fileName.split('.').pop()?.toLowerCase();
+                                
+                                // Use the file extension as the model type
+                                const gameObject = await this.addModelToScene(fileExtension, fileUrl);
+                                resolve(gameObject);
+                            } catch (error) {
+                                console.error('Error loading model:', error);
+                                resolve(undefined);
+                            }
+                        } else {
+                            resolve(undefined);
+                        }
+                    };
+                    
+                    // Trigger the file dialog
+                    input.click();
+                });
+            }
+            
+            // Determine the model type from the extension
+            let modelType = '';
+            switch (extension.toLowerCase()) {
+                case '.gltf':
+                case '.glb':
+                    modelType = 'gltf';
+                    break;
+                case '.fbx':
+                    modelType = 'fbx';
+                    break;
+                case '.obj':
+                    modelType = 'obj';
+                    break;
+                case '.vrm':
+                    modelType = 'vrm';
+                    break;
+                default:
+                    throw new Error(`Unsupported model extension: ${extension}`);
+            }
+            
+            // Load the model using the cache and add it to the scene
+            return this.loadModelWithCache(url, modelType);
+        } catch (error) {
+            console.error('Error adding model to scene:', error);
+            return undefined;
+        }
     }
 
     /**
@@ -785,29 +962,436 @@ export class EditorService {
     }
 
     /**
-     * Elimina un GameObject
-     * @param gameObject GameObject a eliminar
+     * Añade un modelo a la escena desde el caché
+     * @param uuid UUID del modelo en caché
+     * @returns Promise con el GameObject creado
      */
-    deleteGameObject(gameObject: GameObject): void {
-        if (!gameObject) return;
-        
-        // No permitir eliminar el Player
-        if (gameObject.name === 'Player') {
-            console.warn('No se puede eliminar el Player');
-            return;
+    async addModelToSceneFromCache(uuid: string): Promise<GameObject | undefined> {
+        try {
+            // Obtener el modelo del caché
+            const modelInfo = this.modelCacheService.getModel(uuid);
+            if (!modelInfo) {
+                console.error(`Model with UUID ${uuid} not found in cache`);
+                return undefined;
+            }
+            
+            // Incrementar el contador de referencias del modelo
+            this.modelCacheService.incrementReferenceCount(uuid);
+            
+            // Crear un nuevo GameObject
+            const gameObject = new GameObject();
+            gameObject.name = modelInfo.name;
+            
+            // Añadir el modelo como hijo del GameObject
+            const modelObject = modelInfo.rootObject.clone();
+            gameObject.add(modelObject);
+            
+            // Añadir el EditableObjectComponent
+            const editableObjectComponent = new EditableObjectComponent();
+            gameObject.addComponent(editableObjectComponent);
+            
+            // Añadir el ModelComponent e inicializarlo con los datos del modelo
+            const modelComponent = new ModelComponent();
+            
+            // Recopilar todas las mallas en el modelo y registrar materiales y texturas
+            const meshes: THREE.Mesh[] = [];
+            const materials: Set<THREE.Material> = new Set();
+            const textures: THREE.Texture[] = [];
+            
+            modelObject.traverse((child) => {
+                if (child instanceof THREE.Mesh) {
+                    meshes.push(child);
+                    
+                    // Asegurarse de que el mesh tenga userData para ser seleccionable
+                    child.userData = child.userData || {};
+                    // Referencia al GameObject padre para facilitar la selección
+                    child.userData['parentGameObject'] = gameObject;
+                    
+                    // Registrar materiales
+                    if (child.material) {
+                        if (Array.isArray(child.material)) {
+                            child.material.forEach(mat => materials.add(mat));
+                        } else {
+                            materials.add(child.material);
+                        }
+                    }
+                }
+            });
+            
+            // Extraer todas las texturas del modelo
+            modelObject.traverse((object) => {
+                if (object instanceof THREE.Mesh) {
+                    if (Array.isArray(object.material)) {
+                        object.material.forEach(mat => {
+                            if (mat instanceof THREE.MeshStandardMaterial) {
+                                if (mat.map) textures.push(mat.map);
+                                if (mat.normalMap) textures.push(mat.normalMap);
+                                if (mat.roughnessMap) textures.push(mat.roughnessMap);
+                                if (mat.metalnessMap) textures.push(mat.metalnessMap);
+                                if (mat.emissiveMap) textures.push(mat.emissiveMap);
+                                if (mat.aoMap) textures.push(mat.aoMap);
+                                if (mat.displacementMap) textures.push(mat.displacementMap);
+                            }
+                        });
+                    } else if (object.material instanceof THREE.MeshStandardMaterial) {
+                        const mat = object.material;
+                        if (mat.map) textures.push(mat.map);
+                        if (mat.normalMap) textures.push(mat.normalMap);
+                        if (mat.roughnessMap) textures.push(mat.roughnessMap);
+                        if (mat.metalnessMap) textures.push(mat.metalnessMap);
+                        if (mat.emissiveMap) textures.push(mat.emissiveMap);
+                        if (mat.aoMap) textures.push(mat.aoMap);
+                        if (mat.displacementMap) textures.push(mat.displacementMap);
+                    }
+                }
+            });
+            
+            // Procesar las texturas en lotes para mejorar el rendimiento
+            this.processTexturesBatch(textures, modelInfo.name);
+            
+            // Registrar materiales en el ResourceService si no están ya registrados
+            const materialUuids: string[] = [];
+            materials.forEach(material => {
+                // Asegurarse de que el material tenga un nombre
+                if (!material.name) {
+                    material.name = `${modelInfo.name}_Material_${materialUuids.length + 1}`;
+                }
+                
+                // Check if this material is already in the model's materials list in the cache
+                const existingMaterialUuid = modelInfo.materials.find(uuid => {
+                    const cachedMaterial = this.resourceService.materials.get(uuid);
+                    return cachedMaterial && cachedMaterial.resource.uuid === material.uuid;
+                });
+                
+                if (existingMaterialUuid) {
+                    // Material is already in the cache, just increment its reference count
+                    const existingMaterial = this.resourceService.materials.get(existingMaterialUuid);
+                    if (existingMaterial) {
+                        existingMaterial.refCount++;
+                        materialUuids.push(existingMaterialUuid);
+                    }
+                } else {
+                    // Check if the material is already in the resource service by its UUID
+                    let materialUuid = '';
+                    let materialAlreadyExists = false;
+                    
+                    // Check all materials to find if this one already exists
+                    for (const [uuid, info] of this.resourceService.materials.entries()) {
+                        if (info.resource.uuid === material.uuid) {
+                            info.refCount++;
+                            materialUuid = uuid;
+                            materialAlreadyExists = true;
+                            break;
+                        }
+                    }
+                    
+                    // If not found, register the material
+                    if (!materialAlreadyExists) {
+                        const materialName = material.name || `${modelInfo.name}_Material_${materialUuids.length + 1}`;
+                        materialUuid = this.resourceService.addMaterial(material, materialName);
+                        
+                        // Add the UUID to the model's materials list if not already there
+                        if (!modelInfo.materials.includes(materialUuid)) {
+                            modelInfo.materials.push(materialUuid);
+                        }
+                    }
+                    
+                    materialUuids.push(materialUuid);
+                }
+            });
+            
+            // Registrar texturas en el ResourceService si no están ya registradas
+            const textureUuids: string[] = [];
+            textures.forEach(texture => {
+                // Check if this texture is already in the model's textures list in the cache
+                const existingTextureUuid = modelInfo.textures.find(uuid => {
+                    const cachedTexture = this.resourceService.textures.get(uuid);
+                    return cachedTexture && cachedTexture.resource.uuid === texture.uuid;
+                });
+                
+                if (existingTextureUuid) {
+                    // Texture is already in the cache, just increment its reference count
+                    const existingTexture = this.resourceService.textures.get(existingTextureUuid);
+                    if (existingTexture) {
+                        existingTexture.refCount++;
+                        textureUuids.push(existingTextureUuid);
+                    }
+                } else {
+                    // Check if the texture is already in the resource service by its UUID
+                    let textureUuid = '';
+                    let textureAlreadyExists = false;
+                    
+                    // Check all textures to find if this one already exists
+                    for (const [uuid, info] of this.resourceService.textures.entries()) {
+                        if (info.resource.uuid === texture.uuid) {
+                            info.refCount++;
+                            textureUuid = uuid;
+                            textureAlreadyExists = true;
+                            break;
+                        }
+                    }
+                    
+                    // If not found, register the texture
+                    if (!textureAlreadyExists) {
+                        // Create a name for the texture based on the model
+                        const textureName = texture.name || `${modelInfo.name}_Texture_${textureUuids.length + 1}`;
+                        
+                        // Register the texture in the ResourceService
+                        const textureInfo: ResourceInfo<THREE.Texture> = {
+                            resource: texture,
+                            refCount: 1,
+                            name: textureName,
+                            uuid: texture.uuid
+                        };
+                        this.resourceService.textures.set(texture.uuid, textureInfo);
+                        textureUuid = texture.uuid;
+                        
+                        // Add the UUID to the model's textures list if not already there
+                        if (!modelInfo.textures.includes(textureUuid)) {
+                            modelInfo.textures.push(textureUuid);
+                        }
+                    }
+                    
+                    textureUuids.push(textureUuid);
+                }
+            });
+            
+            // Notificar cambios en materiales y texturas
+            this.resourceService.materialsSubject.next(new Map(this.resourceService.materials));
+            this.resourceService.texturesSubject.next(new Map(this.resourceService.textures));
+            
+            // Si encontramos al menos una malla, inicializar el ModelComponent con el objeto del modelo
+            if (meshes.length > 0) {
+                // Obtener animaciones del modelo
+                const animations = this.modelCacheService.getModelAnimations(modelInfo.uuid);
+                
+                // Inicializar con el objeto del modelo y las animaciones
+                modelComponent.initWithObject(modelObject, animations);
+                modelComponent.setModelData(modelInfo.url, modelInfo.modelType, modelInfo.uuid);
+                gameObject.addComponent(modelComponent);
+                
+                // Guardar referencia al UUID del modelo en el userData del GameObject
+                gameObject.userData = gameObject.userData || {};
+                gameObject.userData['modelUuid'] = modelInfo.uuid;
+                
+                // Registrar la acción para el historial
+                const actionState = {
+                    modelUuid: modelInfo.uuid,
+                    gameObject: gameObject,
+                    url: modelInfo.url,
+                    modelType: modelInfo.modelType,
+                    name: modelInfo.name
+                };
+                const addModelAction = new AddModelAction(actionState, this.modelCacheService);
+                this.editorEventsService.emitAction(addModelAction);
+            }
+            
+            // Añadir el GameObject a la escena
+            engine.addGameObjects(gameObject);
+            
+            // Seleccionar el GameObject recién creado
+            if (this.editableSceneComponent) {
+                this.editableSceneComponent.selectedObject.next(gameObject);
+            }
+            
+            return gameObject;
+        } catch (error) {
+            console.error('Error adding model from cache:', error);
+            return undefined;
         }
+    }
+    
+    /**
+     * Crea una imagen accesible para una textura
+     * @param texture Textura para la que crear una imagen accesible
+     */
+    private createAccessibleTextureImage(texture: THREE.Texture): void {
+        if (!texture.image) return;
         
-        // Si el objeto está seleccionado, deseleccionarlo
-        if (this.editableSceneComponent.selectedObject.value === gameObject) {
-            this.editableSceneComponent.unselectObject();
+        try {
+            // Si la textura ya tiene una imagen con src, no hacer nada
+            if (texture.image.src) return;
+            
+            // Verificar si ya existe una previsualización en caché o si se puede obtener una
+            if (texture.uuid) {
+                const previewUrl = this.resourceService.getTexturePreviewUrl(texture);
+                if (previewUrl) {
+                    // Ya existe una previsualización o se pudo obtener una, no necesitamos crear otra
+                    console.log('Previsualización existente encontrada para textura:', texture.uuid);
+                    return;
+                }
+            }
+            
+            // Crear un canvas y dibujar la imagen de la textura en él
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            if (!ctx) return;
+            
+            // Establecer el tamaño del canvas (limitar a un tamaño máximo para mejorar rendimiento)
+            const maxSize = 128; // Tamaño máximo para previsualizaciones
+            const width = Math.min(texture.image.width || 64, maxSize);
+            const height = Math.min(texture.image.height || 64, maxSize);
+            canvas.width = width;
+            canvas.height = height;
+            
+            // Dibujar la imagen en el canvas
+            if (texture.image instanceof HTMLImageElement || 
+                texture.image instanceof HTMLCanvasElement ||
+                texture.image instanceof ImageBitmap) {
+                ctx.drawImage(texture.image, 0, 0, width, height);
+            } else if (texture.image instanceof ImageData) {
+                ctx.putImageData(texture.image, 0, 0);
+            } else {
+                // Si no podemos dibujar la imagen, crear una imagen de color sólido
+                ctx.fillStyle = '#888888';
+                ctx.fillRect(0, 0, width, height);
+            }
+            
+            // Generar una URL de datos con calidad reducida para mejorar rendimiento
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            
+            // Guardar la previsualización en el ResourceService
+            if (texture.uuid && this.resourceService.saveTexturePreview) {
+                this.resourceService.saveTexturePreview(texture.uuid, dataUrl);
+            }
+            
+            // No reemplazamos la imagen original de la textura para evitar problemas de rendimiento
+            // Solo guardamos la previsualización en el ResourceService
+        } catch (e) {
+            console.warn('Error al crear imagen accesible para textura:', e);
         }
+    }
+    
+    /**
+     * Clona un modelo del caché
+     * @param uuid UUID del modelo en caché
+     * @returns Promise con el GameObject clonado
+     */
+    async cloneModelFromCache(uuid: string): Promise<GameObject | undefined> {
+        return this.addModelToSceneFromCache(uuid);
+    }
+
+    /**
+     * Limpia los modelos no utilizados de la caché
+     * @param maxAgeMs Edad máxima en milisegundos para mantener modelos no utilizados (por defecto: 1 hora)
+     * @returns Número de modelos eliminados
+     */
+    cleanupUnusedModels(maxAgeMs: number = 3600000): number {
+        return this.modelCacheService.cleanupUnusedModels(maxAgeMs);
+    }
+
+    /**
+     * Carga un modelo 3D
+     * @param url URL del modelo
+     * @param modelType Tipo de modelo
+     * @returns Promise con el objeto cargado y sus animaciones
+     */
+    async loadModel(url: string, modelType: string): Promise<{ object: THREE.Object3D, animations: THREE.AnimationClip[] } | undefined> {
+        try {
+            // Determinar el loader adecuado según el tipo de modelo
+            let loader;
+            switch (modelType.toLowerCase()) {
+                case 'gltf':
+                case '.gltf':
+                case 'glb':
+                case '.glb':
+                    loader = new GLTFLoader();
+                    // Configurar el loader GLTF con extensiones
+                    const dracoLoader = new DRACOLoader();
+                    dracoLoader.setDecoderPath('assets/draco/');
+                    loader.setDRACOLoader(dracoLoader);
+                    
+                    // Cargar el modelo GLTF/GLB
+                    const gltf = await loader.loadAsync(url);
+                    return {
+                        object: gltf.scene,
+                        animations: gltf.animations || []
+                    };
+                    
+                case 'fbx':
+                case '.fbx':
+                    loader = new FBXLoader();
+                    const fbx = await loader.loadAsync(url);
+                    return {
+                        object: fbx,
+                        animations: fbx.animations || []
+                    };
+                    
+                case 'obj':
+                case '.obj':
+                    loader = new OBJLoader();
+                    const obj = await loader.loadAsync(url);
+                    return {
+                        object: obj,
+                        animations: [] // OBJ no soporta animaciones
+                    };
+                    
+                case 'vrm':
+                case '.vrm':
+                    // Para VRM, usamos el loader GLTF con el plugin VRM
+                    loader = new GLTFLoader();
+                    // Si tienes el plugin VRM, descomentar estas líneas:
+                    // const vrmPlugin = new VRMLoaderPlugin();
+                    // loader.register(callback => callback(vrmPlugin));
+                    
+                    const vrm = await loader.loadAsync(url);
+                    return {
+                        object: vrm.scene,
+                        animations: vrm.animations || []
+                    };
+                    
+                default:
+                    console.error(`Tipo de modelo no soportado: ${modelType}`);
+                    return undefined;
+            }
+        } catch (error) {
+            console.error('Error cargando modelo:', error);
+            return undefined;
+        }
+    }
+
+    /**
+     * Procesa un lote de texturas de forma eficiente
+     * @param textures Array de texturas a procesar
+     * @param modelName Nombre del modelo al que pertenecen las texturas
+     */
+    private processTexturesBatch(textures: THREE.Texture[], modelName: string): void {
+        // Limitar el número de texturas a procesar por frame
+        const MAX_TEXTURES_PER_FRAME = 5;
         
-        // Si tiene padre, eliminarlo del padre
-        if (gameObject.parentGameObject) {
-            gameObject.parentGameObject.removeGameObject(gameObject);
-        } else {
-            // Si no tiene padre, eliminarlo de la escena
-            engine.removeGameObjects(gameObject);
-        }
+        // Función para procesar un lote de texturas
+        const processBatch = (startIndex: number) => {
+            if (startIndex >= textures.length) return;
+            
+            const endIndex = Math.min(startIndex + MAX_TEXTURES_PER_FRAME, textures.length);
+            
+            for (let i = startIndex; i < endIndex; i++) {
+                const texture = textures[i];
+                
+                // Asegurarse de que la textura tenga un nombre
+                if (!texture.name) {
+                    texture.name = `${modelName}_Texture_${i + 1}`;
+                }
+                
+                // Crear previsualización solo si es necesario
+                if (texture.image && !texture.image.src) {
+                    // Verificar si ya existe una previsualización o si se puede obtener una
+                    const previewUrl = this.resourceService.getTexturePreviewUrl(texture);
+                    if (!previewUrl) {
+                        // No existe previsualización, crear una
+                        this.createAccessibleTextureImage(texture);
+                    }
+                }
+            }
+            
+            // Programar el siguiente lote para el siguiente frame
+            if (endIndex < textures.length) {
+                requestAnimationFrame(() => processBatch(endIndex));
+            }
+        };
+        
+        // Iniciar el procesamiento por lotes
+        processBatch(0);
     }
 }

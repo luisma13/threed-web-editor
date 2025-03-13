@@ -49,8 +49,28 @@ export class GameObjectComponent implements OnInit, OnDestroy {
         if (this.gameObject) {
             this.subscriptions.push(
                 this.gameObject.onNameChanged.subscribe(() => {
-                    console.log('GameObject name changed:', this.gameObject.name);
                     this.changeDetectorRef.detectChanges();
+                })
+            );
+            
+            // Suscribirse a cambios en la jerarquía
+            this.subscriptions.push(
+                engine.onGameobjectHerarchyChanged.subscribe((changedGameObject) => {
+                    // Si el objeto que cambió es este, actualizar la vista
+                    if (changedGameObject === this.gameObject) {
+                        this.changeDetectorRef.detectChanges();
+                    }
+                })
+            );
+            
+            // Suscribirse a eliminaciones de GameObjects
+            this.subscriptions.push(
+                engine.onGameobjectRemoved.subscribe((removedGameObject) => {
+                    // Si el objeto eliminado es hijo de este, actualizar la vista
+                    if (this.gameObject.childrenGameObjects && 
+                        this.gameObject.childrenGameObjects.indexOf(removedGameObject) !== -1) {
+                        this.changeDetectorRef.detectChanges();
+                    }
                 })
             );
         }
@@ -91,8 +111,6 @@ export class GameObjectComponent implements OnInit, OnDestroy {
         event.preventDefault();
         event.stopPropagation();
         
-        console.log('onContextMenu en GameObject:', this.gameObject.name);
-        
         // Seleccionar el GameObject si no está seleccionado
         if (!this.isSelected) {
             this.isSelected = true;
@@ -102,7 +120,6 @@ export class GameObjectComponent implements OnInit, OnDestroy {
         
         // Caso especial para el Player
         if (this.gameObject.name === 'Player') {
-            console.log('Caso especial para el Player');
             // Forzar la posición del menú contextual
             const rect = event.target['getBoundingClientRect']();
             const x = rect ? rect.left + rect.width / 2 : event.clientX;
@@ -242,6 +259,16 @@ export class GameObjectComponent implements OnInit, OnDestroy {
             }
         }
         return 'drop-none';
+    }
+
+    /**
+     * Función de seguimiento para ngFor que mejora el rendimiento
+     * @param index Índice del elemento
+     * @param item GameObject a seguir
+     * @returns UUID del GameObject
+     */
+    trackByUuid(index: number, item: GameObject): string {
+        return item.uuid;
     }
 
 }

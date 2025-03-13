@@ -52,8 +52,6 @@ export class GameObjectsDraggableComponent {
             // No mostrar GameObjects internos del editor
             if (this.isEditorInternalGameObject(gameobject)) return;
             
-            console.log('Nuevo GameObject creado:', gameobject.name);
-            
             // Verificar que no esté ya en la lista
             if (!this.gameObjects.includes(gameobject)) {
                 this.gameObjects.push(gameobject);
@@ -62,7 +60,6 @@ export class GameObjectsDraggableComponent {
                     this.changeDetectorRef.detectChanges();
                     // Verificar si este es el objeto seleccionado
                     if (this.editorService.editableSceneComponent.selectedObject.value === gameobject) {
-                        console.log('Actualizando selección para el nuevo GameObject');
                         this.editorService.editableSceneComponent.selectedObject.next(gameobject);
                     }
                 });
@@ -73,13 +70,18 @@ export class GameObjectsDraggableComponent {
             // Verificar que el gameobject no sea undefined o null
             if (!gameobject) return;
             
-            // Verificar si tiene padre
-            if (gameobject.parentGameObject) return;
-            
+            // Buscar el objeto en la lista de objetos raíz
             const index = this.gameObjects.indexOf(gameobject);
             if (index !== -1) {
                 this.gameObjects.splice(index, 1);
                 this.changeDetectorRef.detectChanges();
+            }
+            
+            // También verificar si es hijo de algún objeto en la jerarquía
+            // y forzar la actualización del padre
+            if (gameobject.parentGameObject) {
+                // Forzar actualización de la jerarquía del padre
+                engine.onGameobjectHerarchyChanged.next(gameobject.parentGameObject);
             }
         });
 

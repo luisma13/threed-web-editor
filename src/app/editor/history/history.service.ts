@@ -1,8 +1,8 @@
 import { Injectable } from "@angular/core";
-import { EditorService } from "../editor.service";
 import { Action, TransformData } from "./actions/actions";
 import { ChangeTransformAction } from "./actions/change-transform.action";
 import { BehaviorSubject } from "rxjs";
+import { EditorEventsService } from "../shared/editor-events.service";
 
 @Injectable({ providedIn: 'root' })
 export class HistoryService {
@@ -15,12 +15,18 @@ export class HistoryService {
     canUndo = new BehaviorSubject<boolean>(false);
     canRedo = new BehaviorSubject<boolean>(false);
 
-    constructor(private editorService: EditorService) {
-        this.editorService.editableSceneComponent.onChangeListener.subscribe((data) => {
+    constructor(private editorEventsService: EditorEventsService) {
+        // Subscribe to transform changes through the events service
+        this.editorEventsService.transformChange$.subscribe((data) => {
             if (!data) return;
             if (this.isStateEqualsToLastOne(data, this.lastTransformState)) return;
             this.addAction(new ChangeTransformAction({ gameObject: data.gameObject, transform: data.transform }));
             this.lastTransformState = data;
+        });
+        
+        // Subscribe to action events
+        this.editorEventsService.action$.subscribe(action => {
+            this.addAction(action);
         });
     }
 
@@ -44,7 +50,7 @@ export class HistoryService {
         this.redoActions.push(action);
         const lastAction = this.historyActions[this.historyActions.length - 1];
         if (!lastAction) return;
-        lastAction.executeUndo(this.editorService);
+        lastAction.executeUndo();
         this.updateCanUndoRedo();
     }
 
@@ -52,7 +58,7 @@ export class HistoryService {
         let action = this.redoActions.pop();
         if (!action) return;
         this.historyActions.push(action);
-        action.executeRedo(this.editorService);
+        action.executeRedo();
         this.updateCanUndoRedo();
     }
 

@@ -1,4 +1,4 @@
-import { Component, Inject, HostListener, ViewChild, ElementRef, OnInit, OnDestroy } from '@angular/core';
+import { Component, Inject, HostListener, ViewChild, ElementRef, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -11,6 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Texture, TextureEncoding, Wrapping } from 'three';
 import { PLATFORM_ID, Inject as NgInject } from '@angular/core';
+import { ResourceService } from '../resource.service';
 
 export interface TextureDialogData {
     isEdit: boolean;
@@ -67,7 +68,9 @@ export class TextureDialogComponent implements OnInit, OnDestroy {
     constructor(
         public dialogRef: MatDialogRef<TextureDialogComponent>,
         @Inject(MAT_DIALOG_DATA) public data: TextureDialogData,
-        @NgInject(PLATFORM_ID) platformId: Object
+        @NgInject(PLATFORM_ID) platformId: Object,
+        private resourceService: ResourceService,
+        private changeDetectorRef: ChangeDetectorRef
     ) {
         this.isBrowser = isPlatformBrowser(platformId);
         
@@ -89,50 +92,17 @@ export class TextureDialogComponent implements OnInit, OnDestroy {
             this.generateMipmaps = data.texture.generateMipmaps;
             this.flipY = data.texture.flipY;
             
-            // Set preview URL if the texture has an image
-            if (data.texture.image) {
-                // Si la imagen tiene una URL src, usarla directamente
-                if (data.texture.image.src) {
-                    console.log('Using existing image src for preview:', data.texture.image.src);
-                    this.previewUrl = data.texture.image.src;
-                } 
-                // Si no tiene src pero es un objeto HTMLImageElement o similar con datos
-                else if (data.texture.image instanceof HTMLImageElement || 
-                         data.texture.image instanceof HTMLCanvasElement ||
-                         data.texture.image instanceof ImageBitmap) {
-                    console.log('Creating blob URL from image data');
-                    // Crear un canvas para extraer los datos de la imagen
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    if (ctx) {
-                        // Configurar el canvas con las dimensiones de la imagen
-                        canvas.width = data.texture.image.width;
-                        canvas.height = data.texture.image.height;
-                        
-                        // Dibujar la imagen en el canvas
-                        ctx.drawImage(data.texture.image, 0, 0);
-                        
-                        // Convertir el canvas a blob y crear una URL
-                        canvas.toBlob((blob) => {
-                            if (blob) {
-                                this.previewUrl = URL.createObjectURL(blob);
-                                this.createdBlobUrl = true; // Marcar que hemos creado un blob URL
-                                console.log('Created new blob URL for preview:', this.previewUrl);
-                            }
-                        });
-                    }
-                }
+            // Obtener la URL de previsualización de la textura usando el servicio
+            this.previewUrl = this.resourceService.getTexturePreviewUrl(data.texture);
+            
+            if (this.previewUrl) {
+                console.log('Preview URL obtained successfully');
+            } else {
+                console.log('No preview URL could be obtained for texture');
             }
             
-            console.log('Editing texture with properties:', {
-                path: this.texturePath,
-                wrapS: this.wrapS,
-                wrapT: this.wrapT,
-                encoding: this.encoding,
-                generateMipmaps: this.generateMipmaps,
-                flipY: this.flipY,
-                previewUrl: this.previewUrl
-            });
+            // Forzar la detección de cambios para actualizar la UI
+            this.forcePreviewUpdate();
         }
     }
 
@@ -199,6 +169,17 @@ export class TextureDialogComponent implements OnInit, OnDestroy {
     }
 
     /**
+     * Fuerza la actualización de la previsualización
+     */
+    private forcePreviewUpdate(): void {
+        // Usar setTimeout para asegurar que la actualización ocurre después de que Angular haya procesado otros cambios
+        setTimeout(() => {
+            this.changeDetectorRef.detectChanges();
+            console.log('Forced preview update');
+        }, 0);
+    }
+
+    /**
      * Maneja el cambio de URL
      */
     onUrlChange(): void {
@@ -209,19 +190,13 @@ export class TextureDialogComponent implements OnInit, OnDestroy {
                 this.createdBlobUrl = false;
             }
             
-            // Crear una imagen para probar la URL
-            const img = new Image();
-            img.onload = () => {
-                // La URL es válida, actualizar la vista previa
-                this.previewUrl = this.textureUrl;
-                this.texturePath = this.getFileNameFromUrl(this.textureUrl);
-                this.keepOriginalImage = false; // Se ha seleccionado una nueva URL
-            };
-            img.onerror = () => {
-                // La URL no es válida, limpiar la vista previa
-                this.previewUrl = null;
-            };
-            img.src = this.textureUrl;
+            // Usar directamente la URL como previsualización sin crear una imagen para probarla
+            this.previewUrl = this.textureUrl;
+            this.texturePath = this.getFileNameFromUrl(this.textureUrl);
+            this.keepOriginalImage = false; // Se ha seleccionado una nueva URL
+            
+            // Forzar la actualización de la previsualización
+            this.forcePreviewUpdate();
         } else {
             // Revocar el blob URL anterior si existe y fue creado por este componente
             if (this.previewUrl && this.previewUrl.startsWith('blob:') && this.createdBlobUrl) {
@@ -229,6 +204,9 @@ export class TextureDialogComponent implements OnInit, OnDestroy {
                 this.createdBlobUrl = false;
             }
             this.previewUrl = null;
+            
+            // Forzar la actualización de la previsualización
+            this.forcePreviewUpdate();
         }
     }
 
@@ -270,7 +248,15 @@ export class TextureDialogComponent implements OnInit, OnDestroy {
             const file = event.dataTransfer.files[0];
             if (file.type.startsWith('image/')) {
                 this.handleFile(file);
+                // No es necesario forzar la actualización aquí porque handleFile ya lo hace
+            } else {
+                console.warn('El archivo arrastrado no es una imagen:', file.type);
+                // Forzar la actualización de la previsualización
+                this.forcePreviewUpdate();
             }
+        } else {
+            // Forzar la actualización de la previsualización
+            this.forcePreviewUpdate();
         }
     }
 
@@ -278,6 +264,11 @@ export class TextureDialogComponent implements OnInit, OnDestroy {
      * Procesa un archivo seleccionado o arrastrado
      */
     private handleFile(file: File): void {
+        if (!file.type.startsWith('image/')) {
+            console.warn('El archivo seleccionado no es una imagen:', file.type);
+            return;
+        }
+        
         this.selectedFile = file;
         this.texturePath = file.name;
         
@@ -290,6 +281,9 @@ export class TextureDialogComponent implements OnInit, OnDestroy {
         this.previewUrl = URL.createObjectURL(file);
         this.createdBlobUrl = true; // Marcar que hemos creado un blob URL
         this.keepOriginalImage = false; // Se ha seleccionado un nuevo archivo
+        
+        // Forzar la actualización de la previsualización
+        this.forcePreviewUpdate();
     }
 
     /**
@@ -318,37 +312,31 @@ export class TextureDialogComponent implements OnInit, OnDestroy {
         // Force encoding to be a number and ensure it's properly typed
         const encodingValue = Number(this.encoding) as TextureEncoding;
         
-        console.log('Confirming with encoding value:', encodingValue);
+        // Datos básicos que siempre se envían
+        const result = {
+            isEdit: this.data.isEdit,
+            path: this.data.isEdit ? this.data.path : this.texturePath,
+            originalPath: this.data.path, // Añadir el path original para referencia
+            wrapS: this.wrapS,
+            wrapT: this.wrapT,
+            encoding: encodingValue,
+            generateMipmaps: this.generateMipmaps,
+            flipY: this.flipY
+        };
         
         // Si estamos editando y no se ha seleccionado un nuevo archivo ni URL
         if (this.data.isEdit && !this.selectedFile && !this.textureUrl) {
-            this.keepOriginalImage = true;
             this.dialogRef.close({
-                isEdit: this.data.isEdit,
-                path: this.texturePath,
-                keepOriginalImage: true,
-                wrapS: this.wrapS,
-                wrapT: this.wrapT,
-                encoding: encodingValue,
-                generateMipmaps: this.generateMipmaps,
-                flipY: this.flipY
+                ...result,
+                keepOriginalImage: true
             });
         } else {
-            // Si estamos editando, asegurarnos de enviar el path original
-            const path = this.data.isEdit ? this.data.path : this.texturePath;
-            
             this.dialogRef.close({
-                isEdit: this.data.isEdit,
-                path: path,
-                originalPath: this.data.path, // Añadir el path original para referencia
+                ...result,
                 file: this.selectedFile,
                 url: this.textureUrl,
                 previewUrl: this.previewUrl,
-                wrapS: this.wrapS,
-                wrapT: this.wrapT,
-                encoding: encodingValue,
-                generateMipmaps: this.generateMipmaps,
-                flipY: this.flipY
+                keepOriginalImage: false
             });
         }
     }

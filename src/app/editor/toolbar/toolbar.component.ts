@@ -77,12 +77,16 @@ export class ToolbarComponent implements OnInit {
                         label: 'Load Model',
                         submenu: [
                             {
-                                label: 'Load GLB',
-                                action: () => this.editorService.addModelToScene('.gltf')
+                                label: 'Load GLTF',
+                                action: () => this.editorService.addModelToScene('.gltf', undefined)
                             },
-                            { label: 'Load FBX', action: () => this.editorService.addModelToScene('.fbx') },
-                            { label: 'Load OBJ', action: () => this.editorService.addModelToScene('.obj') },
-                            { label: 'Load VRM', action: () => this.editorService.addModelToScene('.vrm') },
+                            {
+                                label: 'Load GLB',
+                                action: () => this.editorService.addModelToScene('.glb', undefined)
+                            },
+                            { label: 'Load FBX', action: () => this.editorService.addModelToScene('.fbx', undefined) },
+                            { label: 'Load OBJ', action: () => this.editorService.addModelToScene('.obj', undefined) },
+                            { label: 'Load VRM', action: () => this.editorService.addModelToScene('.vrm', undefined) },
                         ]
                     }
                 ]

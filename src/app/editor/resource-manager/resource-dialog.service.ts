@@ -38,13 +38,23 @@ export class ResourceDialogService {
         
         // Verificar si la textura tiene una imagen válida
         if (dialogData.texture.image) {
-          console.log('La textura tiene una imagen:', dialogData.texture.image);
+          console.log('La textura tiene una imagen:', dialogData.texture.image.constructor.name);
           
           // Verificar si la imagen tiene una URL src
           if (dialogData.texture.image.src) {
             console.log('URL de la imagen:', dialogData.texture.image.src);
           } else {
             console.log('La imagen no tiene una URL src');
+            
+            // Verificar si hay una previsualización en caché
+            if (dialogData.texture.uuid && this.resourceService.getTexturePreview) {
+              const cachedUrl = this.resourceService.getTexturePreview(dialogData.texture.uuid);
+              if (cachedUrl) {
+                console.log('Se encontró una previsualización en caché para la textura');
+              } else {
+                console.log('No se encontró previsualización en caché para la textura');
+              }
+            }
           }
         } else {
           console.warn('La textura no tiene una imagen');
@@ -130,8 +140,9 @@ export class ResourceDialogService {
       // Si se está editando y se indicó mantener la imagen original
       if (result.keepOriginalImage) {
         // Solo actualizar las propiedades de la textura existente
+        console.log('Updating texture properties only (keeping original image):', result.path);
         this.resourceService.updateTexture(result.path, textureOptions);
-        console.log('Textura actualizada (manteniendo imagen original):', result);
+        console.log('Texture updated (keeping original image):', result.path);
         return true;
       }
       
@@ -144,54 +155,57 @@ export class ResourceDialogService {
         const textureExists = this.resourceService.textures.has(oldPath);
         
         if (!textureExists) {
-          console.warn(`La textura con clave "${oldPath}" no existe en el mapa de texturas. Creando una nueva textura.`);
+          console.warn(`Texture with key "${oldPath}" does not exist in the texture map. Creating a new texture.`);
           
           // Si la textura no existe, crear una nueva en lugar de actualizar
           if (result.file) {
             // Crear una nueva textura con el archivo
             this.resourceService.createTextureFromFile(result.file, textureOptions)
               .then(() => {
-                console.log('Nueva textura creada con archivo:', result.file.name);
+                console.log('New texture created from file:', result.file.name);
               })
               .catch(error => {
-                console.error('Error al crear textura desde archivo:', error);
+                console.error('Error creating texture from file:', error);
               });
           } else if (result.url) {
             // Crear una nueva textura con la URL
             this.resourceService.loadTextureFromUrl(result.url, textureOptions)
               .then(() => {
-                console.log('Nueva textura creada con URL:', result.url);
+                console.log('New texture created from URL:', result.url);
               })
               .catch(error => {
-                console.error('Error al crear textura desde URL:', error);
+                console.error('Error creating texture from URL:', error);
               });
           }
         } else {
           // La textura existe, actualizarla
           if (result.file) {
+            console.log(`Updating existing texture "${oldPath}" with new file`);
             // Actualizar la textura existente con el nuevo archivo
             this.resourceService.updateTextureFromFile(oldPath, result.file, textureOptions)
-              .then(() => {
-                console.log('Textura actualizada con nuevo archivo:', oldPath);
+              .then((texture) => {
+                console.log('Texture updated with new file:', oldPath);
               })
               .catch(error => {
-                console.error('Error al actualizar textura con nuevo archivo:', error);
+                console.error('Error updating texture with new file:', error);
               });
           } else if (result.url) {
+            console.log(`Updating existing texture "${oldPath}" with new URL: ${result.url}`);
             // Actualizar la textura existente con la nueva URL
             this.resourceService.updateTextureFromUrl(oldPath, result.url, textureOptions)
-              .then(() => {
-                console.log('Textura actualizada con nueva URL:', oldPath);
+              .then((texture) => {
+                console.log('Texture updated with new URL:', oldPath);
               })
               .catch(error => {
-                console.error('Error al actualizar textura con nueva URL:', error);
+                console.error('Error updating texture with new URL:', error);
               });
           }
         }
       } else {
         // Solo actualizar las propiedades
+        console.log(`Updating only properties of texture "${result.path}"`);
         this.resourceService.updateTexture(result.path, textureOptions);
-        console.log('Textura actualizada (solo propiedades):', result);
+        console.log('Texture properties updated:', result.path);
       }
     } else {
       // Añadir nueva textura
@@ -204,18 +218,25 @@ export class ResourceDialogService {
           // Si ya existe una textura con el mismo nombre, generar un nombre único
           const uniqueFileName = `${fileName.split('.')[0]}_${Date.now()}.${fileName.split('.').pop()}`;
           
-          console.log(`Ya existe una textura con el nombre "${fileName}". Creando con nombre único: "${uniqueFileName}"`);
+          console.log(`A texture with name "${fileName}" already exists. Creating with unique name: "${uniqueFileName}"`);
           
           // Crear la textura con el nombre único
           this.resourceService.createTextureFromFile(result.file, textureOptions, uniqueFileName)
+            .then((texture) => {
+              console.log('New texture created with unique name:', uniqueFileName);
+            })
             .catch(error => {
-              console.error('Error al crear textura desde archivo con nombre único:', error);
+              console.error('Error creating texture from file with unique name:', error);
             });
         } else {
           // Si no existe, crear normalmente
+          console.log(`Creating new texture from file: ${fileName}`);
           this.resourceService.createTextureFromFile(result.file, textureOptions)
+            .then((texture) => {
+              console.log('New texture created from file:', fileName);
+            })
             .catch(error => {
-              console.error('Error al crear textura desde archivo:', error);
+              console.error('Error creating texture from file:', error);
             });
         }
       } else if (result.url) {
@@ -225,43 +246,56 @@ export class ResourceDialogService {
         
         if (textureExists) {
           // Si ya existe una textura con el mismo nombre, generar un nombre único para la referencia interna
-          console.log(`Ya existe una textura con el nombre "${fileName}" extraído de la URL. Usando timestamp para diferenciarla.`);
+          console.log(`A texture with name "${fileName}" extracted from URL already exists. Using timestamp to differentiate.`);
           
           // Cargar la textura con un nombre único generado internamente
           this.resourceService.loadTextureFromUrl(result.url, textureOptions, true)
+            .then((texture) => {
+              console.log('New texture created from URL with unique name');
+            })
             .catch(error => {
-              console.error('Error al cargar textura desde URL con nombre único:', error);
+              console.error('Error loading texture from URL with unique name:', error);
             });
         } else {
           // Si no existe, cargar normalmente
+          console.log(`Creating new texture from URL: ${result.url}`);
           this.resourceService.loadTextureFromUrl(result.url, textureOptions)
+            .then((texture) => {
+              console.log('New texture created from URL:', fileName);
+            })
             .catch(error => {
-              console.error('Error al cargar textura desde URL:', error);
+              console.error('Error loading texture from URL:', error);
             });
         }
-      } else {
+      } else if (result.path) {
         // Si solo tenemos una ruta, verificar si ya existe
         const textureExists = this.resourceService.textures.has(result.path);
         
         if (textureExists) {
           // Si ya existe, generar un nombre único
           const uniquePath = `${result.path.split('.')[0]}_${Date.now()}.${result.path.split('.').pop()}`;
-          console.log(`Ya existe una textura con la ruta "${result.path}". Usando ruta única: "${uniquePath}"`);
+          console.log(`A texture with path "${result.path}" already exists. Using unique path: "${uniquePath}"`);
           
           // Cargar con el nombre único
           this.resourceService.loadTexture(uniquePath, textureOptions)
+            .then((texture) => {
+              console.log('New texture created with unique path:', uniquePath);
+            })
             .catch(error => {
-              console.error('Error al cargar textura desde ruta única:', error);
+              console.error('Error loading texture from unique path:', error);
             });
         } else {
           // Si no existe, cargar normalmente
+          console.log(`Creating new texture from path: ${result.path}`);
           this.resourceService.loadTexture(result.path, textureOptions)
+            .then((texture) => {
+              console.log('New texture created from path:', result.path);
+            })
             .catch(error => {
-              console.error('Error al cargar textura desde ruta:', error);
+              console.error('Error loading texture from path:', error);
             });
         }
       }
-      console.log('Textura añadida:', result);
     }
 
     return true;

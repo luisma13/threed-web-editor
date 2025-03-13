@@ -6,6 +6,7 @@ import { EditableObjectComponent } from "./editable-object.component";
 import { BehaviorSubject } from "rxjs";
 import { GameObject } from "../../core/gameobject";
 import { FirstPersonCameraComponent } from "../camera/first-camera.component";
+import { EditorEventsService } from "../../../editor/shared/editor-events.service";
 
 export class EditableSceneComponent extends Component {
 
@@ -14,6 +15,9 @@ export class EditableSceneComponent extends Component {
     mousePressed = false;
 
     onChangeListener: BehaviorSubject<{ transform: { position, rotation, scale }, gameObject: GameObject }> = new BehaviorSubject(undefined);
+    
+    // Reference to the EditorEventsService
+    private editorEventsService: EditorEventsService;
 
     transformControlsMousedownListener = () => {
         engine.draggingObject = true;
@@ -40,6 +44,12 @@ export class EditableSceneComponent extends Component {
 
     constructor() {
         super("EditableSceneComponent", undefined);
+        
+        // Get the EditorEventsService from the global scope
+        // This is a workaround for the circular dependency
+        if (typeof window !== 'undefined') {
+            this.editorEventsService = (window as any)['editorEventsService'];
+        }
     }
 
     public start(): void {
@@ -51,6 +61,11 @@ export class EditableSceneComponent extends Component {
             if (!object) {
                 this.transformControls.detach();
                 engine.outlinePass.selectedObjects = [];
+            }
+            
+            // Notify the EditorEventsService about the selected object change
+            if (this.editorEventsService) {
+                this.editorEventsService.setSelectedObject(object);
             }
         });
 
@@ -192,6 +207,11 @@ export class EditableSceneComponent extends Component {
         };
 
         this.onChangeListener.next(currentState);
+        
+        // Also emit the transform change through the EditorEventsService
+        if (this.editorEventsService) {
+            this.editorEventsService.emitTransformChange(currentState);
+        }
     }
 
     isStateSimilar(state1, state2) {

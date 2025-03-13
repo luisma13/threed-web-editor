@@ -20,6 +20,7 @@ import { BoxColliderComponent } from '../components/geometry/box-collider.compon
 import { SphereComponent } from '../components/geometry/sphere.component';
 import { PlaneComponent } from '../components/geometry/plane.component';
 import { CylinderComponent } from '../components/geometry/cylinder.component';
+import { ModelComponent } from '../components/geometry/model.component';
 
 // Tipo para el constructor de un componente
 type ComponentConstructor = new () => Component;
@@ -95,6 +96,7 @@ export class ComponentRegistry {
         this.registerComponent('SphereComponent', SphereComponent);
         this.registerComponent('PlaneComponent', PlaneComponent);
         this.registerComponent('CylinderComponent', CylinderComponent);
+        this.registerComponent('ModelComponent', ModelComponent);
     }
 
     /**

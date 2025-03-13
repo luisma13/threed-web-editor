@@ -93,6 +93,21 @@ mat-selection-list {
     border-radius: 4px;
 }
 
+.texture-list-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.texture-thumbnail {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 4px;
+    background-color: #222;
+    border: 1px solid #444;
+}
+
 .url-input {
     width: 100%;
 }

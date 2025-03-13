@@ -223,4 +223,31 @@ export class TextureSelectionDialogComponent implements OnInit, OnDestroy {
             this.dialogRef.close();
         }
     }
+
+    /**
+     * Obtiene la URL de vista previa para una textura existente
+     * @param textureId UUID o nombre de la textura
+     * @returns URL de la imagen de vista previa o null si no se puede obtener
+     */
+    getTexturePreviewUrl(textureId: string): string | null {
+        if (!textureId) return null;
+        
+        // Intentar obtener la textura por UUID
+        if (this.resourceService.textures.has(textureId)) {
+            const textureInfo = this.resourceService.textures.get(textureId);
+            if (textureInfo && textureInfo.resource) {
+                return this.resourceService.getTexturePreviewUrl(textureInfo.resource);
+            }
+        }
+        
+        // Si no se encuentra por UUID, intentar buscarla por nombre
+        const textureByName = Array.from(this.resourceService.textures.entries())
+            .find(([_, info]) => info.name === textureId);
+        
+        if (textureByName) {
+            return this.resourceService.getTexturePreviewUrl(textureByName[1].resource);
+        }
+        
+        return null;
+    }
 } 

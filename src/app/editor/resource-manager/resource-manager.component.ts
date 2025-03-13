@@ -11,6 +11,7 @@ import { ResourceDialogService } from './resource-dialog.service';
 import { WebGLRenderer, Scene, PerspectiveCamera, SphereGeometry, Mesh, DirectionalLight, AmbientLight, Material, MeshStandardMaterial, Texture } from 'three';
 import { PLATFORM_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import { ModelCacheComponent } from './model-cache/model-cache.component';
 
 @Component({
     standalone: true,
@@ -21,7 +22,8 @@ import { isPlatformBrowser } from '@angular/common';
         MatIconModule, 
         MatButtonModule,
         TextureDialogComponent,
-        MaterialDialogComponent
+        MaterialDialogComponent,
+        ModelCacheComponent
     ],
     templateUrl: './resource-manager.component.html',
     styleUrls: ['./resource-manager.component.scss']
@@ -69,6 +71,7 @@ export class ResourceManagerComponent implements OnInit, AfterViewInit, OnDestro
             if (this.isInitialized && !this.isInitializing) {
                 setTimeout(() => {
                     this.renderAllMaterialPreviews();
+                    this.changeDetectorRef.detectChanges(); // Force UI update
                 }, 100);
             }
         });
@@ -80,6 +83,18 @@ export class ResourceManagerComponent implements OnInit, AfterViewInit, OnDestro
                 texture: info.resource,
                 refCount: info.refCount
             }));
+            
+            // Re-render material previews when textures change
+            // This ensures materials using updated textures are properly displayed
+            if (this.isInitialized && !this.isInitializing) {
+                console.log('Textures updated, re-rendering material previews');
+                setTimeout(() => {
+                    this.renderAllMaterialPreviews();
+                    this.changeDetectorRef.detectChanges(); // Force UI update
+                }, 100);
+            }
+            
+            this.changeDetectorRef.detectChanges(); // Force UI update
         });
     }
     
@@ -239,6 +254,12 @@ export class ResourceManagerComponent implements OnInit, AfterViewInit, OnDestro
         // Get the total number of materials to render
         const totalMaterials = this.materialCanvases.length;
         
+        // If there are no materials to render, mark as complete and return
+        if (totalMaterials === 0) {
+            this.isInitializing = false;
+            return;
+        }
+        
         // If there are too many materials, batch the rendering to avoid GPU overload
         const BATCH_SIZE = 10; // Render max 10 materials at a time
         
@@ -319,6 +340,7 @@ export class ResourceManagerComponent implements OnInit, AfterViewInit, OnDestro
                 // If this is the last material, mark initialization as complete
                 if (i === totalMaterials - 1) {
                     this.isInitializing = false;
+                    this.changeDetectorRef.detectChanges(); // Force UI update after all renders
                 }
             }, batchIndex * 100 + (i % BATCH_SIZE) * 20); // 100ms between batches, 20ms between items in a batch
         });
@@ -326,6 +348,7 @@ export class ResourceManagerComponent implements OnInit, AfterViewInit, OnDestro
         // Safety timeout to ensure isInitializing is reset even if some renders fail
         setTimeout(() => {
             this.isInitializing = false;
+            this.changeDetectorRef.detectChanges(); // Force UI update
         }, totalMaterials * 30 + 500); // Generous timeout based on number of materials
     }
 
@@ -508,5 +531,15 @@ export class ResourceManagerComponent implements OnInit, AfterViewInit, OnDestro
         
         // Devolver blanco o negro según la luminosidad
         return luminance > 0.5 ? '#000000' : '#ffffff';
+    }
+
+    /**
+     * Obtiene la URL de previsualización para una textura
+     * @param texture Textura para la que obtener la URL de previsualización
+     * @returns URL de previsualización o null si no se puede generar
+     */
+    getTexturePreviewUrl(texture: Texture | null): string | null {
+        // Usar el método del ResourceService para obtener la URL de previsualización
+        return this.resourceService.getTexturePreviewUrl(texture);
     }
 } 

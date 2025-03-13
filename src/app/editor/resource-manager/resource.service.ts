@@ -30,6 +30,9 @@ export class ResourceService {
     
     // Mapa para almacenar las previsualizaciones de los materiales
     private _materialPreviews = new Map<string, MaterialPreview>();
+    
+    // Mapa para almacenar las previsualizaciones de las texturas
+    private _texturePreviewsMap = new Map<string, string>();
 
     // Observable maps for UI updates
     private _texturesSubject = new BehaviorSubject<Map<string, ResourceInfo<Texture>>>(this._textures);
@@ -96,6 +99,60 @@ export class ResourceService {
             const v = c === 'x' ? r : (r & 0x3 | 0x8);
             return v.toString(16);
         });
+    }
+    
+    /**
+     * Guarda una previsualización de textura
+     * @param uuid UUID de la textura
+     * @param dataUrl URL de datos de la previsualización
+     */
+    saveTexturePreview(uuid: string, dataUrl: string): void {
+        // Almacenar la URL de datos en un mapa privado
+        this._texturePreviewsMap.set(uuid, dataUrl);
+    }
+    
+    /**
+     * Obtiene la previsualización de una textura
+     * @param uuid UUID de la textura
+     * @returns URL de datos de la previsualización o null si no existe
+     */
+    getTexturePreview(uuid: string): string | null {
+        return this._texturePreviewsMap.get(uuid) || null;
+    }
+    
+    /**
+     * Obtiene la URL de previsualización para una textura
+     * @param texture Textura para la que obtener la URL de previsualización
+     * @returns URL de previsualización o null si no se puede generar
+     */
+    getTexturePreviewUrl(texture: Texture | null): string | null {
+        if (!texture) return null;
+        
+        // Si la textura tiene una imagen con src, usarla directamente
+        if (texture.image && texture.image.src) {
+            return texture.image.src;
+        }
+        
+        // Si la textura tiene una propiedad uuid, intentar usar una URL en caché
+        if (texture.uuid && this.getTexturePreview) {
+            const cachedUrl = this.getTexturePreview(texture.uuid);
+            if (cachedUrl) return cachedUrl;
+        }
+        
+        // Si la textura tiene una imagen pero no src (como en texturas de modelos importados)
+        if (texture.image) {
+            // Si la imagen ya es un canvas, intentar obtener su URL directamente
+            if (texture.image instanceof HTMLCanvasElement) {
+                try {
+                    return texture.image.toDataURL('image/png');
+                } catch (e) {
+                    console.warn('Error al obtener URL de canvas:', e);
+                }
+            }
+        }
+        
+        // Si no se puede generar una previsualización, devolver null
+        return null;
     }
     
     // Método para actualizar el nombre de un material
@@ -280,6 +337,166 @@ export class ResourceService {
         this._texturesSubject.next(this._textures);
     }
 
+    /**
+     * Aplica opciones a una textura
+     * @param texture Textura a la que aplicar las opciones
+     * @param options Opciones a aplicar
+     * @param logChanges Si es true, registra los cambios en la consola
+     * @private
+     */
+    private applyTextureOptions(
+        texture: Texture, 
+        options: {
+            wrapS?: Wrapping;
+            wrapT?: Wrapping;
+            encoding?: TextureEncoding;
+            generateMipmaps?: boolean;
+            flipY?: boolean;
+        },
+        logChanges: boolean = false
+    ): void {
+        if (logChanges) {
+            console.log('Before update - Texture properties:', {
+                name: texture.name,
+                wrapS: texture.wrapS,
+                wrapT: texture.wrapT,
+                encoding: texture.encoding,
+                generateMipmaps: texture.generateMipmaps,
+                flipY: texture.flipY
+            });
+        }
+        
+        // Aplicar opciones
+        if (options.wrapS !== undefined) {
+            texture.wrapS = options.wrapS;
+        }
+        
+        if (options.wrapT !== undefined) {
+            texture.wrapT = options.wrapT;
+        }
+        
+        if (options.encoding !== undefined) {
+            // Forzar la actualización de la codificación estableciéndola explícitamente
+            if (logChanges) {
+                console.log(`Attempting to update encoding from ${texture.encoding} to ${options.encoding}`);
+            }
+            
+            // En Three.js, algunas propiedades necesitan un manejo especial
+            // Para la codificación, necesitamos asegurarnos de que se establezca correctamente
+            Object.defineProperty(texture, 'encoding', {
+                value: options.encoding,
+                writable: true,
+                configurable: true
+            });
+            
+            if (logChanges) {
+                console.log(`After update, encoding is now: ${texture.encoding}`);
+            }
+        }
+        
+        if (options.generateMipmaps !== undefined) {
+            texture.generateMipmaps = options.generateMipmaps;
+        }
+        
+        if (options.flipY !== undefined) {
+            texture.flipY = options.flipY;
+        }
+        
+        // Siempre marcar la textura como necesitada de actualización
+        texture.needsUpdate = true;
+        
+        if (logChanges) {
+            console.log('After update - Texture properties:', {
+                name: texture.name,
+                wrapS: texture.wrapS,
+                wrapT: texture.wrapT,
+                encoding: texture.encoding,
+                generateMipmaps: texture.generateMipmaps,
+                flipY: texture.flipY
+            });
+        }
+    }
+
+    /**
+     * Método común para actualizar una textura y notificar a los materiales que la usan
+     * @param path Clave de la textura en el mapa
+     * @param texture Nueva textura o textura actualizada
+     * @param textureInfo Información de la textura existente
+     * @param blobUrl URL del blob si existe (para almacenar o revocar)
+     * @private
+     */
+    private updateTextureCommon(
+        path: string, 
+        texture: Texture, 
+        textureInfo: ResourceInfo<Texture>,
+        blobUrl?: string
+    ): void {
+        // Guardar la textura anterior para actualizar referencias
+        const oldTexture = textureInfo.resource;
+        
+        // Actualizar la textura en el mapa con la misma clave
+        this._textures.set(path, {
+            resource: texture,
+            refCount: textureInfo.refCount,
+            name: textureInfo.name,
+            uuid: textureInfo.uuid
+        });
+        
+        // Almacenar la URL del blob si se proporciona
+        if (blobUrl) {
+            this._blobUrls.set(path, blobUrl);
+        }
+        
+        // Actualizar las referencias a la textura en los materiales
+        this._materials.forEach((materialInfo, materialUuid) => {
+            if (materialInfo.resource instanceof MeshStandardMaterial) {
+                const material = materialInfo.resource as MeshStandardMaterial;
+                
+                // Actualizar cada mapa de textura si usa la textura anterior
+                if (material.map === oldTexture) {
+                    material.map = texture;
+                    material.needsUpdate = true;
+                }
+                if (material.normalMap === oldTexture) {
+                    material.normalMap = texture;
+                    material.needsUpdate = true;
+                }
+                if (material.roughnessMap === oldTexture) {
+                    material.roughnessMap = texture;
+                    material.needsUpdate = true;
+                }
+                if (material.metalnessMap === oldTexture) {
+                    material.metalnessMap = texture;
+                    material.needsUpdate = true;
+                }
+                if (material.emissiveMap === oldTexture) {
+                    material.emissiveMap = texture;
+                    material.needsUpdate = true;
+                }
+                if (material.aoMap === oldTexture) {
+                    material.aoMap = texture;
+                    material.needsUpdate = true;
+                }
+                if (material.displacementMap === oldTexture) {
+                    material.displacementMap = texture;
+                    material.needsUpdate = true;
+                }
+            }
+        });
+        
+        // Notificar a los suscriptores
+        this._texturesSubject.next(new Map(this._textures));
+        this._materialsSubject.next(new Map(this._materials));
+        
+        // Actualizar todos los materiales que usan esta textura
+        this.updateMaterialsUsingTexture(textureInfo.uuid);
+    }
+
+    /**
+     * Actualiza las propiedades de una textura existente
+     * @param path Clave de la textura en el mapa
+     * @param options Opciones de la textura a actualizar
+     */
     updateTexture(path: string, options: {
         wrapS?: Wrapping;
         wrapT?: Wrapping;
@@ -294,69 +511,12 @@ export class ResourceService {
         }
 
         const texture = textureInfo.resource;
-        console.log('Before update - Texture properties:', {
-            path,
-            wrapS: texture.wrapS,
-            wrapT: texture.wrapT,
-            encoding: texture.encoding,
-            generateMipmaps: texture.generateMipmaps,
-            flipY: texture.flipY
-        });
         
-        // Apply options and mark texture as needing update
-        if (options.wrapS !== undefined) {
-            texture.wrapS = options.wrapS;
-        }
+        // Aplicar opciones a la textura
+        this.applyTextureOptions(texture, options, true);
         
-        if (options.wrapT !== undefined) {
-            texture.wrapT = options.wrapT;
-        }
-        
-        if (options.encoding !== undefined) {
-            // Force the encoding to update by explicitly setting it
-            console.log(`Attempting to update encoding from ${texture.encoding} to ${options.encoding}`);
-            
-            // In Three.js, some properties need special handling
-            // For encoding, we need to ensure it's properly set
-            Object.defineProperty(texture, 'encoding', {
-                value: options.encoding,
-                writable: true,
-                configurable: true
-            });
-            
-            console.log(`After update, encoding is now: ${texture.encoding}`);
-        }
-        
-        if (options.generateMipmaps !== undefined) {
-            texture.generateMipmaps = options.generateMipmaps;
-        }
-        
-        if (options.flipY !== undefined) {
-            texture.flipY = options.flipY;
-        }
-
-        // Always mark the texture as needing update to ensure changes are applied
-        texture.needsUpdate = true;
-        
-        console.log('After update - Texture properties:', {
-            path,
-            wrapS: texture.wrapS,
-            wrapT: texture.wrapT,
-            encoding: texture.encoding,
-            generateMipmaps: texture.generateMipmaps,
-            flipY: texture.flipY
-        });
-        
-        // Create a new texture info object to ensure the reference is updated
-        this._textures.set(path, {
-            resource: texture,
-            refCount: textureInfo.refCount,
-            name: textureInfo.name,
-            uuid: textureInfo.uuid
-        });
-        
-        // Notify subscribers about the update
-        this._texturesSubject.next(new Map(this._textures));
+        // Usar el método común para actualizar la textura y notificar
+        this.updateTextureCommon(path, texture, textureInfo);
     }
 
     // Material management
@@ -874,11 +1034,11 @@ export class ResourceService {
     }
 
     /**
-     * Updates an existing texture with a new file
-     * @param path Path of the existing texture to update
-     * @param file New file to use for the texture
-     * @param options Texture options
-     * @returns Promise with the updated texture
+     * Actualiza una textura existente con un nuevo archivo
+     * @param path Clave de la textura en el mapa
+     * @param file Nuevo archivo para la textura
+     * @param options Opciones de la textura
+     * @returns Promise con la textura actualizada
      */
     async updateTextureFromFile(path: string, file: File, options: {
         wrapS?: Wrapping;
@@ -891,62 +1051,47 @@ export class ResourceService {
             throw new Error('Cannot update texture from file in non-browser environment');
         }
         
-        // Check if texture exists
+        // Verificar si la textura existe
         const textureInfo = this._textures.get(path);
         if (!textureInfo) {
             console.error(`Texture not found: ${path}`);
             throw new Error(`Texture not found: ${path}`);
         }
         
-        // Revoke old blob URL if it exists
+        // Revocar la URL del blob anterior si existe
         if (this._blobUrls.has(path)) {
             console.log(`Revocando blob URL anterior para ${path}: ${this._blobUrls.get(path)}`);
             URL.revokeObjectURL(this._blobUrls.get(path)!);
         }
         
-        // Create a new blob URL for the file
+        // Crear una nueva URL de blob para el archivo
         const blobUrl = URL.createObjectURL(file);
         console.log(`Creado nuevo blob URL para ${path}: ${blobUrl}`);
         
         try {
-            // Load the texture from the blob URL
+            // Cargar la textura desde la URL del blob
             const texture = await this._textureLoader.loadAsync(blobUrl);
             
-            // Set the name to preserve the original texture name
+            // Establecer el nombre para preservar el nombre original de la textura
             texture.name = textureInfo.name;
             
-            // Apply options
-            if (options.wrapS !== undefined) texture.wrapS = options.wrapS;
-            if (options.wrapT !== undefined) texture.wrapT = options.wrapT;
-            if (options.encoding !== undefined) texture.encoding = options.encoding;
-            if (options.generateMipmaps !== undefined) texture.generateMipmaps = options.generateMipmaps;
-            if (options.flipY !== undefined) texture.flipY = options.flipY;
+            // Aplicar opciones a la textura
+            this.applyTextureOptions(texture, options);
             
-            // Ensure the image has a valid src property
+            // Asegurarse de que la imagen tenga una propiedad src válida
             if (texture.image && !texture.image.src) {
                 texture.image.src = blobUrl;
             }
             
-            // Dispose of the old texture
+            // Liberar la textura anterior
             textureInfo.resource.dispose();
             
-            // Update the texture in the map with the same key
-            this._textures.set(path, {
-                resource: texture,
-                refCount: textureInfo.refCount,
-                name: textureInfo.name,
-                uuid: textureInfo.uuid
-            });
-            
-            // Store the new blob URL
-            this._blobUrls.set(path, blobUrl);
-            
-            // Notify subscribers
-            this._texturesSubject.next(new Map(this._textures));
+            // Usar el método común para actualizar la textura y notificar
+            this.updateTextureCommon(path, texture, textureInfo, blobUrl);
             
             return texture;
         } catch (error) {
-            // Clean up the blob URL if there's an error
+            // Limpiar la URL del blob si hay un error
             URL.revokeObjectURL(blobUrl);
             console.error('Error updating texture from file:', error);
             throw error;
@@ -954,11 +1099,11 @@ export class ResourceService {
     }
 
     /**
-     * Updates an existing texture with a new URL
-     * @param path Path of the existing texture to update
-     * @param url New URL to use for the texture
-     * @param options Texture options
-     * @returns Promise with the updated texture
+     * Actualiza una textura existente con una nueva URL
+     * @param path Clave de la textura en el mapa
+     * @param url Nueva URL para la textura
+     * @param options Opciones de la textura
+     * @returns Promise con la textura actualizada
      */
     async updateTextureFromUrl(path: string, url: string, options: {
         wrapS?: Wrapping;
@@ -971,14 +1116,14 @@ export class ResourceService {
             throw new Error('Cannot update texture from URL in non-browser environment');
         }
         
-        // Check if texture exists
+        // Verificar si la textura existe
         const textureInfo = this._textures.get(path);
         if (!textureInfo) {
             console.error(`Texture not found: ${path}`);
             throw new Error(`Texture not found: ${path}`);
         }
         
-        // Revoke old blob URL if it exists
+        // Revocar la URL del blob anterior si existe
         if (this._blobUrls.has(path)) {
             console.log(`Revocando blob URL anterior para ${path}: ${this._blobUrls.get(path)}`);
             URL.revokeObjectURL(this._blobUrls.get(path)!);
@@ -986,37 +1131,25 @@ export class ResourceService {
         }
         
         try {
-            // Load the texture from the URL
+            // Cargar la textura desde la URL
             const texture = await this._textureLoader.loadAsync(url);
             
-            // Set the name to preserve the original texture name
+            // Establecer el nombre para preservar el nombre original de la textura
             texture.name = textureInfo.name;
             
-            // Apply options
-            if (options.wrapS !== undefined) texture.wrapS = options.wrapS;
-            if (options.wrapT !== undefined) texture.wrapT = options.wrapT;
-            if (options.encoding !== undefined) texture.encoding = options.encoding;
-            if (options.generateMipmaps !== undefined) texture.generateMipmaps = options.generateMipmaps;
-            if (options.flipY !== undefined) texture.flipY = options.flipY;
+            // Aplicar opciones a la textura
+            this.applyTextureOptions(texture, options);
             
-            // Ensure the image has a valid src property
+            // Asegurarse de que la imagen tenga una propiedad src válida
             if (texture.image && !texture.image.src) {
                 texture.image.src = url;
             }
             
-            // Dispose of the old texture
+            // Liberar la textura anterior
             textureInfo.resource.dispose();
             
-            // Update the texture in the map with the same key
-            this._textures.set(path, {
-                resource: texture,
-                refCount: textureInfo.refCount,
-                name: textureInfo.name,
-                uuid: textureInfo.uuid
-            });
-            
-            // Notify subscribers
-            this._texturesSubject.next(new Map(this._textures));
+            // Usar el método común para actualizar la textura y notificar
+            this.updateTextureCommon(path, texture, textureInfo);
             
             return texture;
         } catch (error) {
@@ -1046,5 +1179,91 @@ export class ResourceService {
             this._materialPreviews.delete(uuid);
             this._materialPreviewsSubject.next(new Map(this._materialPreviews));
         }
+    }
+
+    /**
+     * Finds all materials that use a specific texture
+     * @param textureUuid UUID of the texture to search for
+     * @returns Array of material UUIDs that use the texture
+     */
+    findMaterialsUsingTexture(textureUuid: string): string[] {
+        const materialsUsingTexture: string[] = [];
+        const textureInfo = this._textures.get(textureUuid);
+        
+        if (!textureInfo) {
+            console.warn(`Texture with UUID ${textureUuid} not found`);
+            return materialsUsingTexture;
+        }
+        
+        // Get the texture resource
+        const texture = textureInfo.resource;
+        
+        console.log(`Buscando materiales que usan la textura ${textureInfo.name} (UUID: ${textureUuid})`);
+        
+        // Check all materials to see if they use this texture
+        for (const [materialUuid, materialInfo] of this._materials.entries()) {
+            const material = materialInfo.resource;
+            
+            // Only check MeshStandardMaterial for now
+            if (material instanceof MeshStandardMaterial) {
+                // Comparar las instancias de textura directamente
+                if (material.map === texture || 
+                    material.normalMap === texture || 
+                    material.roughnessMap === texture || 
+                    material.metalnessMap === texture || 
+                    material.emissiveMap === texture || 
+                    material.aoMap === texture || 
+                    material.displacementMap === texture) {
+                    
+                    console.log(`Material ${materialInfo.name} (UUID: ${materialUuid}) usa la textura ${textureInfo.name}`);
+                    materialsUsingTexture.push(materialUuid);
+                }
+            }
+        }
+        
+        return materialsUsingTexture;
+    }
+    
+    /**
+     * Updates all materials that use a specific texture
+     * @param textureUuid UUID of the texture that was updated
+     */
+    updateMaterialsUsingTexture(textureUuid: string): void {
+        const materialsToUpdate = this.findMaterialsUsingTexture(textureUuid);
+        
+        if (materialsToUpdate.length === 0) {
+            console.log(`No materials found using texture ${textureUuid}`);
+            return;
+        }
+        
+        console.log(`Updating ${materialsToUpdate.length} materials that use texture ${textureUuid}`);
+        
+        // Update each material to ensure the texture changes are applied
+        materialsToUpdate.forEach(materialUuid => {
+            const materialInfo = this._materials.get(materialUuid);
+            if (materialInfo && materialInfo.resource) {
+                // Mark the material as needing update
+                materialInfo.resource.needsUpdate = true;
+                
+                // Forzar la actualización de las texturas en el material
+                if (materialInfo.resource instanceof MeshStandardMaterial) {
+                    const material = materialInfo.resource as MeshStandardMaterial;
+                    
+                    // Forzar la actualización de cada mapa de textura
+                    if (material.map) material.map.needsUpdate = true;
+                    if (material.normalMap) material.normalMap.needsUpdate = true;
+                    if (material.roughnessMap) material.roughnessMap.needsUpdate = true;
+                    if (material.metalnessMap) material.metalnessMap.needsUpdate = true;
+                    if (material.emissiveMap) material.emissiveMap.needsUpdate = true;
+                    if (material.aoMap) material.aoMap.needsUpdate = true;
+                    if (material.displacementMap) material.displacementMap.needsUpdate = true;
+                }
+                
+                console.log(`Updated material ${materialInfo.name} (${materialUuid})`);
+            }
+        });
+        
+        // Notify subscribers about the material updates
+        this._materialsSubject.next(new Map(this._materials));
     }
 } 

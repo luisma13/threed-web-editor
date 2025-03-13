@@ -1,4 +1,4 @@
-import { EditorService } from "../../editor.service";
+import { EditorEventsService } from "../../shared/editor-events.service";
 
 export interface TransformData {
     position: THREE.Vector3,
@@ -11,6 +11,6 @@ export abstract class Action<T> {
     constructor(data: T) {
         this.state = data;
     }
-    abstract executeUndo(editorService: EditorService): void;
-    abstract executeRedo(editorService: EditorService): void;
+    abstract executeUndo(): void;
+    abstract executeRedo(): void;
 }

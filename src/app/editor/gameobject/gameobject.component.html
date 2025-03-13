@@ -9,10 +9,10 @@
         [ngClass]="getStyle(gameObject)"
         [class.selected]="isSelected">
 
-        <div *ngIf="gameObject?.childrenGameObjects.length === 0" class="icon-placeholder">
+        <div *ngIf="gameObject?.childrenGameObjects?.length === 0" class="icon-placeholder">
         </div>
         
-        <button *ngIf="gameObject?.childrenGameObjects.length > 0"
+        <button *ngIf="gameObject?.childrenGameObjects?.length > 0"
                type="button"
                mat-icon-button
                (click)="toggleChildren(); $event.stopPropagation()"
@@ -25,7 +25,7 @@
         <span class="gameobject-name"> {{ gameObject?.name || gameObject?.type }}</span>
     </div>
 
-    <div *ngIf="showChildren" class="children-container">
-        <app-game-object *ngFor="let child of gameObject?.childrenGameObjects" [gameObject]="child"></app-game-object>
+    <div *ngIf="showChildren && gameObject?.childrenGameObjects?.length > 0" class="children-container">
+        <app-game-object *ngFor="let child of gameObject?.childrenGameObjects; trackBy: trackByUuid" [gameObject]="child"></app-game-object>
     </div>
 </div>

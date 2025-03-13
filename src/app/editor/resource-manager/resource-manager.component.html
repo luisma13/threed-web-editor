@@ -4,6 +4,9 @@
         <span>Resources</span>
     </div>
     <mat-accordion class="resource-manager">
+        <!-- Model Cache Panel -->
+        <app-model-cache></app-model-cache>
+        
         <mat-expansion-panel>
             <mat-expansion-panel-header>
                 <mat-panel-title>
@@ -57,7 +60,14 @@
                          [title]="texture.value.name"
                          (click)="editTexture(texture.key)">
                         <div class="resource-preview">
-                            <img [src]="texture.value.resource.image?.src" alt="texture preview">
+                            <img *ngIf="getTexturePreviewUrl(texture.value.resource)" 
+                                 [src]="getTexturePreviewUrl(texture.value.resource)" 
+                                 alt="texture preview"
+                                 loading="lazy">
+                            <div *ngIf="!getTexturePreviewUrl(texture.value.resource)" 
+                                 class="texture-fallback">
+                                <mat-icon>image</mat-icon>
+                            </div>
                         </div>
                         <div class="resource-name">{{ texture.value.name }}</div>
                         <div class="resource-info">

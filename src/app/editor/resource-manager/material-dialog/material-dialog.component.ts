@@ -525,8 +525,9 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
         // Intentar obtener la textura directamente por UUID/clave
         if (this.resourceService.textures.has(texturePath)) {
             const textureInfo = this.resourceService.textures.get(texturePath);
-            if (textureInfo && textureInfo.resource && textureInfo.resource.image) {
-                return textureInfo.resource.image.src || null;
+            if (textureInfo && textureInfo.resource) {
+                // Usar el método centralizado del ResourceService
+                return this.resourceService.getTexturePreviewUrl(textureInfo.resource);
             }
         }
         
@@ -546,9 +547,8 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
             if (this.metalnessMap === texturePath) this.metalnessMap = textureByName[0];
             if (this.emissiveMap === texturePath) this.emissiveMap = textureByName[0];
             
-            if (textureInfo.resource && textureInfo.resource.image) {
-                return textureInfo.resource.image.src || null;
-            }
+            // Usar el método centralizado del ResourceService
+            return this.resourceService.getTexturePreviewUrl(textureInfo.resource);
         }
         
         console.error(`No se pudo encontrar la textura "${texturePath}" ni por UUID ni por nombre`);
