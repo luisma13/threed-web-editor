@@ -1,0 +1,71 @@
+<div (mousedown)="stopPropagation($event)">
+    <div class="resources-header">
+        <mat-icon>folder</mat-icon>
+        <span>Resources</span>
+    </div>
+    <mat-accordion class="resource-manager">
+        <mat-expansion-panel>
+            <mat-expansion-panel-header>
+                <mat-panel-title>
+                    <mat-icon>storage</mat-icon>
+                    <span>Asset Library</span>
+                </mat-panel-title>
+            </mat-expansion-panel-header>
+
+            <!-- Materials -->
+            <div class="resource-section">
+                <div class="section-header">
+                    <mat-icon>texture</mat-icon>
+                    <span>Materials</span>
+                    <button mat-icon-button (click)="addMaterial()">
+                        <mat-icon>add</mat-icon>
+                    </button>
+                </div>
+                <div class="resource-grid">
+                    <div *ngFor="let material of resourceService.materials | keyvalue; let i = index" 
+                         class="resource-item"
+                         [title]="material.value.name + ' (UUID: ' + material.key + ')'"
+                         (click)="editMaterial(material.key)"
+                         draggable="true"
+                         (dragstart)="onMaterialDragStart($event, material.key)">
+                        <div class="resource-preview material-preview">
+                            <canvas #materialCanvas [attr.data-index]="i" [attr.data-uuid]="material.key"></canvas>
+                        </div>
+                        <div class="resource-name">{{ material.value.name }}</div>
+                        <div class="resource-info">
+                            {{ material.value.refCount }} uses
+                        </div>
+                        <div class="material-textures" *ngIf="getMaterialTextureNames(material.value.resource).length > 0">
+                            <span>Maps: {{ getMaterialTextureNames(material.value.resource).join(', ') }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Textures -->
+            <div class="resource-section">
+                <div class="section-header">
+                    <mat-icon>image</mat-icon>
+                    <span>Textures</span>
+                    <button mat-icon-button (click)="addTexture()">
+                        <mat-icon>add</mat-icon>
+                    </button>
+                </div>
+                <div class="resource-grid">
+                    <div *ngFor="let texture of resourceService.textures | keyvalue" 
+                         class="resource-item"
+                         [title]="texture.value.name"
+                         (click)="editTexture(texture.key)">
+                        <div class="resource-preview">
+                            <img [src]="texture.value.resource.image?.src" alt="texture preview">
+                        </div>
+                        <div class="resource-name">{{ texture.value.name }}</div>
+                        <div class="resource-info">
+                            {{ texture.value.refCount }} uses
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </mat-expansion-panel>
+    </mat-accordion>
+</div> 

@@ -1,0 +1,94 @@
+<h2 mat-dialog-title>Select Texture</h2>
+<mat-dialog-content>
+    <div class="texture-source-tabs">
+        <div class="tab" [class.active]="activeTab === 'existing'" (click)="activeTab = 'existing'">Existing</div>
+        <div class="tab" [class.active]="activeTab === 'url'" (click)="activeTab = 'url'">URL</div>
+        <div class="tab" [class.active]="activeTab === 'upload'" (click)="activeTab = 'upload'">Upload</div>
+    </div>
+    
+    <div class="tab-content" *ngIf="activeTab === 'existing'">
+        <div class="tab-header">
+            <h3>Select from existing textures</h3>
+            <button mat-icon-button class="info-icon" 
+                    [matTooltip]="'Choose from textures that have already been loaded into the editor'"
+                    matTooltipPosition="right"
+                    [matTooltipShowDelay]="300">
+                <mat-icon>help_outline</mat-icon>
+            </button>
+        </div>
+        <mat-selection-list #textureList [multiple]="false">
+            <mat-list-option *ngFor="let texture of data.textures" [value]="texture">
+                {{ texture }}
+            </mat-list-option>
+        </mat-selection-list>
+        <p *ngIf="data.textures.length === 0">No textures available</p>
+    </div>
+    
+    <div class="tab-content" *ngIf="activeTab === 'url'">
+        <div class="tab-header">
+            <h3>Load from URL</h3>
+            <button mat-icon-button class="info-icon" 
+                    [matTooltip]="'Enter a web URL to load a texture directly from the internet. The URL must point to an image file.'"
+                    matTooltipPosition="right"
+                    [matTooltipShowDelay]="300">
+                <mat-icon>help_outline</mat-icon>
+            </button>
+        </div>
+        <mat-form-field appearance="fill" class="url-input">
+            <mat-label>Texture URL</mat-label>
+            <input matInput [(ngModel)]="textureUrl" placeholder="https://example.com/texture.jpg">
+            <mat-hint>Enter a direct URL to an image file</mat-hint>
+        </mat-form-field>
+        <div class="url-preview" *ngIf="textureUrl">
+            <div class="preview-label">Preview:</div>
+            <img [src]="textureUrl" (error)="handleImageError($event)" (load)="handleImageLoad($event)">
+            <div class="error-message" *ngIf="urlError">{{ urlError }}</div>
+        </div>
+    </div>
+    
+    <div class="tab-content" *ngIf="activeTab === 'upload'">
+        <div class="tab-header">
+            <h3>Upload or drag & drop</h3>
+            <button mat-icon-button class="info-icon" 
+                    [matTooltip]="'Upload an image file from your computer or drag and drop it here'"
+                    matTooltipPosition="right"
+                    [matTooltipShowDelay]="300">
+                <mat-icon>help_outline</mat-icon>
+            </button>
+        </div>
+        <div class="drop-zone" 
+             (dragover)="onDragOver($event)" 
+             (dragleave)="onDragLeave($event)" 
+             (drop)="onDrop($event)"
+             [class.drag-over]="isDragging">
+            <input type="file" 
+                   #fileInput 
+                   accept="image/*" 
+                   (change)="onFileSelected($event)" 
+                   style="display: none">
+            <div class="drop-content">
+                <mat-icon>cloud_upload</mat-icon>
+                <p>Drag & drop an image here or</p>
+                <button mat-raised-button color="primary" (click)="fileInput.click()">
+                    Browse Files
+                </button>
+            </div>
+        </div>
+        <div class="file-preview" *ngIf="selectedFile">
+            <div class="preview-label">Selected file:</div>
+            <div class="file-info">
+                <mat-icon>image</mat-icon>
+                <span>{{ selectedFile.name }}</span>
+            </div>
+            <img [src]="filePreviewUrl" *ngIf="filePreviewUrl">
+        </div>
+    </div>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+    <button mat-button (click)="onCancel()">Cancel</button>
+    <button mat-button color="primary" 
+            [disabled]="!isSelectionValid()"
+            (click)="onConfirm()">
+        Select
+    </button>
+</mat-dialog-actions> 

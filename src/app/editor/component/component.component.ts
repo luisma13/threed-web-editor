@@ -10,6 +10,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 import { EditorComponent } from '../editor.component';
 import { ContextMenuService } from '../context-menu/context-menu.service';
+import { MaterialInputComponent } from '../property-editor/material-input/material-input.component';
 
 @Component({
     selector: 'app-component',
@@ -21,7 +22,8 @@ import { ContextMenuService } from '../context-menu/context-menu.service';
         MatFormFieldModule,
         MatInputModule,
         MatCheckboxModule,
-        MatIconModule
+        MatIconModule,
+        MaterialInputComponent
     ],
     templateUrl: './component.component.html',
     styleUrl: './component.component.scss'

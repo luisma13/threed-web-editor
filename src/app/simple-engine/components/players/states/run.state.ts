@@ -14,7 +14,7 @@ export class RunState extends PlayerBaseState {
         super.update(delta);
 
         // Falling
-        if (!this.playerPhysics.inGround) {
+        if (!this.playerPhysics.isGrounded()) {
             this.playerController.changeState(new FallState(this.playerController));
         }
     }

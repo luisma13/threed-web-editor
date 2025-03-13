@@ -40,6 +40,11 @@ export class EngineInput {
         this.controlRight = event.ctrlKey;
         this.shiftRight = event.shiftKey;
 
+        // Check if event.key is defined
+        if (!event.key) {
+            return;
+        }
+
         // save letters only in lowercase
         if (event.key.length === 1 && event.key.match(/[a-z]/i)) {
             this.keys.set(event.key.toLowerCase(), true);
@@ -57,6 +62,11 @@ export class EngineInput {
         this.shiftLeft = event.shiftKey;
         this.controlRight = event.ctrlKey;
         this.shiftRight = event.shiftKey;
+        
+        // Check if event.key is defined
+        if (!event.key) {
+            return;
+        }
         
         // save letters only in lowercase
         if (event.key.length === 1 && event.key.match(/[a-z]/i)) {

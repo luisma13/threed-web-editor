@@ -510,7 +510,7 @@ export class SceneSerializer {
                 break;
             case '.vrm':
                 const { scene } = await loadVRM(url);
-                gameObject = new GameObject(scene);
+                gameObject = new GameObject(null, scene);
                 break;
             default:
                 // Si no se reconoce la extensión, crear un GameObject vacío

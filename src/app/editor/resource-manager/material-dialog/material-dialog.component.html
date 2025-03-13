@@ -1,0 +1,403 @@
+<div (mousedown)="stopPropagation($event)" class="material-dialog-container">
+    <h2 mat-dialog-title>{{ data.isEdit ? 'Edit' : 'Add' }} Material</h2>
+    <mat-dialog-content>
+        <div class="dialog-content">
+            <div class="preview-section">
+                <div class="preview-container">
+                    <canvas #previewCanvas class="preview-canvas"></canvas>
+                    
+                    <div class="preview-controls">
+                        <div class="shape-selector">
+                            <button mat-icon-button 
+                                    [class.active]="previewShape === 'sphere'" 
+                                    (click)="changePreviewShape('sphere')"
+                                    [matTooltip]="'Show sphere preview'"
+                                    matTooltipPosition="right"
+                                    [matTooltipShowDelay]="300">
+                                <mat-icon>radio_button_unchecked</mat-icon>
+                            </button>
+                            <button mat-icon-button 
+                                    [class.active]="previewShape === 'cube'" 
+                                    (click)="changePreviewShape('cube')"
+                                    [matTooltip]="'Show cube preview'"
+                                    matTooltipPosition="right"
+                                    [matTooltipShowDelay]="300">
+                                <mat-icon>crop_square</mat-icon>
+                            </button>
+                            <button mat-icon-button 
+                                    [class.active]="previewShape === 'torus'" 
+                                    (click)="changePreviewShape('torus')"
+                                    [matTooltip]="'Show torus preview'"
+                                    matTooltipPosition="right"
+                                    [matTooltipShowDelay]="300">
+                                <mat-icon>trip_origin</mat-icon>
+                            </button>
+                        </div>
+                        
+                        <div class="light-controls">
+                            <mat-slider min="0" max="2" step="0.1" [discrete]="false">
+                                <input matSliderThumb [(ngModel)]="lightIntensity" (ngModelChange)="updateLighting()">
+                            </mat-slider>
+                            <button mat-icon-button 
+                                    [class.active]="darkBackground" 
+                                    (click)="toggleBackground(true)"
+                                    [matTooltip]="'Dark background'"
+                                    matTooltipPosition="right"
+                                    [matTooltipShowDelay]="300">
+                                <mat-icon>brightness_3</mat-icon>
+                            </button>
+                            <button mat-icon-button 
+                                    [class.active]="!darkBackground" 
+                                    (click)="toggleBackground(false)"
+                                    [matTooltip]="'Light background'"
+                                    matTooltipPosition="right"
+                                    [matTooltipShowDelay]="300">
+                                <mat-icon>wb_sunny</mat-icon>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="properties-section">
+                <div class="properties-container">
+                    <div class="basic-properties">
+                        <h3>Basic Properties</h3>
+                        
+                        <div class="text-field">
+                            <mat-form-field appearance="fill">
+                                <mat-label>Material Name</mat-label>
+                                <input matInput [(ngModel)]="materialName" name="materialName">
+                            </mat-form-field>
+                        </div>
+                        
+                        <div class="color-field">
+                            <div class="property-label">
+                                <mat-label>Color</mat-label>
+                                <button mat-icon-button class="info-icon" 
+                                        [matTooltip]="'Base color of the material. This is multiplied by any albedo texture.'"
+                                        matTooltipPosition="right"
+                                        [matTooltipShowDelay]="300">
+                                    <mat-icon>help_outline</mat-icon>
+                                </button>
+                            </div>
+                            <div class="color-input-container">
+                                <input type="color" [(ngModel)]="color" name="color" (ngModelChange)="updatePreviewMaterial()">
+                            </div>
+                        </div>
+                        
+                        <div class="slider-field">
+                            <div class="property-label">
+                                <mat-label>Roughness: {{ roughness.toFixed(2) }}</mat-label>
+                                <button mat-icon-button class="info-icon" 
+                                        [matTooltip]="'Controls how rough the material appears. Higher values make the material more matte, lower values make it more glossy.'"
+                                        matTooltipPosition="right"
+                                        [matTooltipShowDelay]="300">
+                                    <mat-icon>help_outline</mat-icon>
+                                </button>
+                            </div>
+                            <mat-slider min="0" max="1" step="0.01" [discrete]="false">
+                                <input matSliderThumb [(ngModel)]="roughness" name="roughness" (ngModelChange)="updatePreviewMaterial()">
+                            </mat-slider>
+                        </div>
+                        
+                        <div class="slider-field">
+                            <div class="property-label">
+                                <mat-label>Metalness: {{ metalness.toFixed(2) }}</mat-label>
+                                <button mat-icon-button class="info-icon" 
+                                        [matTooltip]="'Determines how metallic the material appears. Higher values make the material reflect more light like a metal.'"
+                                        matTooltipPosition="right"
+                                        [matTooltipShowDelay]="300">
+                                    <mat-icon>help_outline</mat-icon>
+                                </button>
+                            </div>
+                            <mat-slider min="0" max="1" step="0.01" [discrete]="false">
+                                <input matSliderThumb [(ngModel)]="metalness" name="metalness" (ngModelChange)="updatePreviewMaterial()">
+                            </mat-slider>
+                        </div>
+                        
+                        <div class="checkbox-field">
+                            <div class="property-label">
+                                <mat-checkbox [(ngModel)]="transparent" name="transparent" (ngModelChange)="updatePreviewMaterial()">
+                                    Transparency
+                                </mat-checkbox>
+                                <button mat-icon-button class="info-icon" 
+                                        [matTooltip]="'Enables transparency for the material. When enabled, the opacity slider controls how transparent the material is.'"
+                                        matTooltipPosition="right"
+                                        [matTooltipShowDelay]="300">
+                                    <mat-icon>help_outline</mat-icon>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="slider-field" *ngIf="transparent">
+                            <div class="property-label">
+                                <mat-label>Opacity: {{ opacity.toFixed(2) }}</mat-label>
+                                <button mat-icon-button class="info-icon" 
+                                        [matTooltip]="'Controls how transparent the material is. Only works when Transparency is enabled.'"
+                                        matTooltipPosition="right"
+                                        [matTooltipShowDelay]="300">
+                                    <mat-icon>help_outline</mat-icon>
+                                </button>
+                            </div>
+                            <mat-slider min="0" max="1" step="0.01" [discrete]="false">
+                                <input matSliderThumb [(ngModel)]="opacity" name="opacity" (ngModelChange)="updatePreviewMaterial()">
+                            </mat-slider>
+                        </div>
+                    </div>
+                    
+                    <div class="texture-maps">
+                        <h3>Texture Maps</h3>
+                        
+                        <div class="texture-field">
+                            <div class="property-label">
+                                <mat-label>Albedo Map</mat-label>
+                                <button mat-icon-button class="info-icon" 
+                                        [matTooltip]="'The base color texture of the material. Also known as diffuse map.'"
+                                        matTooltipPosition="right"
+                                        [matTooltipShowDelay]="300">
+                                    <mat-icon>help_outline</mat-icon>
+                                </button>
+                            </div>
+                            <div class="texture-input-container">
+                                <div class="texture-preview" *ngIf="albedoMap">
+                                    <img [src]="getTexturePreviewUrl(albedoMap)" alt="Albedo texture">
+                                </div>
+                                <div class="texture-actions">
+                                    <button mat-stroked-button (click)="selectTexture('albedo')">
+                                        {{ albedoMap ? 'Change' : 'Select' }}
+                                    </button>
+                                    <button mat-icon-button *ngIf="albedoMap" (click)="clearTexture('albedo')" color="warn">
+                                        <mat-icon>clear</mat-icon>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="texture-field">
+                            <div class="property-label">
+                                <mat-label>Normal Map</mat-label>
+                                <button mat-icon-button class="info-icon" 
+                                        [matTooltip]="'Adds surface detail without adding geometry. Makes the surface appear more detailed.'"
+                                        matTooltipPosition="right"
+                                        [matTooltipShowDelay]="300">
+                                    <mat-icon>help_outline</mat-icon>
+                                </button>
+                            </div>
+                            <div class="texture-input-container">
+                                <div class="texture-preview" *ngIf="normalMap">
+                                    <img [src]="getTexturePreviewUrl(normalMap)" alt="Normal texture">
+                                </div>
+                                <div class="texture-actions">
+                                    <button mat-stroked-button (click)="selectTexture('normal')">
+                                        {{ normalMap ? 'Change' : 'Select' }}
+                                    </button>
+                                    <button mat-icon-button *ngIf="normalMap" (click)="clearTexture('normal')" color="warn">
+                                        <mat-icon>clear</mat-icon>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="texture-field">
+                            <div class="property-label">
+                                <mat-label>Roughness Map</mat-label>
+                                <button mat-icon-button class="info-icon" 
+                                        [matTooltip]="'Controls the roughness of different parts of the surface. White is rough, black is smooth.'"
+                                        matTooltipPosition="right"
+                                        [matTooltipShowDelay]="300">
+                                    <mat-icon>help_outline</mat-icon>
+                                </button>
+                            </div>
+                            <div class="texture-input-container">
+                                <div class="texture-preview" *ngIf="roughnessMap">
+                                    <img [src]="getTexturePreviewUrl(roughnessMap)" alt="Roughness texture">
+                                </div>
+                                <div class="texture-actions">
+                                    <button mat-stroked-button (click)="selectTexture('roughness')">
+                                        {{ roughnessMap ? 'Change' : 'Select' }}
+                                    </button>
+                                    <button mat-icon-button *ngIf="roughnessMap" (click)="clearTexture('roughness')" color="warn">
+                                        <mat-icon>clear</mat-icon>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="texture-field">
+                            <div class="property-label">
+                                <mat-label>Metalness Map</mat-label>
+                                <button mat-icon-button class="info-icon" 
+                                        [matTooltip]="'Controls which parts of the surface are metallic. White is metallic, black is non-metallic.'"
+                                        matTooltipPosition="right"
+                                        [matTooltipShowDelay]="300">
+                                    <mat-icon>help_outline</mat-icon>
+                                </button>
+                            </div>
+                            <div class="texture-input-container">
+                                <div class="texture-preview" *ngIf="metalnessMap">
+                                    <img [src]="getTexturePreviewUrl(metalnessMap)" alt="Metalness texture">
+                                </div>
+                                <div class="texture-actions">
+                                    <button mat-stroked-button (click)="selectTexture('metalness')">
+                                        {{ metalnessMap ? 'Change' : 'Select' }}
+                                    </button>
+                                    <button mat-icon-button *ngIf="metalnessMap" (click)="clearTexture('metalness')" color="warn">
+                                        <mat-icon>clear</mat-icon>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="advanced-properties">
+                        <h3>Advanced Properties</h3>
+                        
+                        <div class="select-field">
+                            <mat-form-field appearance="fill">
+                                <mat-label>Side</mat-label>
+                                <mat-select [(ngModel)]="side" name="side" (ngModelChange)="updatePreviewMaterial()">
+                                    <mat-option [value]="0">Front</mat-option>
+                                    <mat-option [value]="1">Back</mat-option>
+                                    <mat-option [value]="2">Double</mat-option>
+                                </mat-select>
+                            </mat-form-field>
+                        </div>
+                        
+                        <div class="checkbox-field">
+                            <div class="property-label">
+                                <mat-checkbox [(ngModel)]="flatShading" name="flatShading" (ngModelChange)="updatePreviewMaterial()">
+                                    Flat Shading
+                                </mat-checkbox>
+                                <button mat-icon-button class="info-icon" 
+                                        [matTooltip]="'When enabled, faces appear flat without smooth transitions between them. Good for low-poly stylized looks.'"
+                                        matTooltipPosition="right"
+                                        [matTooltipShowDelay]="300">
+                                    <mat-icon>help_outline</mat-icon>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="checkbox-field">
+                            <div class="property-label">
+                                <mat-checkbox [(ngModel)]="wireframe" name="wireframe" (ngModelChange)="updatePreviewMaterial()">
+                                    Wireframe
+                                </mat-checkbox>
+                                <button mat-icon-button class="info-icon" 
+                                        [matTooltip]="'Shows only the edges of the geometry. Useful for debugging or for special effects.'"
+                                        matTooltipPosition="right"
+                                        [matTooltipShowDelay]="300">
+                                    <mat-icon>help_outline</mat-icon>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="slider-field">
+                            <div class="property-label">
+                                <mat-label>Alpha Test: {{ alphaTest.toFixed(2) }}</mat-label>
+                                <button mat-icon-button class="info-icon" 
+                                        [matTooltip]="'Sets the alpha value below which pixels are discarded. Useful for cutout effects like foliage.'"
+                                        matTooltipPosition="right"
+                                        [matTooltipShowDelay]="300">
+                                    <mat-icon>help_outline</mat-icon>
+                                </button>
+                            </div>
+                            <mat-slider min="0" max="1" step="0.01" [discrete]="false">
+                                <input matSliderThumb [(ngModel)]="alphaTest" name="alphaTest" (ngModelChange)="updatePreviewMaterial()">
+                            </mat-slider>
+                        </div>
+                        
+                        <div class="checkbox-field">
+                            <div class="property-label">
+                                <mat-checkbox [(ngModel)]="depthTest" name="depthTest" (ngModelChange)="updatePreviewMaterial()">
+                                    Depth Test
+                                </mat-checkbox>
+                                <button mat-icon-button class="info-icon" 
+                                        [matTooltip]="'When enabled, the material checks if it is behind other objects. Disable for special overlay effects.'"
+                                        matTooltipPosition="right"
+                                        [matTooltipShowDelay]="300">
+                                    <mat-icon>help_outline</mat-icon>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="checkbox-field">
+                            <div class="property-label">
+                                <mat-checkbox [(ngModel)]="depthWrite" name="depthWrite" (ngModelChange)="updatePreviewMaterial()">
+                                    Depth Write
+                                </mat-checkbox>
+                                <button mat-icon-button class="info-icon" 
+                                        [matTooltip]="'Determines if the material should write to the depth buffer. Disable for transparent overlays.'"
+                                        matTooltipPosition="right"
+                                        [matTooltipShowDelay]="300">
+                                    <mat-icon>help_outline</mat-icon>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="color-field">
+                            <div class="property-label">
+                                <mat-label>Emissive Color</mat-label>
+                                <button mat-icon-button class="info-icon" 
+                                        [matTooltip]="'Color that the material emits. Used for glowing effects. Intensity is controlled separately.'"
+                                        matTooltipPosition="right"
+                                        [matTooltipShowDelay]="300">
+                                    <mat-icon>help_outline</mat-icon>
+                                </button>
+                            </div>
+                            <div class="color-input-container">
+                                <input type="color" [(ngModel)]="emissiveColor" name="emissiveColor" (ngModelChange)="updatePreviewMaterial()">
+                            </div>
+                        </div>
+                        
+                        <div class="slider-field">
+                            <div class="property-label">
+                                <mat-label>Emissive Intensity: {{ emissiveIntensity.toFixed(2) }}</mat-label>
+                                <button mat-icon-button class="info-icon" 
+                                        [matTooltip]="'Controls how strongly the material emits light. Higher values create a stronger glow effect.'"
+                                        matTooltipPosition="right"
+                                        [matTooltipShowDelay]="300">
+                                    <mat-icon>help_outline</mat-icon>
+                                </button>
+                            </div>
+                            <mat-slider min="0" max="3" step="0.01" [discrete]="false">
+                                <input matSliderThumb [(ngModel)]="emissiveIntensity" name="emissiveIntensity" (ngModelChange)="updatePreviewMaterial()">
+                            </mat-slider>
+                        </div>
+                        
+                        <div class="texture-field">
+                            <div class="property-label">
+                                <mat-label>Emissive Map</mat-label>
+                                <button mat-icon-button class="info-icon" 
+                                        [matTooltip]="'Controls which parts of the material emit light. Used for glowing effects like neon signs or screens.'"
+                                        matTooltipPosition="right"
+                                        [matTooltipShowDelay]="300">
+                                    <mat-icon>help_outline</mat-icon>
+                                </button>
+                            </div>
+                            <div class="texture-input-container">
+                                <div class="texture-preview" *ngIf="emissiveMap">
+                                    <img [src]="getTexturePreviewUrl(emissiveMap)" alt="Emissive texture">
+                                </div>
+                                <div class="texture-actions">
+                                    <button mat-stroked-button (click)="selectTexture('emissive')">
+                                        {{ emissiveMap ? 'Change' : 'Select' }}
+                                    </button>
+                                    <button mat-icon-button *ngIf="emissiveMap" (click)="clearTexture('emissive')" color="warn">
+                                        <mat-icon>clear</mat-icon>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+        <button mat-button (click)="onCancel()">Cancel</button>
+        <button mat-button color="primary" (click)="onConfirm()">
+            {{ data.isEdit ? 'Update' : 'Add' }}
+        </button>
+    </mat-dialog-actions>
+</div> 

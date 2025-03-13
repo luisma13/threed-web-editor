@@ -38,7 +38,7 @@ export class SyncableSceneComponent extends Component {
     async loadNetworkPlayer(objectId) {
         const url = "https://usercollection.mypinata.cloud/ipfs/QmZan3z9nMTmEKSf99bPb8crKcYm4scMJd5YpCTN14B9mn/Crustybutt_da_gobblin_king.vrm";
         const { vrm } = await loadVRM(url);
-        const player = new GameObject(vrm.scene);
+        const player = new GameObject(null, vrm.scene);
         const playerComponent = new PlayerComponent();
         player.addComponent(playerComponent);
         await playerComponent.changeAvatar(vrm, url);

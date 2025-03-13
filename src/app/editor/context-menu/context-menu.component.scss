@@ -17,31 +17,35 @@
     margin: 0;
 }
 
-.context-menu ul li {
+.menu-item {
+    position: relative;
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    font-size: 14px;
+}
+
+.menu-item-content {
     padding: 8px 15px;
     cursor: pointer;
-    font-size: 14px;
-    color: #e0e0e0;
     display: flex;
     align-items: center;
     transition: background-color 0.2s;
-    background-color: #2a2a2a;
 }
 
-.context-menu ul li:hover {
+.menu-item:hover > .menu-item-content {
     background-color: #3a3a3a;
 }
 
-.context-menu ul li.disabled {
+.menu-item.disabled > .menu-item-content {
     color: #777;
     cursor: default;
 }
 
-.context-menu ul li.disabled:hover {
+.menu-item.disabled:hover > .menu-item-content {
     background-color: #2a2a2a;
 }
 
-.context-menu ul li.separator {
+.separator {
     height: 1px;
     padding: 0;
     margin: 5px 0;
@@ -49,22 +53,18 @@
     cursor: default;
 }
 
-.context-menu ul li.separator:hover {
+.separator:hover {
     background-color: #444;
 }
 
-.context-menu ul li {
-    position: relative;
-}
-
-.context-menu ul li .menu-icon {
+.menu-icon {
     margin-right: 8px;
     font-size: 16px;
     width: 20px;
     text-align: center;
 }
 
-.context-menu ul li .submenu-indicator {
+.submenu-indicator {
     margin-left: auto;
 }
 
@@ -81,8 +81,16 @@
     min-width: 180px;
 }
 
-.context-menu ul li:hover > .submenu {
+/* Show submenu on hover */
+.menu-item:hover > .submenu {
     display: block;
+}
+
+/* Ensure text doesn't wrap in menu items */
+.menu-item-content {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .context-menu-header {

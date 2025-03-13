@@ -40,7 +40,7 @@ const gltfLoader = new GLTFLoader(manager)
 export async function loadObj(modelObj): Promise<GameObject> {
     const loader = new ObjectLoader();
     const obj = await loader.loadAsync(modelObj);
-    return new GameObject(obj);
+    return new GameObject(null, obj);
 }
 
 export async function loadVRM(modelUrl: string, helperRoot?: THREE.Group): Promise<{ vrm: VRM, scene: THREE.Group }> {
@@ -71,7 +71,7 @@ export async function loadVRM(modelUrl: string, helperRoot?: THREE.Group): Promi
 export async function loadFBX(url): Promise<GameObject> {
     const loader = new FBXLoader();
     const asset = await loader.loadAsync(url);
-    return new GameObject(asset);
+    return new GameObject(null, asset);
 }
 
 export async function loadFBXAnimation(animationUrl): Promise<AnimationClip> {
@@ -83,7 +83,7 @@ export async function loadFBXAnimation(animationUrl): Promise<AnimationClip> {
 
 export async function loadGLB(url): Promise<GameObject> {
     const gltf = await gltfLoader.loadAsync(url);
-    const gameObject = new GameObject(gltf.scene);
+    const gameObject = new GameObject(null, gltf.scene);
     gameObject.animations = gltf.animations;
     return gameObject;
 }

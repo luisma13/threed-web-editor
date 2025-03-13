@@ -20,6 +20,12 @@ import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { ComponentInfo } from './component-selector/component-selector-dialog.component';
 import { Component } from "../simple-engine/core/component";
+import { BoxComponent } from "../simple-engine/components/geometry/box.component";
+import { BoxColliderComponent } from "../simple-engine/components/geometry/box-collider.component";
+import { ComponentRegistry } from '../simple-engine/utils/component-registry';
+import { SceneSerializer } from '../simple-engine/utils/scene-serializer';
+import { ResourceService } from './resource-manager/resource.service';
+import { MaterialManager } from '../simple-engine/managers/material-manager';
 
 @Injectable({ providedIn: 'root' })
 export class EditorService {
@@ -52,7 +58,8 @@ export class EditorService {
 
     constructor(
         private sceneExportService: SceneExportService,
-        @Inject(PLATFORM_ID) private platformId: Object
+        @Inject(PLATFORM_ID) private platformId: Object,
+        private resourceService: ResourceService
     ) {
         // Solo crear el input si estamos en el navegador
         if (isPlatformBrowser(this.platformId)) {
@@ -62,8 +69,11 @@ export class EditorService {
             this.input.style.display = 'none';
             document.body.appendChild(this.input);
             
-            // No inicializamos los componentes del editor aquí
-            // Se inicializarán después de que el motor esté listo
+            // Initialize MaterialManager with ResourceService
+            MaterialManager.getInstance().setResourceService(this.resourceService);
+            
+            // Make the ResourceService available globally for components
+            (window as any)['resourceService'] = this.resourceService;
         }
     }
     
@@ -159,33 +169,33 @@ export class EditorService {
         // }
 
         // load VRM
-        const { vrm } = await loadVRM("assets/avatar.vrm");
+        // const { vrm } = await loadVRM("assets/avatar.vrm");
 
-        const player = new GameObject();
-        player.name = "Player"
-        player.isEnabled = true;
-        // Añadir el componente EditableObjectComponent para que sea seleccionable
-        player.addComponent(new EditableObjectComponent());
-        engine.addGameObjects(player);
+        // const player = new GameObject();
+        // player.name = "Player"
+        // player.isEnabled = true;
+        // // Añadir el componente EditableObjectComponent para que sea seleccionable
+        // player.addComponent(new EditableObjectComponent());
+        // engine.addGameObjects(player);
 
-        const playerComponent = new PlayerComponent(player);
-        await playerComponent.changeAvatar(vrm);
+        // const playerComponent = new PlayerComponent(player);
+        // await playerComponent.changeAvatar(vrm);
 
-        // Asegurarse de que el modelo VRM sea seleccionable
-        if (vrm && vrm.scene) {
-            // Recorrer todos los meshes del modelo VRM y asegurarse de que sean seleccionables
-            vrm.scene.traverse((object) => {
-                if (object instanceof THREE.Mesh) {
-                    // Asegurarse de que el mesh tenga userData para ser seleccionable
-                    object.userData = object.userData || {};
-                    // Referencia al GameObject padre para facilitar la selección
-                    object.userData['parentGameObject'] = player;
-                }
-            });
-        }
+        // // Asegurarse de que el modelo VRM sea seleccionable
+        // if (vrm && vrm.scene) {
+        //     // Recorrer todos los meshes del modelo VRM y asegurarse de que sean seleccionables
+        //     vrm.scene.traverse((object) => {
+        //         if (object instanceof THREE.Mesh) {
+        //             // Asegurarse de que el mesh tenga userData para ser seleccionable
+        //             object.userData = object.userData || {};
+        //             // Referencia al GameObject padre para facilitar la selección
+        //             object.userData['parentGameObject'] = player;
+        //         }
+        //     });
+        // }
 
-        // await playerComponent.addUserAnimToMap("Test", "assets/Idle_Aiming_1H_Art_Flipped.fbx")
-        playerComponent.changeAnim("Idle");
+        // // await playerComponent.addUserAnimToMap("Test", "assets/Idle_Aiming_1H_Art_Flipped.fbx")
+        // playerComponent.changeAnim("Idle");
 
         // player.addComponent(playerComponent);
         // player.addComponent(new PlayerPhysicsComponent());
@@ -219,12 +229,30 @@ export class EditorService {
     newGameObject(parent?: GameObject) {
         const gameObject = new GameObject();
         gameObject.name = "New GameObject";
-        if (parent)
-            parent.addGameObject(gameObject, false);
-        else
+        
+        // Añadir el EditableObjectComponent
+        gameObject.addComponent(new EditableObjectComponent());
+        
+        // Si tiene padre, añadirlo como hijo
+        if (parent) {
+            parent.addGameObject(gameObject);
+        } else {
+            // Si no tiene padre, añadirlo a la escena
             engine.addGameObjects(gameObject);
+        }
 
-        this.editableSceneComponent.selectedObject.next(gameObject);
+        // Asegurarnos de que el objeto está en la escena antes de seleccionarlo
+        setTimeout(() => {
+            // Seleccionar el nuevo objeto
+            this.editableSceneComponent.selectedObject.next(gameObject);
+            
+            // Forzar la actualización de la UI
+            if (this.editableSceneComponent.selectedObject.value !== gameObject) {
+                console.warn('Reintentando selección del GameObject');
+                this.editableSceneComponent.selectedObject.next(gameObject);
+            }
+        }, 0);
+        
         return gameObject;
     }
 
@@ -646,10 +674,24 @@ export class EditorService {
      * @returns Lista de información de componentes disponibles
      */
     getAvailableComponents(): ComponentInfo[] {
-        // Lista de componentes disponibles con su información
         const components: ComponentInfo[] = [];
         
-        // Añadir componentes de luz
+        // Geometría
+        components.push({
+            name: 'Box',
+            description: 'Crea una caja 3D básica',
+            icon: 'crop_square',
+            type: BoxComponent
+        });
+
+        components.push({
+            name: 'Box Collider',
+            description: 'Añade un colisionador en forma de caja',
+            icon: 'select_all',
+            type: BoxColliderComponent
+        });
+
+        // Luces
         components.push({
             name: 'Directional Light',
             description: 'Luz direccional que ilumina toda la escena desde una dirección',
@@ -664,7 +706,7 @@ export class EditorService {
             type: SpotLightComponent
         });
         
-        // Añadir componentes de jugador
+        // Jugador
         components.push({
             name: 'Player Component',
             description: 'Componente para controlar un personaje jugable',
@@ -686,7 +728,7 @@ export class EditorService {
             type: PlayerControllerComponent
         });
         
-        // Añadir componente de rejilla
+        // Rejilla
         components.push({
             name: 'Grid Helper',
             description: 'Muestra una rejilla de referencia en la escena',
@@ -720,6 +762,52 @@ export class EditorService {
         } catch (error) {
             console.error('Error al añadir componente:', error);
             return null;
+        }
+    }
+
+    /**
+     * Renombra un GameObject
+     * @param gameObject GameObject a renombrar
+     * @param newName Nuevo nombre
+     */
+    public renameGameObject(gameObject: GameObject, newName: string) {
+        if (!gameObject || !newName) return;
+        
+        // Verificar que el nombre sea único
+        const existingObject = engine.gameObjects.find(go => go.name === newName);
+        if (existingObject) {
+            console.warn(`Ya existe un GameObject con el nombre ${newName}`);
+            return;
+        }
+        
+        // Renombrar el GameObject
+        gameObject.setName(newName);
+    }
+
+    /**
+     * Elimina un GameObject
+     * @param gameObject GameObject a eliminar
+     */
+    deleteGameObject(gameObject: GameObject): void {
+        if (!gameObject) return;
+        
+        // No permitir eliminar el Player
+        if (gameObject.name === 'Player') {
+            console.warn('No se puede eliminar el Player');
+            return;
+        }
+        
+        // Si el objeto está seleccionado, deseleccionarlo
+        if (this.editableSceneComponent.selectedObject.value === gameObject) {
+            this.editableSceneComponent.unselectObject();
+        }
+        
+        // Si tiene padre, eliminarlo del padre
+        if (gameObject.parentGameObject) {
+            gameObject.parentGameObject.removeGameObject(gameObject);
+        } else {
+            // Si no tiene padre, eliminarlo de la escena
+            engine.removeGameObjects(gameObject);
         }
     }
 }

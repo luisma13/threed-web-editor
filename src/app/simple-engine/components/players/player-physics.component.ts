@@ -2,6 +2,8 @@ import * as CANNON from "cannon-es";
 import { Group } from "three";
 import { Component } from "../../core/component";
 import { CollisionGroups, engine } from "../../core/engine/engine";
+import { Editable } from "../../decorators/editable.decorator";
+import 'reflect-metadata';
 
 /**
  *
@@ -11,19 +13,55 @@ import { CollisionGroups, engine } from "../../core/engine/engine";
 export class PlayerPhysicsComponent extends Component {
     readonly MASS = 6;
 
-    inGround = false;
-    jumpVelocity = 8;
-    jumpHeight = 2;
+    private rayHasHit: boolean = false;
+    private rayResult: CANNON.RaycastResult;
+    private inGround: boolean = false;
 
-    // Ray casting
-    rayResult: CANNON.RaycastResult = new CANNON.RaycastResult();
-    rayHasHit = false;
-    public rayCastLength = 0.3;
-    public raySafeOffset = 0.03;
+    @Editable({
+        type: 'number',
+        name: 'Jump Velocity',
+        description: 'Initial velocity when jumping',
+        min: 0,
+        max: 20,
+        step: 0.1
+    })
+    private jumpVelocity: number = 8;
+
+    @Editable({
+        type: 'number',
+        name: 'Jump Height',
+        description: 'Maximum jump height',
+        min: 0,
+        max: 10,
+        step: 0.1
+    })
+    private jumpHeight: number = 2;
+
+    @Editable({
+        type: 'number',
+        name: 'Ray Cast Length',
+        description: 'Length of the ground detection ray',
+        min: 0.1,
+        max: 1,
+        step: 0.01
+    })
+    private rayCastLength: number = 0.3;
+
+    @Editable({
+        type: 'number',
+        name: 'Ray Safe Offset',
+        description: 'Safe distance from ground',
+        min: 0.01,
+        max: 0.1,
+        step: 0.01
+    })
+    private raySafeOffset: number = 0.03;
+
     raycastBox: Group;
 
     constructor() {
         super("PlayerPhysicsComponent");
+        this.rayResult = new CANNON.RaycastResult();
     }
 
     public start(): void {
@@ -43,11 +81,11 @@ export class PlayerPhysicsComponent extends Component {
     }
 
     public update(deltaTime: number): void {
-
+        this.checkGround();
     }
 
     public override lateUpdate(deltaTime: number): void {
-        this.feetRaycast();
+        // No late update needed
     }
 
     feetRaycast(): void {
@@ -100,20 +138,6 @@ export class PlayerPhysicsComponent extends Component {
         this.rayCastLength = 0.3;
         this.raySafeOffset = 0.03;
         
-        // Actualizar los metadatos si existen
-        if (Reflect.hasMetadata("isEditable", this, "jumpVelocity")) {
-            Reflect.defineMetadata("isEditable", { type: "number", name: "Jump Velocity", value: this.jumpVelocity }, this, "jumpVelocity");
-        }
-        if (Reflect.hasMetadata("isEditable", this, "jumpHeight")) {
-            Reflect.defineMetadata("isEditable", { type: "number", name: "Jump Height", value: this.jumpHeight }, this, "jumpHeight");
-        }
-        if (Reflect.hasMetadata("isEditable", this, "rayCastLength")) {
-            Reflect.defineMetadata("isEditable", { type: "number", name: "Ray Cast Length", value: this.rayCastLength }, this, "rayCastLength");
-        }
-        if (Reflect.hasMetadata("isEditable", this, "raySafeOffset")) {
-            Reflect.defineMetadata("isEditable", { type: "number", name: "Ray Safe Offset", value: this.raySafeOffset }, this, "raySafeOffset");
-        }
-        
         // Resetear el rigidbody si existe
         if (this.gameObject && this.gameObject.rigidbody) {
             // Detener cualquier movimiento
@@ -155,5 +179,46 @@ export class PlayerPhysicsComponent extends Component {
             }
             this.raycastBox = null;
         }
+    }
+
+    /**
+     * Verifica si el jugador está en el suelo
+     */
+    private checkGround(): void {
+        if (!this.gameObject || !this.gameObject.rigidbody) return;
+
+        const start = new CANNON.Vec3(
+            this.gameObject.position.x,
+            this.gameObject.position.y,
+            this.gameObject.position.z
+        );
+        const end = new CANNON.Vec3(
+            this.gameObject.position.x,
+            this.gameObject.position.y - this.rayCastLength,
+            this.gameObject.position.z
+        );
+
+        this.rayHasHit = false;
+        this.rayResult.reset();
+
+        this.gameObject.rigidbody.world.raycastClosest(start, end, {}, this.rayResult);
+
+        if (this.rayResult.hasHit) {
+            this.rayHasHit = true;
+            this.inGround = this.rayResult.distance <= this.raySafeOffset;
+        } else {
+            this.inGround = false;
+        }
+    }
+
+    /**
+     * Verifica si el jugador está en el suelo
+     */
+    public isGrounded(): boolean {
+        return this.inGround;
+    }
+
+    public override set(key: string, value: any): void {
+        this[key] = value;
     }
 }

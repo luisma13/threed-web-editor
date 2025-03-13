@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, Output, QueryList, ViewChild, ViewChildren } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, Output, QueryList, ViewChild, ViewChildren, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,6 +8,7 @@ import { engine } from '../../simple-engine/core/engine/engine';
 import { GameObjectsDraggableComponent } from '../gameobject-draggables/gameobjects-draggables.component';
 import { EditorComponent } from '../editor.component';
 import { ContextMenuService } from '../context-menu/context-menu.service';
+import { Subscription } from 'rxjs';
 
 @Component({
     standalone: true,
@@ -16,7 +17,7 @@ import { ContextMenuService } from '../context-menu/context-menu.service';
     templateUrl: './gameobject.component.html',
     styleUrls: ['./gameobject.component.scss']
 })
-export class GameObjectComponent {
+export class GameObjectComponent implements OnInit, OnDestroy {
 
     @ViewChild('title', { static: true }) title: ElementRef;
     @Input() gameObject: GameObject;
@@ -25,8 +26,10 @@ export class GameObjectComponent {
     @Input() dragGameObject: GameObject;
     @Input() dragGameobjectExpandOverGameobject: GameObject;
     @Output() onSortRoot: EventEmitter<{ position: "below" | "above", onDroppedGameobject: GameObject, movedGameObject: GameObject }> = new EventEmitter();
+    
     isSelected: boolean;
     showChildren: boolean = false;
+    private subscriptions: Subscription[] = [];
 
     /* Drag and drop */
     dragGameobjectExpandOverWaitTimeMs = 300;
@@ -41,9 +44,28 @@ export class GameObjectComponent {
 
     ngOnInit() {
         GameObjectsDraggableComponent.gameObjectsHtmlElements.push(this);
+        
+        // Suscribirse a cambios en el nombre del GameObject
+        if (this.gameObject) {
+            this.subscriptions.push(
+                this.gameObject.onNameChanged.subscribe(() => {
+                    console.log('GameObject name changed:', this.gameObject.name);
+                    this.changeDetectorRef.detectChanges();
+                })
+            );
+        }
     }
 
     ngOnDestroy() {
+        // Limpiar suscripciones
+        this.subscriptions.forEach(sub => sub.unsubscribe());
+        this.subscriptions = [];
+        
+        // Eliminar de la lista de elementos HTML
+        const index = GameObjectsDraggableComponent.gameObjectsHtmlElements.indexOf(this);
+        if (index !== -1) {
+            GameObjectsDraggableComponent.gameObjectsHtmlElements.splice(index, 1);
+        }
     }
 
     ngAfterViewInit() {

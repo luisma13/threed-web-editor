@@ -6,8 +6,8 @@ export interface IHasHelper {
 
 export interface AttributeType {
     name?: string;
-    type?: "string" | "number" | "boolean" | "array" | "color";
-    value?: String | Number | Boolean | Array<AttributeType>;
+    type?: "string" | "number" | "boolean" | "array" | "color" | "material";
+    value?: String | Number | Boolean | Array<AttributeType> | string;
     min?: number;
     max?: number;
     step?: number;

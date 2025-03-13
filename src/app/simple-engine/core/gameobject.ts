@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Component } from './component';
 import * as CANNON from "cannon-es";
 import { engine } from './engine/engine';
+import { Subject } from 'rxjs';
 
 export class GameObject extends THREE.Object3D {
 
@@ -11,18 +12,31 @@ export class GameObject extends THREE.Object3D {
     public rigidbody: CANNON.Body;
     public childrenGameObjects: GameObject[] = [];
     public isEnabled: boolean = true;
+    public onNameChanged = new Subject<void>();
 
-    constructor(threeObject?: THREE.Object3D, body?: CANNON.Body) {
+    constructor(name: string = 'GameObject', threeObject?: THREE.Object3D, body?: CANNON.Body) {
         super();
+        
+        if (name) {
+            this.name = name;
+        }
 
         if (threeObject) {
-            this.position.copy(threeObject ? threeObject.position : new THREE.Vector3())
+            this.position.copy(threeObject.position);
             this.add(threeObject);
             threeObject.position.set(0, 0, 0);
         }
 
-        this.rigidbody = body;
+        if (body) {
+            this.userData['body'] = body;
+        }
+
         this.components = [];
+    }
+
+    public setName(value: string) {
+        this.name = value;
+        this.onNameChanged.next();
     }
 
     public addGameObject(gameObject: GameObject, sendEvent = true): GameObject {

@@ -3,14 +3,17 @@
     <div class="editor-content">
         <!-- Panel de jerarquía -->
         <div class="editor-sidebar editor-sidebar-left mat-elevation-z1">
-            <div class="editor-panel">
+            <div class="editor-panel hierarchy-panel">
                 <div class="editor-panel-header">
                     <mat-icon>account_tree</mat-icon>
                     <span>Scene Hierarchy</span>
                 </div>
                 <div class="editor-panel-content">
-            <app-game-objects-draggable></app-game-objects-draggable>
+                    <app-game-objects-draggable></app-game-objects-draggable>
                 </div>
+            </div>
+            <div class="editor-panel resources-panel">
+                <app-resource-manager></app-resource-manager>
             </div>
         </div>
 

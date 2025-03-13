@@ -15,6 +15,11 @@ import { EditableSceneComponent } from '../components/editor/editable-scene.comp
 import { FirstPersonCameraComponent } from '../components/camera/first-camera.component';
 import { ColliderCameraComponent } from '../components/camera/collider-camera.component';
 import { RotateComponent } from '../components/transforms/rotate.component';
+import { BoxComponent } from '../components/geometry/box.component';
+import { BoxColliderComponent } from '../components/geometry/box-collider.component';
+import { SphereComponent } from '../components/geometry/sphere.component';
+import { PlaneComponent } from '../components/geometry/plane.component';
+import { CylinderComponent } from '../components/geometry/cylinder.component';
 
 // Tipo para el constructor de un componente
 type ComponentConstructor = new () => Component;
@@ -31,7 +36,8 @@ export class ComponentRegistry {
     }
 
     /**
-     * Obtiene la instancia del registro de componentes (Singleton)
+     * Obtiene la instancia única del registro de componentes
+     * @returns Instancia del registro de componentes
      */
     public static getInstance(): ComponentRegistry {
         if (!ComponentRegistry.instance) {
@@ -41,47 +47,54 @@ export class ComponentRegistry {
     }
 
     /**
-     * Registra los componentes integrados en el motor
-     */
-    private registerBuiltInComponents(): void {
-        // Luces
-        this.register('AmbientLightComponent', AmbientLightComponent);
-        this.register('DirectionalLightComponent', DirectionalLightComponent);
-        this.register('SpotLightComponent', SpotLightComponent);
-
-        // Helpers
-        this.register('GridHelperComponent', GridHelperComponent);
-
-        // Jugadores
-        this.register('PlayerComponent', PlayerComponent);
-        this.register('PlayerControllerComponent', PlayerControllerComponent);
-        this.register('PlayerPhysicsComponent', PlayerPhysicsComponent);
-        this.register('BlendshapesComponent', BlendshapesComponent);
-
-        // Networking
-        this.register('SyncablePlayerSenderComponent', SyncablePlayerSenderComponent);
-        this.register('SyncablePlayerReceiverComponent', SyncablePlayerReceiverComponent);
-        this.register('SyncableSceneComponent', SyncableSceneComponent);
-
-        // Editor
-        this.register('EditableObjectComponent', EditableObjectComponent);
-        this.register('EditableSceneComponent', EditableSceneComponent);
-
-        // Cámara
-        this.register('FirstPersonCameraComponent', FirstPersonCameraComponent);
-        this.register('ColliderCameraComponent', ColliderCameraComponent);
-
-        // Transformaciones
-        this.register('RotateComponent', RotateComponent);
-    }
-
-    /**
-     * Registra un componente en el registro
+     * Registra un nuevo tipo de componente
      * @param typeName Nombre del tipo de componente
      * @param constructor Constructor del componente
      */
-    public register(typeName: string, constructor: ComponentConstructor): void {
+    public registerComponent(typeName: string, constructor: ComponentConstructor): void {
         this.registry.set(typeName, constructor);
+    }
+
+    /**
+     * Registra los componentes integrados en el engine
+     */
+    private registerBuiltInComponents(): void {
+        // Luces
+        this.registerComponent('AmbientLightComponent', AmbientLightComponent);
+        this.registerComponent('DirectionalLightComponent', DirectionalLightComponent);
+        this.registerComponent('SpotLightComponent', SpotLightComponent);
+
+        // Helpers
+        this.registerComponent('GridHelperComponent', GridHelperComponent);
+
+        // Player
+        this.registerComponent('PlayerComponent', PlayerComponent);
+        this.registerComponent('PlayerControllerComponent', PlayerControllerComponent);
+        this.registerComponent('PlayerPhysicsComponent', PlayerPhysicsComponent);
+        this.registerComponent('BlendshapesComponent', BlendshapesComponent);
+
+        // Networking
+        this.registerComponent('SyncablePlayerSenderComponent', SyncablePlayerSenderComponent);
+        this.registerComponent('SyncablePlayerReceiverComponent', SyncablePlayerReceiverComponent);
+        this.registerComponent('SyncableSceneComponent', SyncableSceneComponent);
+
+        // Editor
+        this.registerComponent('EditableObjectComponent', EditableObjectComponent);
+        this.registerComponent('EditableSceneComponent', EditableSceneComponent);
+
+        // Camera
+        this.registerComponent('FirstPersonCameraComponent', FirstPersonCameraComponent);
+        this.registerComponent('ColliderCameraComponent', ColliderCameraComponent);
+
+        // Transforms
+        this.registerComponent('RotateComponent', RotateComponent);
+
+        // Geometry
+        this.registerComponent('BoxComponent', BoxComponent);
+        this.registerComponent('BoxColliderComponent', BoxColliderComponent);
+        this.registerComponent('SphereComponent', SphereComponent);
+        this.registerComponent('PlaneComponent', PlaneComponent);
+        this.registerComponent('CylinderComponent', CylinderComponent);
     }
 
     /**

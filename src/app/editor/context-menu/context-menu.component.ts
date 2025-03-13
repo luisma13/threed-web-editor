@@ -4,6 +4,13 @@ import { EditorService } from '../editor.service';
 import { HistoryService } from '../history/history.service';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ComponentSelectorDialogComponent } from '../component-selector/component-selector-dialog.component';
+import { BoxComponent } from '../../simple-engine/components/geometry/box.component';
+import { DirectionalLightComponent } from '../../simple-engine/components/light/directional-light.component';
+import { SpotLightComponent } from '../../simple-engine/components/light/spot-light.component';
+import { GameObject } from '../../simple-engine/core/gameobject';
+import { SphereComponent } from '../../simple-engine/components/geometry/sphere.component';
+import { PlaneComponent } from '../../simple-engine/components/geometry/plane.component';
+import { CylinderComponent } from '../../simple-engine/components/geometry/cylinder.component';
 
 export interface MenuItem {
   label?: string;
@@ -52,16 +59,15 @@ export class ContextMenuComponent {
             icon: 'plus',
             items: [
                 { label: 'Empty GameObject', action: 'create:empty', icon: 'cube' },
-                { label: 'Primitive', icon: 'shapes', items: [
+                { label: 'Primitives', icon: 'shapes', items: [
                     { label: 'Cube', action: 'create:cube', icon: 'cube' },
                     { label: 'Sphere', action: 'create:sphere', icon: 'circle' },
                     { label: 'Plane', action: 'create:plane', icon: 'square' },
                     { label: 'Cylinder', action: 'create:cylinder', icon: 'cylinder' }
                 ]},
                 { type: 'separator' },
-                { label: 'Light', icon: 'lightbulb', items: [
+                { label: 'Lights', icon: 'lightbulb', items: [
                     { label: 'Directional Light', action: 'create:directionalLight', icon: 'sun' },
-                    { label: 'Point Light', action: 'create:pointLight', icon: 'lightbulb' },
                     { label: 'Spot Light', action: 'create:spotLight', icon: 'flashlight' }
                 ]}
             ]
@@ -83,6 +89,25 @@ export class ContextMenuComponent {
         { label: 'Rename', action: 'gameObject:rename', icon: 'edit' },
         { label: 'Duplicate', action: 'gameObject:duplicate', icon: 'copy' },
         { label: 'Delete', action: 'gameObject:delete', icon: 'trash' },
+        { type: 'separator' },
+        { 
+            label: 'Create', 
+            icon: 'plus',
+            items: [
+                { label: 'Empty GameObject', action: 'create:empty', icon: 'cube' },
+                { label: 'Primitives', icon: 'shapes', items: [
+                    { label: 'Cube', action: 'create:cube', icon: 'cube' },
+                    { label: 'Sphere', action: 'create:sphere', icon: 'circle' },
+                    { label: 'Plane', action: 'create:plane', icon: 'square' },
+                    { label: 'Cylinder', action: 'create:cylinder', icon: 'cylinder' }
+                ]},
+                { type: 'separator' },
+                { label: 'Lights', icon: 'lightbulb', items: [
+                    { label: 'Directional Light', action: 'create:directionalLight', icon: 'sun' },
+                    { label: 'Spot Light', action: 'create:spotLight', icon: 'flashlight' }
+                ]}
+            ]
+        },
         { type: 'separator' },
         { label: 'Add Component', action: 'component:add', icon: 'plus' }
     ];
@@ -232,145 +257,141 @@ export class ContextMenuComponent {
         this.executeAction(item.action);
     }
 
-    executeAction(action: string) {
-        // Acciones generales
+    private executeAction(action: string): void {
+        // Handle undo/redo actions first
         if (action === 'undo') {
             this.historyService.undo();
             return;
         }
-        
         if (action === 'redo') {
             this.historyService.redo();
             return;
         }
-        
-        // Acciones de escena
-        if (action === 'export:scene') {
-            // Deshabilitar la cámara durante la exportación
-            if (this.editorService.firstPersonCameraComponent) {
-                this.editorService.firstPersonCameraComponent.setEnabled(false);
-            }
-            
-            this.editorService.exportScene();
-            
-            // Habilitar la cámara después de la exportación
-            setTimeout(() => {
-                if (this.editorService.firstPersonCameraComponent) {
-                    this.editorService.firstPersonCameraComponent.setEnabled(true);
+
+        const [category, type] = action.split(':');
+
+        switch (category) {
+            case 'create':
+                const parent = this.contextType === 'gameObject' ? this.contextObject as GameObject : undefined;
+                let newGameObject: GameObject;
+
+                switch (type) {
+                    case 'empty':
+                        newGameObject = this.editorService.newGameObject(parent);
+                        newGameObject.name = 'Empty GameObject';
+                        break;
+                    case 'cube':
+                        newGameObject = this.editorService.newGameObject(parent);
+                        newGameObject.name = 'Cube';
+                        newGameObject.addComponent(new BoxComponent());
+                        break;
+                    case 'sphere':
+                        newGameObject = this.editorService.newGameObject(parent);
+                        newGameObject.name = 'Sphere';
+                        newGameObject.addComponent(new SphereComponent());
+                        break;
+                    case 'plane':
+                        newGameObject = this.editorService.newGameObject(parent);
+                        newGameObject.name = 'Plane';
+                        newGameObject.addComponent(new PlaneComponent());
+                        break;
+                    case 'cylinder':
+                        newGameObject = this.editorService.newGameObject(parent);
+                        newGameObject.name = 'Cylinder';
+                        newGameObject.addComponent(new CylinderComponent());
+                        break;
+                    case 'directionalLight':
+                        newGameObject = this.editorService.newGameObject(parent);
+                        newGameObject.name = 'Directional Light';
+                        newGameObject.addComponent(new DirectionalLightComponent());
+                        break;
+                    case 'spotLight':
+                        newGameObject = this.editorService.newGameObject(parent);
+                        newGameObject.name = 'Spot Light';
+                        newGameObject.addComponent(new SpotLightComponent());
+                        break;
+                    default:
+                        console.warn(`Unhandled create type: ${type}`);
                 }
-            }, 100);
-            
-            return;
-        }
-        
-        if (action === 'import:scene') {
-            // Deshabilitar la cámara durante la importación
-            if (this.editorService.firstPersonCameraComponent) {
-                this.editorService.firstPersonCameraComponent.setEnabled(false);
-            }
-            
-            this.editorService.loadScene();
-            
-            // Habilitar la cámara después de la importación
-            setTimeout(() => {
-                if (this.editorService.firstPersonCameraComponent) {
-                    this.editorService.firstPersonCameraComponent.setEnabled(true);
+                break;
+            case 'gameObject':
+                const gameObject = this.contextObject as GameObject;
+                switch (type) {
+                    case 'rename':
+                        const newName = prompt('Enter new name:', gameObject.name);
+                        if (newName) {
+                            this.editorService.renameGameObject(gameObject, newName);
+                        }
+                        break;
+                    case 'delete':
+                        this.editorService.deleteGameObject(gameObject);
+                        break;
+                    default:
+                        console.warn(`Unhandled gameObject action: ${type}`);
                 }
-            }, 100);
-            
-            return;
-        }
-        
-        // Acciones de creación
-        if (action.startsWith('create:')) {
-            const objectType = action.split(':')[1];
-            // Implementar en EditorService
-            console.log('Create GameObject:', objectType);
-            return;
-        }
-        
-        // Acciones de carga de modelos
-        if (action.startsWith('load:')) {
-            const fileExtension = action.split(':')[1];
-            
-            // Deshabilitar la cámara durante la carga del modelo
-            if (this.editorService.firstPersonCameraComponent) {
-                this.editorService.firstPersonCameraComponent.setEnabled(false);
-            }
-            
-            this.editorService.addModelToScene(fileExtension).then(() => {
-                // Habilitar la cámara después de cargar el modelo
-                if (this.editorService.firstPersonCameraComponent) {
-                    this.editorService.firstPersonCameraComponent.setEnabled(true);
+                break;
+            case 'component':
+                switch (type) {
+                    case 'add':
+                        this.openComponentSelectorDialog();
+                        break;
+                    case 'reset':
+                        this.editorService.resetComponent(this.contextObject);
+                        break;
+                    case 'remove':
+                        this.editorService.removeComponent(this.contextObject);
+                        break;
+                    case 'copy':
+                        this.editorService.copyComponent(this.contextObject);
+                        // Enable paste option
+                        this.updateMenuItemState('component:paste', false);
+                        break;
+                    case 'paste':
+                        this.editorService.pasteComponentValues(this.contextObject);
+                        break;
+                    default:
+                        console.warn(`Unhandled component action: ${type}`);
                 }
-            }).catch(() => {
-                // En caso de error, asegurarse de habilitar la cámara
-                if (this.editorService.firstPersonCameraComponent) {
-                    this.editorService.firstPersonCameraComponent.setEnabled(true);
+                break;
+            case 'export':
+                switch (type) {
+                    case 'scene':
+                        this.editorService.exportScene();
+                        break;
+                    default:
+                        console.warn(`Unhandled export type: ${type}`);
                 }
-            });
-            
-            return;
-        }
-        
-        // Acciones de GameObject
-        if (action.startsWith('gameObject:')) {
-            const gameObjectAction = action.split(':')[1];
-            
-            // Para acciones que podrían abrir diálogos, deshabilitar la cámara
-            if (gameObjectAction === 'rename') {
-                // Deshabilitar la cámara durante el renombrado
-                if (this.editorService.firstPersonCameraComponent) {
-                    this.editorService.firstPersonCameraComponent.setEnabled(false);
+                break;
+            case 'import':
+                switch (type) {
+                    case 'scene':
+                        this.editorService.loadScene();
+                        break;
+                    default:
+                        console.warn(`Unhandled import type: ${type}`);
                 }
-                
-                // Implementar en EditorService
-                console.log('GameObject action:', gameObjectAction);
-                
-                // Habilitar la cámara después del renombrado
-                setTimeout(() => {
-                    if (this.editorService.firstPersonCameraComponent) {
-                        this.editorService.firstPersonCameraComponent.setEnabled(true);
-                    }
-                }, 100);
-            } else {
-                // Implementar en EditorService
-                console.log('GameObject action:', gameObjectAction);
-            }
-            
-            return;
-        }
-        
-        // Acciones de componentes
-        if (action.startsWith('component:')) {
-            const parts = action.split(':');
-            const componentAction = parts[1];
-            
-            if (componentAction === 'add') {
-                // Abrir el diálogo de selección de componentes
-                this.openComponentSelectorDialog();
-                return;
-            }
-            
-            // Ejecutar la acción correspondiente en el componente
-            switch (componentAction) {
-                case 'reset':
-                    this.editorService.resetComponent(this.contextObject);
-                    break;
-                case 'remove':
-                    this.editorService.removeComponent(this.contextObject);
-                    break;
-                case 'copy':
-                    this.editorService.copyComponent(this.contextObject);
-                    // Habilitar la opción de pegar
-                    this.updateMenuItemState('component:paste', false);
-                    break;
-                case 'paste':
-                    this.editorService.pasteComponentValues(this.contextObject);
-                    break;
-                default:
-                    console.log('Component action not implemented:', componentAction);
-            }
+                break;
+            case 'load':
+                switch (type) {
+                    case '.gltf':
+                    case '.glb':
+                        this.editorService.addModelToScene('glb');
+                        break;
+                    case '.fbx':
+                        this.editorService.addModelToScene('fbx');
+                        break;
+                    case '.obj':
+                        this.editorService.addModelToScene('obj');
+                        break;
+                    case '.vrm':
+                        this.editorService.addModelToScene('vrm');
+                        break;
+                    default:
+                        console.warn(`Unhandled load type: ${type}`);
+                }
+                break;
+            default:
+                console.warn(`Unhandled action category: ${category}`);
         }
     }
 

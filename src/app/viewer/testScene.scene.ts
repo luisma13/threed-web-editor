@@ -26,7 +26,7 @@ export async function createTestScene() {
         material: engine.PHYSIC_MATERIAL
     });
 
-    const floor = new GameObject(undefined, body);
+    const floor = new GameObject(undefined, undefined, body);
     engine.addGameObjects(floor);
 
     loadGLTF("assets/viperoom.glb", true, false).then((gameObject) => {

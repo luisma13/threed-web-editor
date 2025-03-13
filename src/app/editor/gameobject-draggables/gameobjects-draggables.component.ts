@@ -30,12 +30,18 @@ export class GameObjectsDraggableComponent {
     }
 
     ngOnInit() {
+        // Suscribirse a cambios en la selección
         this.editorService.editableSceneComponent?.selectedObject.subscribe(object => {
+            // Actualizar la selección en todos los elementos
             GameObjectsDraggableComponent.gameObjectsHtmlElements.forEach(element => {
                 element.isSelected = object === element.gameObject;
+                if (element.isSelected) {
+                    console.log('GameObject seleccionado:', element.gameObject.name);
+                }
             });
         });
         
+        // Suscribirse a la creación de GameObjects
         engine.onGameobjectCreated.subscribe((gameobject) => {
             // Verificar que el gameobject no sea undefined o null
             if (!gameobject) return;
@@ -46,8 +52,21 @@ export class GameObjectsDraggableComponent {
             // No mostrar GameObjects internos del editor
             if (this.isEditorInternalGameObject(gameobject)) return;
             
-            this.gameObjects.push(gameobject);
-            setTimeout(() => this.changeDetectorRef.detectChanges());
+            console.log('Nuevo GameObject creado:', gameobject.name);
+            
+            // Verificar que no esté ya en la lista
+            if (!this.gameObjects.includes(gameobject)) {
+                this.gameObjects.push(gameobject);
+                // Forzar actualización de la UI
+                setTimeout(() => {
+                    this.changeDetectorRef.detectChanges();
+                    // Verificar si este es el objeto seleccionado
+                    if (this.editorService.editableSceneComponent.selectedObject.value === gameobject) {
+                        console.log('Actualizando selección para el nuevo GameObject');
+                        this.editorService.editableSceneComponent.selectedObject.next(gameobject);
+                    }
+                });
+            }
         });
 
         engine.onGameobjectRemoved.subscribe((gameobject) => {
@@ -67,16 +86,18 @@ export class GameObjectsDraggableComponent {
         engine.onGameobjectHerarchyChanged.subscribe((gameobject) => {
             if (!gameobject) return;
 
+            // Verificar si el gameObject ya está en la lista
             const index = this.gameObjects.indexOf(gameobject);
-            // remove from root if already added and has no parent
-            if (index !== -1 && gameobject.parentGameObject) {
+            
+            // Si tiene padre y está en la lista raíz, eliminarlo
+            if (gameobject.parentGameObject && index !== -1) {
                 this.gameObjects.splice(index, 1);
             } 
-            
-            // add to root if not already added and has no parent
-            if (!gameobject.parentGameObject && !this.isEditorInternalGameObject(gameobject)) {
+            // Si no tiene padre y no está en la lista raíz (y no es interno), añadirlo
+            else if (!gameobject.parentGameObject && index === -1 && !this.isEditorInternalGameObject(gameobject)) {
                 this.gameObjects.push(gameobject);
             }
+            
             this.changeDetectorRef.detectChanges();
         });
         

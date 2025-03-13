@@ -5,33 +5,24 @@
 @include mat.core();
 
 @mixin theme-styles() {
-  // Incluir todos los estilos de componentes para el tema claro (por defecto)
-  @include mat.all-component-themes(theme.$light-theme);
-
-  // Aplicar variables CSS para el tema claro por defecto
+  // Aplicar tema oscuro por defecto
+  @include mat.all-component-themes(theme.$dark-theme);
+  
+  // Definir variables CSS para el tema oscuro por defecto
   :root {
-    @include theme.theme-variables(theme.$light-theme);
-  }
-
-  // Aplicar tema según la preferencia del sistema
-  @media (prefers-color-scheme: dark) {
-    .mat-app-background {
-      @include mat.all-component-colors(theme.$dark-theme);
-    }
-    :root {
-      @include theme.theme-variables(theme.$dark-theme);
-    }
-  }
-
-  // Clase para forzar tema oscuro
-  .dark-theme {
-    @include mat.all-component-colors(theme.$dark-theme);
     @include theme.theme-variables(theme.$dark-theme);
   }
 
-  // Clase para forzar tema claro
+  // Asegurar que el fondo y texto base coincidan
+  body {
+    background-color: var(--background-color);
+    color: var(--text-color);
+  }
+
+  // Clase para forzar tema claro si es necesario
   .light-theme {
-    @include mat.all-component-colors(theme.$light-theme);
     @include theme.theme-variables(theme.$light-theme);
+    background-color: var(--background-color);
+    color: var(--text-color);
   }
 } 

@@ -13,7 +13,7 @@ export class JumpState extends PlayerBaseState {
 
         if (this.gameobject.rigidbody.velocity.y < 0) this.playerController.changeState(new FallState(this.playerController));
 
-        if (this.playerPhysics.inGround) this.playerController.changeState(new IdleState(this.playerController));
+        if (this.playerPhysics.isGrounded()) this.playerController.changeState(new IdleState(this.playerController));
     }
 
     onStateEnter(): void {

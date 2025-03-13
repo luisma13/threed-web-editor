@@ -47,6 +47,14 @@
                    (ngModelChange)="onPropertyChange($event, property)">
           </mat-form-field>
         </div>
+        
+        <!-- Material selector para material -->
+        <app-material-input *ngIf="property.type === 'material'"
+                           [label]="property.name"
+                           [value]="property.value?.toString() || ''"
+                           (valueChange)="onPropertyChange($event, property)"
+                           class="material-input">
+        </app-material-input>
       </div>
     </ng-container>
     

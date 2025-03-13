@@ -63,6 +63,12 @@ export class EditableSceneComponent extends Component {
         } else if (this.mousePressed) {
             this.mousePressed = false;
             
+            // Verificar si el clic ocurrió dentro del contenedor de renderizado
+            if (!this.isClickOnRendererContainer()) {
+                console.log("Clic fuera del contenedor de renderizado, ignorando");
+                return;
+            }
+            
             // Buscar el FirstPersonCameraComponent en todos los GameObjects
             let firstPersonCamera = null;
             
@@ -107,6 +113,53 @@ export class EditableSceneComponent extends Component {
                 }
             }
         }
+    }
+
+    /**
+     * Verifica si el clic ocurrió dentro del contenedor de renderizado y no en un elemento de UI superpuesto
+     * @returns true si el clic está dentro del contenedor y no en un elemento de UI, false en caso contrario
+     */
+    private isClickOnRendererContainer(): boolean {
+        // Si no hay contenedor de renderizado, asumimos que el clic es válido
+        if (!engine.rendererContainer) return true;
+        
+        // Obtener las coordenadas del clic
+        const x = engine.input.mouse.x;
+        const y = engine.input.mouse.y;
+        
+        // Obtener las dimensiones y posición del contenedor
+        const rect = engine.rendererContainer.getBoundingClientRect();
+        
+        // Verificar si el clic está dentro del contenedor
+        const isInsideContainer = (
+            x >= rect.left &&
+            x <= rect.right &&
+            y >= rect.top &&
+            y <= rect.bottom
+        );
+        
+        // Si el clic no está dentro del contenedor, retornar false
+        if (!isInsideContainer) return false;
+        
+        // Verificar si el clic ocurrió en un elemento de UI superpuesto
+        const elementAtPoint = document.elementFromPoint(x, y);
+        if (!elementAtPoint) return true;
+        
+        // Verificar si el elemento o alguno de sus padres es el contenedor de renderizado
+        let currentElement = elementAtPoint;
+        while (currentElement) {
+            // Si encontramos el contenedor de renderizado, el clic es válido
+            if (currentElement === engine.rendererContainer || 
+                currentElement === engine.renderer.domElement) {
+                return true;
+            }
+            
+            currentElement = currentElement.parentElement;
+        }
+        
+        // Si llegamos aquí, el clic ocurrió en un elemento superpuesto
+        console.log("Clic en elemento superpuesto:", elementAtPoint.tagName, elementAtPoint.className);
+        return false;
     }
 
     public override lateUpdate(deltaTime: number): void { }
@@ -162,7 +215,7 @@ export class EditableSceneComponent extends Component {
 
         // return if the click is outside the canvas
         if (mouse.x < -1 || mouse.x > 1 || mouse.y < -1 || mouse.y > 1) {
-            console.log("Click outside canvas, ignoring");
+            console.log("Click outside canvas, ignorando");
             return;
         }
 
@@ -203,4 +256,5 @@ export class EditableSceneComponent extends Component {
     changeTransformMode(mode: "translate" | "rotate" | "scale") {
         this.transformControls.setMode(mode);
     }
+
 }

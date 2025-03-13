@@ -1,9 +1,13 @@
-import { VRM, VRMUtils } from "@pixiv/three-vrm";
+import { VRM, VRMUtils, VRMHumanBoneName, VRMLoaderPlugin } from "@pixiv/three-vrm";
 import * as THREE from "three";
 import { Component } from "../../core/component";
 import { engine } from "../../core/engine/engine";
 import { GameObject } from "../../core/gameobject";
 import { retargetAnimForVRM } from "../../loaders/mixamoAnimLoader-PRO";
+import { AnimationAction, AnimationClip, AnimationMixer } from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { Editable } from "../../decorators/editable.decorator";
+import 'reflect-metadata';
 
 interface OnAvatarChangeEvent {
     (newAvatar: VRM, url: string): void;
@@ -12,14 +16,22 @@ interface OnAvatarChangeEvent {
 export class PlayerComponent extends Component {
 
     currentAnim: string;
-    fadeDuration = 0.2;
-
     vrm: VRM;
-    animationsMap: Map<string, THREE.AnimationAction> = new Map();
-    mixer: THREE.AnimationMixer;
+    mixer: AnimationMixer;
+    animationsMap: Map<string, AnimationAction> = new Map();
 
     // to subscribe to action changes
     private onAvatarChange: OnAvatarChangeEvent[] = [];
+
+    @Editable({
+        type: 'number',
+        name: 'Fade Duration',
+        description: 'Duration of animation transitions',
+        min: 0,
+        max: 1,
+        step: 0.1
+    })
+    fadeDuration: number = 0.2;
 
     constructor(object?: GameObject) {
         super("PlayerComponent", object);
@@ -27,21 +39,18 @@ export class PlayerComponent extends Component {
 
     public start(): void { }
 
-    changeAnim(animName: any, blend = true) {
-        if (this.currentAnim == animName) {
-            const current = this.animationsMap.get(this.currentAnim);
-            current.reset().play();
-            return;
+    changeAnim(name: string): void {
+        if (!this.mixer || !this.animationsMap.has(name)) return;
+
+        const nextAnim = this.animationsMap.get(name);
+        const currentAnim = this.animationsMap.get(this.currentAnim);
+
+        if (currentAnim) {
+            currentAnim.fadeOut(this.fadeDuration);
         }
-        const toPlayAction = this.animationsMap.get(animName);
-        const currentAction = this.animationsMap.get(this.currentAnim);
 
-        if (currentAction) currentAction.fadeOut(this.fadeDuration);
-
-        if (blend) toPlayAction.reset().fadeIn(this.fadeDuration).play();
-        else toPlayAction.reset().play();
-
-        this.currentAnim = animName;
+        nextAnim.reset().fadeIn(this.fadeDuration).play();
+        this.currentAnim = name;
     }
 
     async changeAvatar(vrm: VRM, url?: string) {
@@ -113,8 +122,12 @@ export class PlayerComponent extends Component {
     }
 
     public update(deltaTime: number): void {
-        this.mixer.update(deltaTime);
-        this.vrm.update(deltaTime);
+        if (this.mixer) {
+            this.mixer.update(deltaTime);
+        }
+        if (this.vrm) {
+            this.vrm.update(deltaTime);
+        }
     }
 
     public override lateUpdate(deltaTime: number): void {
@@ -142,11 +155,6 @@ export class PlayerComponent extends Component {
         
         // Restaurar valores por defecto
         this.fadeDuration = 0.2;
-        
-        // Actualizar los metadatos si existen
-        if (Reflect.hasMetadata("isEditable", this, "fadeDuration")) {
-            Reflect.defineMetadata("isEditable", { type: "number", name: "Fade Duration", value: this.fadeDuration }, this, "fadeDuration");
-        }
         
         // No eliminamos el VRM actual, ya que eso requeriría cargar uno nuevo
         // Solo reseteamos las animaciones si hay un VRM cargado
@@ -199,5 +207,49 @@ export class PlayerComponent extends Component {
 
     public subscribeToAvatarChange(callback: OnAvatarChangeEvent) {
         this.onAvatarChange.push(callback);
+    }
+
+    public override set(key: string, value: any): void {
+        this[key] = value;
+    }
+
+    /**
+     * Carga un modelo VRM
+     * @param url URL del modelo
+     */
+    async loadVRM(url: string): Promise<void> {
+        const loader = new GLTFLoader();
+        loader.register((parser) => new VRMLoaderPlugin(parser));
+
+        const gltf = await loader.loadAsync(url);
+        const vrm = gltf.userData.vrm;
+
+        // Remove previous VRM from scene
+        if (this.vrm) {
+            this.gameObject.remove(this.vrm.scene);
+        }
+
+        this.vrm = vrm;
+        this.gameObject.add(this.vrm.scene);
+
+        // Setup animation
+        this.mixer = new AnimationMixer(this.vrm.scene);
+    }
+
+    /**
+     * Añade una animación al mapa de animaciones
+     * @param name Nombre de la animación
+     * @param clip Clip de animación
+     */
+    addAnimation(name: string, clip: AnimationClip): void {
+        if (!this.mixer) return;
+
+        const action = this.mixer.clipAction(clip);
+        this.animationsMap.set(name, action);
+
+        if (name === "Idle") {
+            action.play();
+            this.currentAnim = name;
+        }
     }
 }

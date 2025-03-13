@@ -1,29 +1,53 @@
-<div class="context-menu" *ngIf="isVisible" [style.left.px]="x" [style.top.px]="y">
+<div class="context-menu" *ngIf="isVisible" [style.left.px]="x" [style.top.px]="y" (click)="$event.stopPropagation()">
   <div *ngIf="contextType" class="context-menu-header">{{ contextTypeTitle }}</div>
   <ul>
     <ng-container *ngFor="let item of currentMenuItems">
       <li *ngIf="item.type === 'separator'" class="separator"></li>
       <li *ngIf="item.type !== 'separator'" 
-          [class.disabled]="item.disabled" 
-          (click)="!item.disabled && !item.items && onItemClick(item)">
-        <span *ngIf="item.icon" class="menu-icon">
-          <i class="fas fa-{{ item.icon }}"></i>
-        </span>
-        {{ item.label }}
-        <span *ngIf="item.items" class="submenu-indicator">
-          <i class="fas fa-chevron-right"></i>
-        </span>
+          [class.disabled]="item.disabled"
+          class="menu-item">
+        <div class="menu-item-content" (click)="!item.disabled && !item.items && onItemClick(item, $event)">
+          <span *ngIf="item.icon" class="menu-icon">
+            <i class="fas fa-{{ item.icon }}"></i>
+          </span>
+          {{ item.label }}
+          <span *ngIf="item.items" class="submenu-indicator">
+            <i class="fas fa-chevron-right"></i>
+          </span>
+        </div>
         <div *ngIf="item.items" class="submenu">
           <ul>
             <ng-container *ngFor="let subItem of item.items">
               <li *ngIf="subItem.type === 'separator'" class="separator"></li>
               <li *ngIf="subItem.type !== 'separator'"
                   [class.disabled]="subItem.disabled"
-                  (click)="!subItem.disabled && onItemClick(subItem, $event)">
-                <span *ngIf="subItem.icon" class="menu-icon">
-                  <i class="fas fa-{{ subItem.icon }}"></i>
-                </span>
-                {{ subItem.label }}
+                  class="menu-item">
+                <div class="menu-item-content" (click)="!subItem.disabled && !subItem.items && onItemClick(subItem, $event)">
+                  <span *ngIf="subItem.icon" class="menu-icon">
+                    <i class="fas fa-{{ subItem.icon }}"></i>
+                  </span>
+                  {{ subItem.label }}
+                  <span *ngIf="subItem.items" class="submenu-indicator">
+                    <i class="fas fa-chevron-right"></i>
+                  </span>
+                </div>
+                <div *ngIf="subItem.items" class="submenu">
+                  <ul>
+                    <ng-container *ngFor="let subSubItem of subItem.items">
+                      <li *ngIf="subSubItem.type === 'separator'" class="separator"></li>
+                      <li *ngIf="subSubItem.type !== 'separator'"
+                          [class.disabled]="subSubItem.disabled"
+                          class="menu-item">
+                        <div class="menu-item-content" (click)="!subSubItem.disabled && onItemClick(subSubItem, $event)">
+                          <span *ngIf="subSubItem.icon" class="menu-icon">
+                            <i class="fas fa-{{ subSubItem.icon }}"></i>
+                          </span>
+                          {{ subSubItem.label }}
+                        </div>
+                      </li>
+                    </ng-container>
+                  </ul>
+                </div>
               </li>
             </ng-container>
           </ul>

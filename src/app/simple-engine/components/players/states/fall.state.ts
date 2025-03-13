@@ -11,7 +11,7 @@ export class FallState extends PlayerBaseState {
     override update(delta): void {
         super.update(delta);
 
-        if (this.playerPhysics.inGround) {
+        if (this.playerPhysics.isGrounded()) {
             this.playerController.changeState(new IdleState(this.playerController));
         }
         if (this.gameobject.rigidbody.velocity.y < -5) this.playerController.changeState(new FallHightState(this.playerController));

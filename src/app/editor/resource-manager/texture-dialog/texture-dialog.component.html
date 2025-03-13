@@ -1,0 +1,155 @@
+<div (mousedown)="stopPropagation($event)" class="texture-dialog-container">
+    <h2 mat-dialog-title>{{ data.isEdit ? 'Edit' : 'Add' }} Texture</h2>
+    <mat-dialog-content>
+        <form #textureForm="ngForm">
+            <div class="upload-section">
+                <div class="section-header">
+                    <h3>Upload Texture</h3>
+                    <button mat-icon-button class="info-icon" 
+                            [matTooltip]="'Drag and drop an image file or click to select from your computer'"
+                            matTooltipPosition="right"
+                            [matTooltipShowDelay]="300">
+                        <mat-icon>help_outline</mat-icon>
+                    </button>
+                </div>
+                
+                <div class="drop-zone" 
+                     (dragover)="onDragOver($event)" 
+                     (dragleave)="onDragLeave($event)" 
+                     (drop)="onDrop($event)"
+                     [class.drag-over]="isDragging">
+                    <div class="drop-content">
+                        <mat-icon>cloud_upload</mat-icon>
+                        <p>Drag & drop an image here</p>
+                        <button mat-raised-button color="primary" (click)="openFileSelector()">
+                            <mat-icon>folder_open</mat-icon> Browse Files
+                        </button>
+                        <input type="file" #fileInput style="display: none" accept="image/*" (change)="onFileSelected($event)">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="url-section">
+                <div class="section-header">
+                    <h3>Or Load from URL</h3>
+                    <button mat-icon-button class="info-icon" 
+                            [matTooltip]="'Enter a web URL to load a texture directly from the internet. The URL must point to an image file.'"
+                            matTooltipPosition="right"
+                            [matTooltipShowDelay]="300">
+                        <mat-icon>help_outline</mat-icon>
+                    </button>
+                </div>
+                
+                <mat-form-field appearance="fill" class="url-input">
+                    <mat-label>Texture URL</mat-label>
+                    <input matInput [(ngModel)]="textureUrl" name="url" placeholder="https://example.com/texture.jpg" (ngModelChange)="onUrlChange()">
+                    <mat-hint>Enter a direct URL to an image file</mat-hint>
+                </mat-form-field>
+            </div>
+
+            <div class="preview" *ngIf="previewUrl">
+                <div class="preview-header">
+                    <h3>Preview</h3>
+                    <button mat-icon-button class="info-icon" 
+                            [matTooltip]="'Preview of how the texture will appear'"
+                            matTooltipPosition="right"
+                            [matTooltipShowDelay]="300">
+                        <mat-icon>help_outline</mat-icon>
+                    </button>
+                </div>
+                <div class="preview-image-container">
+                    <img [src]="previewUrl" alt="Texture preview">
+                </div>
+            </div>
+
+            <div class="texture-options">
+                <h3 class="options-header">Texture Options</h3>
+                
+                <div class="option-row">
+                    <mat-form-field appearance="fill">
+                        <mat-label>Wrap Mode S</mat-label>
+                        <mat-select [(ngModel)]="wrapS" name="wrapS">
+                            <mat-option [value]="1000">Repeat</mat-option>
+                            <mat-option [value]="1001">Clamp</mat-option>
+                            <mat-option [value]="1002">Mirror</mat-option>
+                        </mat-select>
+                    </mat-form-field>
+                    <button mat-icon-button class="info-icon" 
+                            [matTooltip]="'Controls how the texture wraps horizontally. Repeat tiles the texture, Clamp stretches the edge pixels, Mirror reflects the texture.'"
+                            matTooltipPosition="right"
+                            [matTooltipShowDelay]="300">
+                        <mat-icon>help_outline</mat-icon>
+                    </button>
+                </div>
+
+                <div class="option-row">
+                    <mat-form-field appearance="fill">
+                        <mat-label>Wrap Mode T</mat-label>
+                        <mat-select [(ngModel)]="wrapT" name="wrapT">
+                            <mat-option [value]="1000">Repeat</mat-option>
+                            <mat-option [value]="1001">Clamp</mat-option>
+                            <mat-option [value]="1002">Mirror</mat-option>
+                        </mat-select>
+                    </mat-form-field>
+                    <button mat-icon-button class="info-icon" 
+                            [matTooltip]="'Controls how the texture wraps vertically. Repeat tiles the texture, Clamp stretches the edge pixels, Mirror reflects the texture.'"
+                            matTooltipPosition="right"
+                            [matTooltipShowDelay]="300">
+                        <mat-icon>help_outline</mat-icon>
+                    </button>
+                </div>
+
+                <div class="option-row">
+                    <mat-form-field appearance="fill">
+                        <mat-label>Encoding</mat-label>
+                        <mat-select [(ngModel)]="encoding" name="encoding">
+                            <mat-option [value]="3000">Linear (3000)</mat-option>
+                            <mat-option [value]="3001">sRGB (3001)</mat-option>
+                            <mat-option [value]="3007">RGBE (3007)</mat-option>
+                        </mat-select>
+                    </mat-form-field>
+                    <button mat-icon-button class="info-icon" 
+                            [matTooltip]="'Color encoding of the texture. Linear is for normal maps and data textures, sRGB is for color textures, RGBE is for HDR textures.'"
+                            matTooltipPosition="right"
+                            [matTooltipShowDelay]="300">
+                        <mat-icon>help_outline</mat-icon>
+                    </button>
+                </div>
+
+                <div class="checkbox-options">
+                    <div class="option-row">
+                        <mat-checkbox [(ngModel)]="generateMipmaps" name="mipmaps">
+                            Generate Mipmaps
+                        </mat-checkbox>
+                        <button mat-icon-button class="info-icon" 
+                                [matTooltip]="'Creates smaller versions of the texture for better performance and quality when viewed from a distance. Usually should be enabled.'"
+                                matTooltipPosition="right"
+                                [matTooltipShowDelay]="300">
+                            <mat-icon>help_outline</mat-icon>
+                        </button>
+                    </div>
+
+                    <div class="option-row">
+                        <mat-checkbox [(ngModel)]="flipY" name="flipY">
+                            Flip Y
+                        </mat-checkbox>
+                        <button mat-icon-button class="info-icon" 
+                                [matTooltip]="'Flips the texture vertically. Usually should be enabled for most image formats to display correctly in 3D.'"
+                                matTooltipPosition="right"
+                                [matTooltipShowDelay]="300">
+                            <mat-icon>help_outline</mat-icon>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+        <button mat-button (click)="onCancel()">Cancel</button>
+        <button mat-button color="primary" 
+                [disabled]="!isFormValid()"
+                (click)="onConfirm()">
+            {{ data.isEdit ? 'Update' : 'Add' }}
+        </button>
+    </mat-dialog-actions>
+</div> 

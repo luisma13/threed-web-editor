@@ -5,6 +5,8 @@ import { engine } from "../../core/engine/engine";
 import { PlayerComponent } from "./player.component";
 import { PlayerBaseState } from "./states/base.state";
 import { IdleState } from "./states/idle.state";
+import { Editable } from "../../decorators/editable.decorator";
+import 'reflect-metadata';
 
 interface OnActionChangeEvent {
     (newAnimation: string): void;
@@ -17,14 +19,17 @@ interface OnActionChangeEvent {
  */
 export class PlayerControllerComponent extends Component {
     currentState: PlayerBaseState;
-    currentStateTime = 0;
+    currentStateTime: number = 0;
 
     cameraTarget = new Vector3();
 
-    shifthPressed = false;
-    keysPressed = {};
+    @Editable({
+        type: 'boolean',
+        name: 'Movement Enabled',
+        description: 'Enable/disable player movement'
+    })
+    isMovementEnabled: boolean = true;
 
-    isMovementEnabled = true;
     startPosition: Vector3;
     startRotation: Euler;
     startCameraPosition: Vector3;
@@ -37,6 +42,9 @@ export class PlayerControllerComponent extends Component {
 
     private _boundKeyDown: (event: KeyboardEvent) => void;
     private _boundKeyUp: (event: KeyboardEvent) => void;
+
+    keysPressed: { [key: string]: boolean } = {};
+    shifthPressed: boolean = false;
 
     constructor() {
         super("PlayerControllerComponent");
@@ -162,11 +170,6 @@ export class PlayerControllerComponent extends Component {
         this.isMovementEnabled = true;
         this.currentStateTime = 0;
         
-        // Actualizar los metadatos si existen
-        if (Reflect.hasMetadata("isEditable", this, "isMovementEnabled")) {
-            Reflect.defineMetadata("isEditable", { type: "boolean", name: "Movement Enabled", value: this.isMovementEnabled }, this, "isMovementEnabled");
-        }
-        
         // Resetear la posición y rotación
         this.resetPosition();
         
@@ -195,5 +198,9 @@ export class PlayerControllerComponent extends Component {
         
         this.playerComponent = null;
         this.keysPressed = {};
+    }
+
+    public override set(key: string, value: any): void {
+        this[key] = value;
     }
 }

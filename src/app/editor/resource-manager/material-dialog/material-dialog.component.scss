@@ -1,0 +1,271 @@
+:host {
+    display: block;
+    width: 100%;
+    max-width: 1000px;
+    color: #e0e0e0;
+}
+
+.material-dialog-container {
+    background-color: #333;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+h2[mat-dialog-title] {
+    margin: 0;
+    padding: 16px;
+    background-color: #444;
+    color: white;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+mat-dialog-content {
+    padding: 0 !important;
+    background-color: #333;
+    max-height: 80vh;
+    overflow: hidden !important;
+}
+
+.dialog-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: 80vh;
+}
+
+.preview-section {
+    width: 100%;
+    min-width: 100%;
+    background-color: #222;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    height: 300px;
+    min-height: 300px;
+    flex-shrink: 0;
+}
+
+.preview-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.preview-canvas {
+    width: 100%;
+    height: 100%;
+    min-height: 250px;
+    border-radius: 4px;
+    background-color: #1a1a1a;
+}
+
+.preview-controls {
+    display: flex;
+    justify-content: space-between;
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    right: 16px;
+    border-radius: 4px;
+    padding: 8px;
+    z-index: 10;
+}
+
+.shape-selector, .light-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.shape-selector button, .light-controls button {
+    background-color: rgba(50, 50, 50, 0.6);
+    color: #ddd;
+}
+
+.shape-selector button:hover, .light-controls button:hover {
+    background-color: rgba(70, 70, 70, 0.8);
+    color: white;
+}
+
+.light-controls mat-slider {
+    width: 100px;
+}
+
+button.active {
+    color: #4a90e2 !important;
+    background-color: rgba(74, 144, 226, 0.3) !important;
+}
+
+.properties-section {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    background-color: #2a2a2a;
+    max-height: calc(80vh - 300px - 32px - 48px);
+}
+
+.properties-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+h3 {
+    margin: 0 0 16px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #444;
+    color: #4a90e2;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.basic-properties, .texture-maps, .advanced-properties {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.text-field, .select-field {
+    width: 100%;
+}
+
+.text-field mat-form-field, .select-field mat-form-field {
+    width: 100%;
+}
+
+.color-field, .slider-field, .checkbox-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.property-label {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.property-label mat-label {
+    flex: 1;
+}
+
+.info-icon {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #aaa;
+    opacity: 0.7;
+    transition: opacity 0.2s, color 0.2s;
+    margin-left: 8px;
+    position: relative;
+}
+
+.info-icon:hover {
+    opacity: 1;
+    color: #4a90e2;
+}
+
+.info-icon mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.color-input-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.color-input-container input[type="color"] {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 4px;
+    background: none;
+    cursor: pointer;
+}
+
+.texture-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.texture-input-container {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.texture-preview {
+    width: 64px;
+    height: 64px;
+    border-radius: 4px;
+    overflow: hidden;
+    background-color: #1a1a1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.texture-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.texture-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Estilos para los tooltips */
+::ng-deep .mat-tooltip {
+    background-color: rgba(50, 50, 50, 0.95) !important;
+    color: white !important;
+    font-size: 12px !important;
+    padding: 8px 12px !important;
+    border-radius: 4px !important;
+    max-width: 250px !important;
+    word-break: normal !important;
+    white-space: pre-wrap !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+    line-height: 1.4 !important;
+    margin: 4px !important;
+}
+
+mat-dialog-actions {
+    padding: 8px 16px;
+    background-color: #444;
+    border-top: 1px solid #555;
+}
+
+button[mat-button] {
+    text-transform: uppercase;
+    font-weight: 500;
+}
+
+/* Estilos para pantallas más pequeñas */
+@media (max-width: 768px) {
+    .dialog-content {
+        flex-direction: column;
+    }
+    
+    .preview-section {
+        width: 100%;
+        min-width: 100%;
+        height: 300px;
+    }
+} 

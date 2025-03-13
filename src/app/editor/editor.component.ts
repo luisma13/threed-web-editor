@@ -18,6 +18,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { FirstPersonCameraComponent } from '../simple-engine/components/camera/first-camera.component';
 import { ContextMenuService } from './context-menu/context-menu.service';
+import { ResourceManagerComponent } from './resource-manager/resource-manager.component';
+import { ResourceDialogService } from './resource-manager/resource-dialog.service';
 
 export class EditorModule { }
 
@@ -37,7 +39,8 @@ export class EditorModule { }
         MatInputModule,
         MatButtonModule,
         MatTooltipModule,
-        DragDropModule
+        DragDropModule,
+        ResourceManagerComponent
     ],
     templateUrl: './editor.component.html',
     styleUrl: './editor.component.scss'
@@ -56,7 +59,8 @@ export class EditorComponent {
         private editorService: EditorService,
         private historyService: HistoryService,
         private changeDetector: ChangeDetectorRef,
-        private contextMenuService: ContextMenuService
+        private contextMenuService: ContextMenuService,
+        private resourceDialogService: ResourceDialogService
     ) {
         afterNextRender(() => this.initScene());
     }

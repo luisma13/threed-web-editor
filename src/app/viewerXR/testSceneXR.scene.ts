@@ -32,7 +32,7 @@ export function createARVipeRoomScene() {
     );
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
-    engineXR.addGameObjects(new GameObject(ambientLight));
+    engineXR.addGameObjects(new GameObject(null, ambientLight));
 
     let vipeRoom: Object3D;
 
@@ -42,7 +42,7 @@ export function createARVipeRoomScene() {
 
     const controller = engineXR.renderer.xr.getController(0);
     controller.addEventListener("select", onSelect);
-    engineXR.addGameObjects(new GameObject(controller));
+    engineXR.addGameObjects(new GameObject(null, controller));
 
     function onSelect() {
         if (planeMarker.visible) {
@@ -52,7 +52,7 @@ export function createARVipeRoomScene() {
             const box = new THREE.Mesh(boxGeometry, boxMaterial);
             box.position.setFromMatrixPosition(planeMarker.matrix);
 
-            engineXR.addGameObjects(new GameObject(box));
+            engineXR.addGameObjects(new GameObject(null, box));
 
             if (!vipeRoom) return;
 
@@ -63,7 +63,7 @@ export function createARVipeRoomScene() {
             model.rotation.y = Math.random() * (Math.PI * 2);
             model.visible = true;
 
-            engineXR.addGameObjects(new GameObject(model));
+            engineXR.addGameObjects(new GameObject(null, model));
         }
     }
 
