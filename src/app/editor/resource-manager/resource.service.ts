@@ -40,7 +40,6 @@ export class ResourceService {
     private _materialPreviewsSubject = new BehaviorSubject<Map<string, MaterialPreview>>(this._materialPreviews);
 
     // Flag para indicar si el servicio está siendo destruido
-    private isBeingDestroyed = false;
     private isBrowser: boolean;
 
     get textures() {
@@ -352,19 +351,8 @@ export class ResourceService {
             encoding?: TextureEncoding;
             generateMipmaps?: boolean;
             flipY?: boolean;
-        },
-        logChanges: boolean = false
-    ): void {
-        if (logChanges) {
-            console.log('Before update - Texture properties:', {
-                name: texture.name,
-                wrapS: texture.wrapS,
-                wrapT: texture.wrapT,
-                encoding: texture.encoding,
-                generateMipmaps: texture.generateMipmaps,
-                flipY: texture.flipY
-            });
         }
+    ): void {
         
         // Aplicar opciones
         if (options.wrapS !== undefined) {
@@ -377,9 +365,6 @@ export class ResourceService {
         
         if (options.encoding !== undefined) {
             // Forzar la actualización de la codificación estableciéndola explícitamente
-            if (logChanges) {
-                console.log(`Attempting to update encoding from ${texture.encoding} to ${options.encoding}`);
-            }
             
             // En Three.js, algunas propiedades necesitan un manejo especial
             // Para la codificación, necesitamos asegurarnos de que se establezca correctamente
@@ -388,10 +373,6 @@ export class ResourceService {
                 writable: true,
                 configurable: true
             });
-            
-            if (logChanges) {
-                console.log(`After update, encoding is now: ${texture.encoding}`);
-            }
         }
         
         if (options.generateMipmaps !== undefined) {
@@ -404,17 +385,6 @@ export class ResourceService {
         
         // Siempre marcar la textura como necesitada de actualización
         texture.needsUpdate = true;
-        
-        if (logChanges) {
-            console.log('After update - Texture properties:', {
-                name: texture.name,
-                wrapS: texture.wrapS,
-                wrapT: texture.wrapT,
-                encoding: texture.encoding,
-                generateMipmaps: texture.generateMipmaps,
-                flipY: texture.flipY
-            });
-        }
     }
 
     /**
@@ -513,7 +483,7 @@ export class ResourceService {
         const texture = textureInfo.resource;
         
         // Aplicar opciones a la textura
-        this.applyTextureOptions(texture, options, true);
+        this.applyTextureOptions(texture, options);
         
         // Usar el método común para actualizar la textura y notificar
         this.updateTextureCommon(path, texture, textureInfo);
@@ -929,8 +899,6 @@ export class ResourceService {
      */
     public disposeAllResources(): void {
         if (!this.isBrowser) return;
-        
-        this.isBeingDestroyed = true;
         
         console.log('Disposing all resources in ResourceService');
         

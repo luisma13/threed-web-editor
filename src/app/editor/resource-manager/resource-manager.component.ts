@@ -113,8 +113,6 @@ export class ResourceManagerComponent implements OnInit, AfterViewInit, OnDestro
     }
     
     ngOnDestroy(): void {
-        if (!this.isBrowser) return;
-        
         // Dispose shared renderer and resources
         this.disposeSharedRenderer();
     }

@@ -171,7 +171,6 @@ export class ContextMenuComponent {
 
     showContextMenu(event: MouseEvent, type: ContextType, contextObject: any = null) {
         event.preventDefault();
-        console.log('ContextMenuComponent.showContextMenu:', type, contextObject?.name || contextObject?.constructor?.name);
         
         // Asegurarse de que las coordenadas estén dentro de la ventana
         const windowWidth = window.innerWidth;
@@ -215,7 +214,6 @@ export class ContextMenuComponent {
         // Forzar la visibilidad del menú
         setTimeout(() => {
             this.isVisible = true;
-            console.log('Menú contextual visible:', this.isVisible, 'en posición:', this.x, this.y);
             
             // Forzar la detección de cambios
             this.changeDetectorRef.detectChanges();
@@ -431,14 +429,10 @@ export class ContextMenuComponent {
                 }
                 
                 if (result) {
-                    console.log('Componente seleccionado:', result.name);
-                    
                     // Añadir el componente seleccionado al GameObject
                     const addedComponent = this.editorService.addComponentToGameObject(currentGameObject, result.type);
                     
                     if (addedComponent) {
-                        console.log('Componente añadido con éxito:', addedComponent);
-                        
                         // Asegurarse de que el GameObject siga seleccionado
                         if (this.editorService.editableSceneComponent) {
                             this.editorService.editableSceneComponent.selectObject(currentGameObject);
@@ -447,8 +441,6 @@ export class ContextMenuComponent {
                     } else {
                         console.error('Error al añadir el componente');
                     }
-                } else {
-                    console.log('Diálogo cerrado sin seleccionar componente');
                 }
             });
         } catch (error) {

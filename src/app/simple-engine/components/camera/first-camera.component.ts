@@ -76,7 +76,6 @@ export class FirstPersonCameraComponent extends Component {
      * @returns true si se estaba rotando la cámara, false en caso contrario
      */
     public wasRotating(): boolean {
-        console.log("wasRotating check:", this.wasRotatingCamera);
         return this.wasRotatingCamera;
     }
 
@@ -84,7 +83,6 @@ export class FirstPersonCameraComponent extends Component {
      * Resetea el flag de rotación de cámara
      */
     public resetRotationFlag(): void {
-        console.log("Resetting rotation flag from:", this.wasRotatingCamera, "to false");
         this.wasRotatingCamera = false;
     }
 
@@ -177,7 +175,6 @@ export class FirstPersonCameraComponent extends Component {
             // Usamos un umbral más bajo para ser más sensibles al movimiento
             if (Math.abs(deltaX) > 0.5 || Math.abs(deltaY) > 0.5) {
                 if (!this.wasRotatingCamera) {
-                    console.log("Detectado movimiento de cámara:", deltaX, deltaY);
                     this.wasRotatingCamera = true;
                 }
             }

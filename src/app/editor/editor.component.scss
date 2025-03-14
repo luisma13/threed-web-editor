@@ -282,6 +282,13 @@
     }
 }
 
+.components-panel {
+    .panel-content {
+        overflow-y: auto;
+        height: 100%;
+    }
+}
+
 .panel-header {
     display: flex;
     align-items: center;

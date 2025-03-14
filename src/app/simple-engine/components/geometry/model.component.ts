@@ -29,6 +29,7 @@ interface MeshInfo {
     materialIndex: number;
     isSkinned: boolean;
     boneCount?: number;
+    visible: boolean;
 }
 
 /**
@@ -95,6 +96,16 @@ export class ModelComponent extends Component {
     })
     public modelUuid: string = '';
     
+    // Escala global del modelo
+    @Editable({
+        type: 'number',
+        description: 'Escala global del modelo',
+        min: 0.01,
+        max: 10,
+        step: 0.01
+    })
+    public modelScale: number = 1.0;
+    
     // Número de mallas
     @Editable({
         type: 'number',
@@ -125,12 +136,35 @@ export class ModelComponent extends Component {
         return this.currentAnimation;
     }
     
+    public set currentAnimationName(value: string) {
+        if (value && value !== this.currentAnimation) {
+            this.playAnimation(value);
+        }
+    }
+    
     // Reproducir animación
     @Editable({
         type: 'boolean',
         description: 'Reproducir animación'
     })
     public isAnimationPlaying: boolean = false;
+    
+    // Velocidad de la animación
+    @Editable({
+        type: 'number',
+        description: 'Velocidad de la animación',
+        min: 0.1,
+        max: 5,
+        step: 0.1
+    })
+    public animationSpeed: number = 1.0;
+    
+    // Malla seleccionada para editar
+    @Editable({
+        type: 'string',
+        description: 'Malla seleccionada'
+    })
+    public selectedMeshIndex: string = '';
     
     constructor() {
         super("ModelComponent");
@@ -156,6 +190,11 @@ export class ModelComponent extends Component {
         // Configurar mixer para animaciones si hay animaciones
         if (animations.length > 0) {
             this.setupAnimations();
+        }
+        
+        // Seleccionar la primera malla por defecto si hay mallas
+        if (this.meshInfoList.length > 0) {
+            this.selectedMeshIndex = `0: ${this.meshInfoList[0].name}`;
         }
     }
     
@@ -206,7 +245,8 @@ export class ModelComponent extends Component {
                 vertexCount: geometry.attributes && geometry.attributes['position'] ? geometry.attributes['position'].count : 0,
                 triangleCount: geometry.index ? geometry.index.count / 3 : 0,
                 materialIndex: Array.isArray(mesh.material) ? -1 : this.materials.indexOf(mesh.material),
-                isSkinned: mesh instanceof SkinnedMesh
+                isSkinned: mesh instanceof SkinnedMesh,
+                visible: mesh.visible
             };
             
             // Si es una malla con esqueleto, añadir información de huesos
@@ -320,56 +360,46 @@ export class ModelComponent extends Component {
     }
     
     /**
-     * Obtiene la información de las mallas para mostrar en el editor
-     * @returns Lista de información de mallas en formato JSON
+     * Obtiene el material de la malla seleccionada actualmente
      */
     @Editable({
-        type: 'string',
-        description: 'Información de mallas'
+        type: 'material',
+        description: 'Material de la malla seleccionada'
     })
-    public getMeshInfo(): string {
-        return JSON.stringify(this.meshInfoList, null, 2);
+    public get selectedMeshMaterial(): string {
+        const meshIndex = this.getSelectedMeshIndex();
+        if (meshIndex === -1 || meshIndex >= this.meshes.length) {
+            return '';
+        }
+        
+        const mesh = this.meshes[meshIndex];
+        if (!mesh.material) {
+            return '';
+        }
+        
+        // Si la malla tiene un solo material
+        if (!Array.isArray(mesh.material)) {
+            return mesh.material.uuid;
+        }
+        
+        // Si la malla tiene múltiples materiales, devolver el primero
+        if (mesh.material.length > 0) {
+            return mesh.material[0].uuid;
+        }
+        
+        return '';
     }
     
     /**
-     * Obtiene la información de los materiales para mostrar en el editor
-     * @returns Lista de información de materiales en formato JSON
+     * Establece el material de la malla seleccionada
      */
-    @Editable({
-        type: 'string',
-        description: 'Información de materiales'
-    })
-    public getMaterialInfo(): string {
-        return JSON.stringify(this.materialInfoList, null, 2);
-    }
-    
-    /**
-     * Obtiene la información de las animaciones para mostrar en el editor
-     * @returns Lista de información de animaciones en formato JSON
-     */
-    @Editable({
-        type: 'string',
-        description: 'Información de animaciones'
-    })
-    public getAnimationInfo(): string {
-        return JSON.stringify(this.animationInfoList, null, 2);
-    }
-    
-    /**
-     * Actualiza un material en el modelo
-     * @param index Índice del material a actualizar
-     * @param materialId ID del nuevo material
-     */
-    @Editable({
-        type: 'string',
-        description: 'Actualizar material (formato: índice,materialId)'
-    })
-    public updateMaterial(index: number, materialId: string): void {
-        if (index < 0 || index >= this.materials.length) {
-            console.error(`Índice de material fuera de rango: ${index}`);
+    public set selectedMeshMaterial(materialId: string) {
+        const meshIndex = this.getSelectedMeshIndex();
+        if (meshIndex === -1 || meshIndex >= this.meshes.length) {
             return;
         }
         
+        // Obtener el material del MaterialManager
         const materialManager = MaterialManager.getInstance();
         const material = materialManager.getMaterial(materialId);
         
@@ -378,54 +408,135 @@ export class ModelComponent extends Component {
             return;
         }
         
-        // Actualizar el material en la lista
-        this.materials[index] = material;
+        // Actualizar el material de la malla
+        const mesh = this.meshes[meshIndex];
         
-        // Actualizar el material en todas las mallas que lo usan
-        this.meshes.forEach(mesh => {
-            if (Array.isArray(mesh.material)) {
-                // Para mallas con múltiples materiales, buscar el índice correcto
-                for (let i = 0; i < mesh.material.length; i++) {
-                    if (mesh.material[i].uuid === this.materials[index].uuid) {
-                        mesh.material[i] = material;
-                    }
-                }
-            } else if (mesh.material && mesh.material.uuid === this.materials[index].uuid) {
-                // Para mallas con un solo material
-                mesh.material = material;
+        if (Array.isArray(mesh.material)) {
+            // Si la malla tiene múltiples materiales, actualizar todos
+            for (let i = 0; i < mesh.material.length; i++) {
+                mesh.material[i] = material;
             }
-        });
+        } else {
+            // Si la malla tiene un solo material
+            mesh.material = material;
+        }
         
-        // Regenerar información de materiales
+        // Actualizar la información de materiales
         this.generateMaterialInfo();
     }
     
     /**
-     * Actualiza el color de un material
-     * @param index Índice del material a actualizar
-     * @param colorHex Color en formato hexadecimal
+     * Obtiene la visibilidad de la malla seleccionada
      */
     @Editable({
-        type: 'string',
-        description: 'Actualizar color de material (formato: índice,colorHex)'
+        type: 'boolean',
+        description: 'Visibilidad de la malla seleccionada'
     })
-    public updateMaterialColor(index: number, colorHex: string): void {
-        if (index < 0 || index >= this.materials.length) {
-            console.error(`Índice de material fuera de rango: ${index}`);
+    public get selectedMeshVisible(): boolean {
+        const meshIndex = this.getSelectedMeshIndex();
+        if (meshIndex === -1 || meshIndex >= this.meshes.length) {
+            return true;
+        }
+        
+        return this.meshes[meshIndex].visible;
+    }
+    
+    /**
+     * Establece la visibilidad de la malla seleccionada
+     */
+    public set selectedMeshVisible(visible: boolean) {
+        const meshIndex = this.getSelectedMeshIndex();
+        if (meshIndex === -1 || meshIndex >= this.meshes.length) {
             return;
         }
         
-        const material = this.materials[index];
-        
-        if (material instanceof MeshStandardMaterial) {
-            material.color = new Color(colorHex);
-            material.needsUpdate = true;
-            
-            // Regenerar información de materiales
-            this.generateMaterialInfo();
-        } else {
-            console.error(`El material en el índice ${index} no es un MeshStandardMaterial`);
+        this.meshes[meshIndex].visible = visible;
+        this.meshInfoList[meshIndex].visible = visible;
+    }
+    
+    /**
+     * Obtiene el nombre de la malla seleccionada
+     */
+    @Editable({
+        type: 'string',
+        description: 'Nombre de la malla seleccionada'
+    })
+    public get selectedMeshName(): string {
+        const meshIndex = this.getSelectedMeshIndex();
+        if (meshIndex === -1 || meshIndex >= this.meshInfoList.length) {
+            return '';
         }
+        
+        return this.meshInfoList[meshIndex].name;
+    }
+    
+    /**
+     * Establece el nombre de la malla seleccionada
+     */
+    public set selectedMeshName(name: string) {
+        const meshIndex = this.getSelectedMeshIndex();
+        if (meshIndex === -1 || meshIndex >= this.meshes.length || !name) {
+            return;
+        }
+        
+        this.meshes[meshIndex].name = name;
+        this.meshInfoList[meshIndex].name = name;
+        
+        // Actualizar el dropdown de selección de malla
+        this.selectedMeshIndex = `${meshIndex}: ${name}`;
+    }
+    
+    /**
+     * Obtiene información detallada sobre la malla seleccionada
+     */
+    @Editable({
+        type: 'string',
+        description: 'Información de la malla seleccionada'
+    })
+    public get selectedMeshInfo(): string {
+        const meshIndex = this.getSelectedMeshIndex();
+        if (meshIndex === -1 || meshIndex >= this.meshInfoList.length) {
+            return 'No hay malla seleccionada';
+        }
+        
+        const info = this.meshInfoList[meshIndex];
+        return `Vértices: ${info.vertexCount}, Triángulos: ${info.triangleCount}, ${info.isSkinned ? `Huesos: ${info.boneCount || 0}` : 'No tiene esqueleto'}`;
+    }
+    
+    /**
+     * Obtiene el índice de la malla seleccionada actualmente
+     */
+    private getSelectedMeshIndex(): number {
+        if (!this.selectedMeshIndex) {
+            return -1;
+        }
+        
+        // El formato es "índice: nombre"
+        const parts = this.selectedMeshIndex.split(':');
+        if (parts.length < 1) {
+            return -1;
+        }
+        
+        return parseInt(parts[0], 10);
+    }
+    
+    /**
+     * Aplica la escala global al modelo
+     */
+    @Editable({
+        type: 'boolean',
+        description: 'Aplicar escala global'
+    })
+    public applyModelScale(): void {
+        if (!this.rootObject) {
+            return;
+        }
+        
+        this.rootObject.scale.set(this.modelScale, this.modelScale, this.modelScale);
+        
+        // Actualizar la matriz del objeto
+        this.rootObject.updateMatrix();
+        this.rootObject.updateMatrixWorld(true);
     }
     
     /**
@@ -455,6 +566,7 @@ export class ModelComponent extends Component {
         
         // Reproducir la nueva animación
         const action = this.mixer.clipAction(animation);
+        action.setEffectiveTimeScale(this.animationSpeed);
         action.play();
         
         this.currentAnimation = animationName;
@@ -491,6 +603,7 @@ export class ModelComponent extends Component {
         }
         
         this.meshes[meshIndex].visible = visible;
+        this.meshInfoList[meshIndex].visible = visible;
     }
     
     /**
@@ -527,6 +640,9 @@ export class ModelComponent extends Component {
         this.animationCount = 0;
         this.currentAnimation = '';
         this.isAnimationPlaying = false;
+        this.animationSpeed = 1.0;
+        this.modelScale = 1.0;
+        this.selectedMeshIndex = '';
     }
     
     /**
@@ -558,5 +674,294 @@ export class ModelComponent extends Component {
      */
     public onDestroy(): void {
         this.cleanup();
+    }
+    
+    /**
+     * Obtiene la lista de mallas disponibles en el modelo
+     */
+    @Editable({
+        type: 'string',
+        description: 'Lista de mallas disponibles'
+    })
+    public getMeshList(): string {
+        if (this.meshInfoList.length === 0) {
+            return 'No hay mallas disponibles';
+        }
+        
+        return this.meshInfoList.map((mesh, index) => 
+            `${index}: ${mesh.name} (${mesh.visible ? 'Visible' : 'Oculta'})`
+        ).join('\n');
+    }
+    
+    /**
+     * Selecciona una malla específica por su índice
+     */
+    @Editable({
+        type: 'number',
+        description: 'Seleccionar malla por índice',
+        min: 0
+    })
+    public selectMeshByIndex(index: number): void {
+        if (index < 0 || index >= this.meshInfoList.length) {
+            console.error(`Índice de malla fuera de rango: ${index}`);
+            return;
+        }
+        
+        this.selectedMeshIndex = `${index}: ${this.meshInfoList[index].name}`;
+    }
+    
+    /**
+     * Obtiene el color del material de la malla seleccionada
+     */
+    @Editable({
+        type: 'color',
+        description: 'Color del material'
+    })
+    public get selectedMeshColor(): string {
+        const meshIndex = this.getSelectedMeshIndex();
+        if (meshIndex === -1 || meshIndex >= this.meshes.length) {
+            return '#ffffff';
+        }
+        
+        const mesh = this.meshes[meshIndex];
+        if (!mesh.material) {
+            return '#ffffff';
+        }
+        
+        // Si la malla tiene un solo material
+        if (!Array.isArray(mesh.material)) {
+            if (mesh.material instanceof MeshStandardMaterial && mesh.material.color) {
+                return '#' + mesh.material.color.getHexString();
+            }
+        } else if (mesh.material.length > 0) {
+            // Si la malla tiene múltiples materiales, usar el primero
+            const material = mesh.material[0];
+            if (material instanceof MeshStandardMaterial && material.color) {
+                return '#' + material.color.getHexString();
+            }
+        }
+        
+        return '#ffffff';
+    }
+    
+    /**
+     * Establece el color del material de la malla seleccionada
+     */
+    public set selectedMeshColor(colorHex: string) {
+        const meshIndex = this.getSelectedMeshIndex();
+        if (meshIndex === -1 || meshIndex >= this.meshes.length) {
+            return;
+        }
+        
+        const mesh = this.meshes[meshIndex];
+        if (!mesh.material) {
+            return;
+        }
+        
+        // Aplicar el color al material
+        if (!Array.isArray(mesh.material)) {
+            if (mesh.material instanceof MeshStandardMaterial) {
+                mesh.material.color = new Color(colorHex);
+                mesh.material.needsUpdate = true;
+            }
+        } else {
+            // Si la malla tiene múltiples materiales, actualizar todos
+            for (let i = 0; i < mesh.material.length; i++) {
+                const material = mesh.material[i];
+                if (material instanceof MeshStandardMaterial) {
+                    material.color = new Color(colorHex);
+                    material.needsUpdate = true;
+                }
+            }
+        }
+        
+        // Actualizar la información de materiales
+        this.generateMaterialInfo();
+    }
+    
+    /**
+     * Obtiene información sobre el material de la malla seleccionada
+     */
+    @Editable({
+        type: 'string',
+        description: 'Información del material'
+    })
+    public get selectedMaterialInfo(): string {
+        const meshIndex = this.getSelectedMeshIndex();
+        if (meshIndex === -1 || meshIndex >= this.meshes.length) {
+            return 'No hay malla seleccionada';
+        }
+        
+        const mesh = this.meshes[meshIndex];
+        if (!mesh.material) {
+            return 'La malla no tiene material';
+        }
+        
+        // Si la malla tiene un solo material
+        if (!Array.isArray(mesh.material)) {
+            return this.getMaterialInfoString(mesh.material);
+        } else if (mesh.material.length > 0) {
+            // Si la malla tiene múltiples materiales, mostrar información del primero
+            return `La malla tiene ${mesh.material.length} materiales. Primer material:\n` + 
+                   this.getMaterialInfoString(mesh.material[0]);
+        }
+        
+        return 'La malla no tiene material';
+    }
+    
+    /**
+     * Obtiene una cadena con información sobre un material
+     */
+    private getMaterialInfoString(material: Material): string {
+        let info = `Tipo: ${material.type}\n`;
+        info += `Nombre: ${material.name || 'Sin nombre'}\n`;
+        
+        if (material instanceof MeshStandardMaterial) {
+            info += `Color: #${material.color.getHexString()}\n`;
+            info += `Metalness: ${material.metalness}\n`;
+            info += `Roughness: ${material.roughness}\n`;
+            info += `Mapa difuso: ${material.map ? 'Sí' : 'No'}\n`;
+            info += `Mapa normal: ${material.normalMap ? 'Sí' : 'No'}\n`;
+        }
+        
+        return info;
+    }
+    
+    /**
+     * Ajusta la metalicidad del material de la malla seleccionada
+     */
+    @Editable({
+        type: 'number',
+        description: 'Metalicidad del material',
+        min: 0,
+        max: 1,
+        step: 0.01
+    })
+    public get selectedMeshMetalness(): number {
+        const meshIndex = this.getSelectedMeshIndex();
+        if (meshIndex === -1 || meshIndex >= this.meshes.length) {
+            return 0;
+        }
+        
+        const mesh = this.meshes[meshIndex];
+        if (!mesh.material) {
+            return 0;
+        }
+        
+        // Si la malla tiene un solo material
+        if (!Array.isArray(mesh.material)) {
+            if (mesh.material instanceof MeshStandardMaterial) {
+                return mesh.material.metalness;
+            }
+        } else if (mesh.material.length > 0) {
+            // Si la malla tiene múltiples materiales, usar el primero
+            const material = mesh.material[0];
+            if (material instanceof MeshStandardMaterial) {
+                return material.metalness;
+            }
+        }
+        
+        return 0;
+    }
+    
+    /**
+     * Establece la metalicidad del material de la malla seleccionada
+     */
+    public set selectedMeshMetalness(value: number) {
+        const meshIndex = this.getSelectedMeshIndex();
+        if (meshIndex === -1 || meshIndex >= this.meshes.length) {
+            return;
+        }
+        
+        const mesh = this.meshes[meshIndex];
+        if (!mesh.material) {
+            return;
+        }
+        
+        // Aplicar la metalicidad al material
+        if (!Array.isArray(mesh.material)) {
+            if (mesh.material instanceof MeshStandardMaterial) {
+                mesh.material.metalness = value;
+                mesh.material.needsUpdate = true;
+            }
+        } else {
+            // Si la malla tiene múltiples materiales, actualizar todos
+            for (let i = 0; i < mesh.material.length; i++) {
+                const material = mesh.material[i];
+                if (material instanceof MeshStandardMaterial) {
+                    material.metalness = value;
+                    material.needsUpdate = true;
+                }
+            }
+        }
+    }
+    
+    /**
+     * Ajusta la rugosidad del material de la malla seleccionada
+     */
+    @Editable({
+        type: 'number',
+        description: 'Rugosidad del material',
+        min: 0,
+        max: 1,
+        step: 0.01
+    })
+    public get selectedMeshRoughness(): number {
+        const meshIndex = this.getSelectedMeshIndex();
+        if (meshIndex === -1 || meshIndex >= this.meshes.length) {
+            return 0;
+        }
+        
+        const mesh = this.meshes[meshIndex];
+        if (!mesh.material) {
+            return 0;
+        }
+        
+        // Si la malla tiene un solo material
+        if (!Array.isArray(mesh.material)) {
+            if (mesh.material instanceof MeshStandardMaterial) {
+                return mesh.material.roughness;
+            }
+        } else if (mesh.material.length > 0) {
+            // Si la malla tiene múltiples materiales, usar el primero
+            const material = mesh.material[0];
+            if (material instanceof MeshStandardMaterial) {
+                return material.roughness;
+            }
+        }
+        
+        return 0;
+    }
+    
+    /**
+     * Establece la rugosidad del material de la malla seleccionada
+     */
+    public set selectedMeshRoughness(value: number) {
+        const meshIndex = this.getSelectedMeshIndex();
+        if (meshIndex === -1 || meshIndex >= this.meshes.length) {
+            return;
+        }
+        
+        const mesh = this.meshes[meshIndex];
+        if (!mesh.material) {
+            return;
+        }
+        
+        // Aplicar la rugosidad al material
+        if (!Array.isArray(mesh.material)) {
+            if (mesh.material instanceof MeshStandardMaterial) {
+                mesh.material.roughness = value;
+                mesh.material.needsUpdate = true;
+            }
+        } else {
+            // Si la malla tiene múltiples materiales, actualizar todos
+            for (let i = 0; i < mesh.material.length; i++) {
+                const material = mesh.material[i];
+                if (material instanceof MeshStandardMaterial) {
+                    material.roughness = value;
+                    material.needsUpdate = true;
+                }
+            }
+        }
     }
 } 

@@ -359,10 +359,7 @@ export class ModelCacheComponent implements OnInit, OnDestroy, AfterViewInit {
         event.stopPropagation(); // Evitar que se seleccione el modelo
         
         const model = this.modelCacheService.getModel(uuid);
-        if (model) {
-            // Usar el EditorService para añadir el modelo a la escena
-            console.log(`Adding model to scene: ${model.name}`);
-            
+        if (model) {            
             // Implementación real: crear un nuevo GameObject con el modelo
             this.editorService.addModelToSceneFromCache(uuid);
         }

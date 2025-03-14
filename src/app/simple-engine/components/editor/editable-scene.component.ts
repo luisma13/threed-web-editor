@@ -80,7 +80,6 @@ export class EditableSceneComponent extends Component {
             
             // Verificar si el clic ocurrió dentro del contenedor de renderizado
             if (!this.isClickOnRendererContainer()) {
-                console.log("Clic fuera del contenedor de renderizado, ignorando");
                 return;
             }
             
@@ -105,15 +104,10 @@ export class EditableSceneComponent extends Component {
                 }
             }
             
-            console.log("FirstPersonCamera found:", !!firstPersonCamera);
-            
             // Solo evitamos la selección si la cámara estaba rotando
             if (firstPersonCamera && firstPersonCamera.wasRotating()) {
-                console.log("Cámara estaba rotando, no seleccionamos objeto");
                 firstPersonCamera.resetRotationFlag();
             } else {
-                // Si no se estaba rotando la cámara, proceder con la selección de objetos
-                console.log("Procesando clic para selección de objeto");
                 this.onClick();
             }
         }
@@ -172,8 +166,6 @@ export class EditableSceneComponent extends Component {
             currentElement = currentElement.parentElement;
         }
         
-        // Si llegamos aquí, el clic ocurrió en un elemento superpuesto
-        console.log("Clic en elemento superpuesto:", elementAtPoint.tagName, elementAtPoint.className);
         return false;
     }
 
@@ -220,11 +212,8 @@ export class EditableSceneComponent extends Component {
             state1.scale.equals(state2.scale);
     }
 
-    onClick() {
-        console.log("onClick called");
-        
+    onClick() {        
         if (engine.draggingObject) {
-            console.log("Dragging object, ignoring click");
             return;
         }
 
@@ -235,7 +224,6 @@ export class EditableSceneComponent extends Component {
 
         // return if the click is outside the canvas
         if (mouse.x < -1 || mouse.x > 1 || mouse.y < -1 || mouse.y > 1) {
-            console.log("Click outside canvas, ignorando");
             return;
         }
 
@@ -244,14 +232,8 @@ export class EditableSceneComponent extends Component {
         
         // Filtrar objetos seleccionables
         const selectableObjects = engine.gameObjects.filter(go => go && go.getComponent(EditableObjectComponent));
-        console.log("Selectable objects:", selectableObjects.length);
-        
         const intersects = raycaster.intersectObjects(selectableObjects, true);
-        console.log("Intersections:", intersects.length);
-
         if (intersects.length == 0) {
-            console.log("No intersections found");
-            //this.unselectObject();
             return;
         }
 
@@ -262,7 +244,6 @@ export class EditableSceneComponent extends Component {
             selectedObject = parent;
         });
 
-        console.log("Selected object:", selectedObject.name || "unnamed");
         this.selectObject(selectedObject as GameObject);
         this.selectedObject.next(selectedObject as GameObject);
     }

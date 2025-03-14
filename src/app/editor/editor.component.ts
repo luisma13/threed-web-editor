@@ -1,10 +1,10 @@
-import { ChangeDetectorRef, Component, ElementRef, HostListener, Inject, NgModule, ViewChild, afterNextRender, CUSTOM_ELEMENTS_SCHEMA, PLATFORM_ID } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, HostListener, Inject, ViewChild, afterNextRender, CUSTOM_ELEMENTS_SCHEMA, PLATFORM_ID } from '@angular/core';
 import { engine } from '../simple-engine/core/engine/engine';
 import { GameObject } from '../simple-engine/core/gameobject';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { ComponentComponent } from './component/component.component';
 import { EditorService } from './editor.service';
-import { ContextMenuComponent, ContextType } from './context-menu/context-menu.component';
+import { ContextMenuComponent } from './context-menu/context-menu.component';
 import { FormsModule } from '@angular/forms';
 import { ToolbarComponent } from './toolbar/toolbar.component';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,8 +15,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { DragDropModule, CdkDragMove } from '@angular/cdk/drag-drop';
-import { FirstPersonCameraComponent } from '../simple-engine/components/camera/first-camera.component';
+import { DragDropModule } from '@angular/cdk/drag-drop';
 import { ContextMenuService } from './context-menu/context-menu.service';
 import { ResourceManagerComponent } from './resource-manager/resource-manager.component';
 import { ResourceDialogService } from './resource-manager/resource-dialog.service';
@@ -69,12 +68,7 @@ export class EditorComponent {
         afterNextRender(() => this.initScene());
     }
 
-    async initScene() {
-        // Verificar que estamos en un entorno de navegador
-        if (!isPlatformBrowser(this.platformId)) {
-            return;
-        }
-        
+    async initScene() {        
         // Inicializar el motor
         engine.init(this.viewer.nativeElement, "#c3c3c3");
 
@@ -94,9 +88,7 @@ export class EditorComponent {
         this.editorService.initializeEditorComponents();
         
         // Suscribirse al evento de componente reseteado
-        this.editorService.componentReset.subscribe(component => {
-            console.log('Componente reseteado, actualizando UI:', component.name);
-            // Forzar la actualización de la UI
+        this.editorService.componentReset.subscribe(() => {
             this.changeDetector.detectChanges();
         });
 
@@ -134,38 +126,10 @@ export class EditorComponent {
         this.viewer.nativeElement.ondragover = (event) => event.preventDefault();
         this.viewer.nativeElement.ondrop = (event) => this.onDragged(event);
         
-        // Configurar el elemento del viewport para la cámara en primera persona
-        this.configureFirstPersonCamera();
-        
-        // Configurar eventos de clic derecho para el menú contextual
-        this.setupContextMenuEvents();
         
         // Seleccionar el objeto Environment por defecto
         if (environmentObject) {
             this.selectGameObject(environmentObject);
-        } else {
-            // Si no hay objeto Environment, seleccionar el primero disponible
-            setTimeout(() => {
-                this.selectDefaultGameObject();
-            }, 500);
-        }
-    }
-    
-    /**
-     * Configura los eventos para el menú contextual
-     */
-    private setupContextMenuEvents() {
-        // Desactivar el menú contextual predeterminado del navegador
-        document.addEventListener('contextmenu', (event) => {
-            event.preventDefault();
-        });
-    }
-    
-    private configureFirstPersonCamera() {
-        // Ya no es necesario buscar el componente en los GameObjects
-        // porque ahora está en el EditorCoreGameObject
-        if (this.editorService.firstPersonCameraComponent) {
-            this.editorService.firstPersonCameraComponent.setViewportElement(this.viewer.nativeElement);
         }
     }
 
@@ -315,34 +279,13 @@ export class EditorComponent {
     ngAfterViewInit() {
         // Registrar el menú contextual en el servicio
         this.contextMenuService.registerContextMenu(this.contextMenu);
-        
-        // Verificar que estamos en un entorno de navegador
-        if (isPlatformBrowser(this.platformId)) {
-            // Configurar la cámara en primera persona
-            this.configureFirstPersonCamera();
-            
-            // Seleccionar un objeto por defecto
-            this.selectDefaultGameObject();
-            
-            // Configurar eventos del menú contextual
-            this.setupContextMenuEvents();
-            
-            // Asegurarse de que el viewport del motor se actualice correctamente
-            this.updateEngineViewport();
-        }
     }
     
     /**
      * Actualiza el viewport del motor para que coincida con el tamaño actual del contenedor
      */
-    private updateEngineViewport() {
-        if (!isPlatformBrowser(this.platformId)) {
-            return;
-        }
-        
+    private updateEngineViewport() {        
         if (this.viewer && this.viewer.nativeElement && engine.scene && engine.camera) {
-            // Asegurarse de que el contenedor del renderer esté configurado correctamente
-            engine.rendererContainer = this.viewer.nativeElement;
             // Forzar una actualización del tamaño del motor
             engine.onResize();
         }

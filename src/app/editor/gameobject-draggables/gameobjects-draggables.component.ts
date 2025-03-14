@@ -35,9 +35,6 @@ export class GameObjectsDraggableComponent {
             // Actualizar la selección en todos los elementos
             GameObjectsDraggableComponent.gameObjectsHtmlElements.forEach(element => {
                 element.isSelected = object === element.gameObject;
-                if (element.isSelected) {
-                    console.log('GameObject seleccionado:', element.gameObject.name);
-                }
             });
         });
         

@@ -8,24 +8,19 @@ import { DirectionalLightComponent } from "../simple-engine/components/light/dir
 import { SpotLightComponent } from "../simple-engine/components/light/spot-light.component";
 import { engine } from "../simple-engine/core/engine/engine";
 import { GameObject } from "../simple-engine/core/gameobject";
-import { loadGLB, loadFBX, loadObj, loadVRM } from "../simple-engine/loaders/modelsLoader";
 import * as THREE from "three";
 import { PlayerComponent } from "../simple-engine/components/players/player.component";
 import { PlayerPhysicsComponent } from "../simple-engine/components/players/player-physics.component";
 import { PlayerControllerComponent } from "../simple-engine/components/players/player-controller.component";
-import { loadDefaultEquirectangularHDR } from "../simple-engine/loaders/hdrLoader";
 import { SceneExportService } from "./scene-export.service";
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
-import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import { ComponentInfo } from './component-selector/component-selector-dialog.component';
 import { Component } from "../simple-engine/core/component";
 import { BoxComponent } from "../simple-engine/components/geometry/box.component";
 import { BoxColliderComponent } from "../simple-engine/components/geometry/box-collider.component";
-import { ComponentRegistry } from '../simple-engine/utils/component-registry';
-import { SceneSerializer } from '../simple-engine/utils/scene-serializer';
 import { ResourceService, ResourceInfo } from './resource-manager/resource.service';
 import { MaterialManager } from '../simple-engine/managers/material-manager';
 import { ModelCacheService } from './resource-manager/model-cache.service';
@@ -122,8 +117,6 @@ export class EditorService {
         
         // Marcar como inicializado
         this.editorComponentsInitialized = true;
-        
-        console.log('Editor components initialized successfully');
     }
 
     setViewerElement(element: ElementRef) {
@@ -166,52 +159,6 @@ export class EditorService {
         engine.addGameObjects(environment);
         engine.addGameObjects(SpotLight);
         engine.addGameObjects(directionalLight);
-
-        // loadDefaultEquirectangularHDR();
-
-        // Create cube
-        // for (let i = 0; i < 5; i++) {
-        //     const cube = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshStandardMaterial({ color: 0x000 }));
-        //     const cubeObject = new GameObject(cube);
-        //     cubeObject.name = "Cube " + i;
-        //     cubeObject.position.set(i + 0.5, 0.25, 0);
-        //     cubeObject.addComponent(new EditableObjectComponent());
-        //     engine.addGameObjects(cubeObject);
-        // }
-
-        // load VRM
-        // const { vrm } = await loadVRM("assets/avatar.vrm");
-
-        // const player = new GameObject();
-        // player.name = "Player"
-        // player.isEnabled = true;
-        // // Añadir el componente EditableObjectComponent para que sea seleccionable
-        // player.addComponent(new EditableObjectComponent());
-        // engine.addGameObjects(player);
-
-        // const playerComponent = new PlayerComponent(player);
-        // await playerComponent.changeAvatar(vrm);
-
-        // // Asegurarse de que el modelo VRM sea seleccionable
-        // if (vrm && vrm.scene) {
-        //     // Recorrer todos los meshes del modelo VRM y asegurarse de que sean seleccionables
-        //     vrm.scene.traverse((object) => {
-        //         if (object instanceof THREE.Mesh) {
-        //             // Asegurarse de que el mesh tenga userData para ser seleccionable
-        //             object.userData = object.userData || {};
-        //             // Referencia al GameObject padre para facilitar la selección
-        //             object.userData['parentGameObject'] = player;
-        //         }
-        //     });
-        // }
-
-        // // await playerComponent.addUserAnimToMap("Test", "assets/Idle_Aiming_1H_Art_Flipped.fbx")
-        // playerComponent.changeAnim("Idle");
-
-        // player.addComponent(playerComponent);
-        // player.addComponent(new PlayerPhysicsComponent());
-        // player.addComponent(new PlayerControllerComponent());
-        // player.addComponent(new EditableObjectComponent());
 
         // Configurar el elemento del viewport para la cámara en primera persona
         if (this.firstPersonCameraComponent && this.viewerElement) {
@@ -271,9 +218,6 @@ export class EditorService {
      * Exporta la escena actual
      */
     exportScene() {
-        // Verificar que estamos en el navegador
-        if (!isPlatformBrowser(this.platformId)) return;
-
         // Pedir al usuario el nombre de la escena
         const sceneName = prompt('Nombre de la escena:', this.currentSceneName);
         if (sceneName) {
@@ -286,9 +230,6 @@ export class EditorService {
      * Importa una escena desde un archivo
      */
     loadScene() {
-        // Verificar que estamos en el navegador
-        if (!isPlatformBrowser(this.platformId)) return;
-
         this.input.accept = '.scene';
         this.input.onchange = async (event) => {
             const file = this.input.files[0];
@@ -647,153 +588,31 @@ export class EditorService {
     resetComponent(component: any): void {
         if (!component) return;
         
-        // Verificar si el componente tiene un método reset
-        if (typeof component.reset === 'function') {
-            component.reset();
-            
-            // Emitir evento de componente reseteado
-            this.componentReset.emit(component);
-            return;
-        }
-        
-        // Si no tiene un método reset, crear una nueva instancia del mismo tipo
-        const gameObject = component.gameObject;
         const componentType = component.constructor;
-        
-        // Guardar los valores personalizados que queremos preservar
-        const preservedValues = {};
-        
+        const newComponent = new componentType();
+
         // Obtener los metadatos de las propiedades editables
-        const keys = Object.keys(component);
+        const keys = Object.keys(newComponent);
         for (const key of keys) {
             const metadata = Reflect.getMetadata("isEditable", component, key);
             if (metadata) {
-                preservedValues[key] = component[key];
+                // Copiar el valor por defecto del nuevo componente al componente actual
+                component.set(key, newComponent[key]);
             }
         }
-        
-        // Limpiar el componente antes de eliminarlo
-        if (typeof component.cleanup === 'function') {
-            console.log('Llamando al método cleanup antes de resetear:', componentType.name);
-            component.cleanup();
-        } else if (typeof component.dispose === 'function') {
-            console.log('Llamando al método dispose antes de resetear:', componentType.name);
-            component.dispose();
-        } else {
-            console.log('El componente no tiene método cleanup o dispose:', componentType.name);
-            // Intentar limpiar objetos THREE.js comunes
-            this.cleanupCommonThreeObjects(component);
-        }
-        
-        // Eliminar el componente actual
-        gameObject.removeComponent(component);
-        
-        // Añadir una nueva instancia del mismo tipo
-        const newComponent = new componentType();
-        gameObject.addComponent(newComponent);
-        
-        // Restaurar los valores personalizados
-        for (const key in preservedValues) {
-            if (newComponent.hasOwnProperty(key)) {
-                newComponent[key] = preservedValues[key];
-                
-                // Si el componente tiene un método set, llamarlo para actualizar el valor
-                if (typeof newComponent.set === 'function') {
-                    newComponent.set(key, preservedValues[key]);
-                }
-            }
-        }
-        
-        console.log('Componente reseteado correctamente:', componentType.name);
         
         // Emitir evento de componente reseteado
-        this.componentReset.emit(newComponent);
+        this.componentReset.emit(component);
     }
     
     /**
      * Elimina un componente de su GameObject
      * @param component Componente a eliminar
      */
-    removeComponent(component: any): void {
-        if (!component || !component.gameObject) return;
-        
-        // Verificar si el componente tiene un método de limpieza
-        if (typeof component.cleanup === 'function') {
-            console.log('Llamando al método cleanup del componente:', component.constructor.name);
-            component.cleanup();
-        } else if (typeof component.dispose === 'function') {
-            console.log('Llamando al método dispose del componente:', component.constructor.name);
-            component.dispose();
-        } else {
-            console.log('El componente no tiene método cleanup o dispose:', component.constructor.name);
-            // Intentar limpiar objetos THREE.js comunes
-            this.cleanupCommonThreeObjects(component);
-        }
-        
+    removeComponent(component: Component): void {
+        if (!component || !component.gameObject) return;        
         // Eliminar el componente del GameObject
         component.gameObject.removeComponent(component);
-    }
-    
-    /**
-     * Intenta limpiar objetos THREE.js comunes que podrían estar asociados al componente
-     * @param component Componente a limpiar
-     */
-    private cleanupCommonThreeObjects(component: any): void {
-        // Verificar si el componente tiene propiedades que podrían ser objetos THREE.js
-        for (const key in component) {
-            const value = component[key];
-            
-            // Ignorar propiedades nulas, indefinidas o que no son objetos
-            if (!value || typeof value !== 'object') continue;
-            
-            // Limpiar luces
-            if (value instanceof THREE.Light) {
-                console.log('Eliminando luz:', value.type);
-                if (value.parent) {
-                    value.parent.remove(value);
-                }
-                // Limpiar sombras si existen
-                if (value.shadow && value.shadow.map) {
-                    value.shadow.map.dispose();
-                }
-            }
-            
-            // Limpiar geometrías
-            if (value instanceof THREE.BufferGeometry) {
-                console.log('Eliminando geometría');
-                value.dispose();
-            }
-            
-            // Limpiar materiales
-            if (value instanceof THREE.Material) {
-                console.log('Eliminando material');
-                value.dispose();
-            }
-            
-            // Limpiar texturas
-            if (value instanceof THREE.Texture) {
-                console.log('Eliminando textura');
-                value.dispose();
-            }
-            
-            // Limpiar mallas
-            if (value instanceof THREE.Mesh) {
-                console.log('Eliminando malla');
-                if (value.parent) {
-                    value.parent.remove(value);
-                }
-                if (value.geometry) {
-                    value.geometry.dispose();
-                }
-                if (value.material) {
-                    if (Array.isArray(value.material)) {
-                        value.material.forEach(material => material.dispose());
-                    } else {
-                        value.material.dispose();
-                    }
-                }
-            }
-        }
     }
     
     /**
@@ -805,9 +624,6 @@ export class EditorService {
         
         // Guardar referencia al componente copiado
         this.copiedComponent = component;
-        
-        // Habilitar la opción de pegar en el menú contextual
-        // Esto se implementará en el ContextMenuComponent
     }
     
     /**
@@ -823,17 +639,11 @@ export class EditorService {
             return;
         }
         
-        // Copiar los valores de las propiedades
-        for (const key in this.copiedComponent) {
-            // Evitar copiar propiedades internas o referencias
-            if (
-                key !== 'gameObject' && 
-                key !== 'id' && 
-                !key.startsWith('_') && 
-                typeof this.copiedComponent[key] !== 'function'
-            ) {
-                // Copiar el valor
-                targetComponent[key] = this.copiedComponent[key];
+        const keys = Object.keys(this.copiedComponent);
+        for (const key of keys) {
+            const metadata = Reflect.getMetadata("isEditable", this.copiedComponent, key);
+            if (metadata) {
+                targetComponent.set(key, this.copiedComponent[key]);
             }
         }
     }
@@ -928,13 +738,7 @@ export class EditorService {
         try {
             // Crear una nueva instancia del componente
             const component = new componentType();
-            
-            // Añadir el componente al GameObject
             gameObject.addComponent(component);
-            
-            // No necesitamos seleccionar el GameObject de nuevo
-            // ya que ya está seleccionado en el contexto del menú
-            
             return component;
         } catch (error) {
             console.error('Error al añadir componente:', error);
@@ -971,7 +775,6 @@ export class EditorService {
             // Obtener el modelo del caché
             const modelInfo = this.modelCacheService.getModel(uuid);
             if (!modelInfo) {
-                console.error(`Model with UUID ${uuid} not found in cache`);
                 return undefined;
             }
             
@@ -1216,8 +1019,6 @@ export class EditorService {
             if (texture.uuid) {
                 const previewUrl = this.resourceService.getTexturePreviewUrl(texture);
                 if (previewUrl) {
-                    // Ya existe una previsualización o se pudo obtener una, no necesitamos crear otra
-                    console.log('Previsualización existente encontrada para textura:', texture.uuid);
                     return;
                 }
             }
@@ -1270,15 +1071,6 @@ export class EditorService {
      */
     async cloneModelFromCache(uuid: string): Promise<GameObject | undefined> {
         return this.addModelToSceneFromCache(uuid);
-    }
-
-    /**
-     * Limpia los modelos no utilizados de la caché
-     * @param maxAgeMs Edad máxima en milisegundos para mantener modelos no utilizados (por defecto: 1 hora)
-     * @returns Número de modelos eliminados
-     */
-    cleanupUnusedModels(maxAgeMs: number = 3600000): number {
-        return this.modelCacheService.cleanupUnusedModels(maxAgeMs);
     }
 
     /**
