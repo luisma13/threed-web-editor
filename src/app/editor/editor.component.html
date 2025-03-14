@@ -11,9 +11,13 @@
                     <app-game-objects-draggable></app-game-objects-draggable>
                 </div>
             </div>
-            <div class="resizable-divider" (mousedown)="startDividerDrag($event, 'horizontal')">
-                <div class="divider-handle"></div>
-            </div>
+            <app-resizable-panel 
+                type="horizontal"
+                topPanelSelector=".hierarchy-panel"
+                bottomPanelSelector=".resources-panel"
+                viewportSelector=".editor-viewport"
+                (dimensionsChanged)="onPanelDimensionsChanged()">
+            </app-resizable-panel>
             <div class="resources-panel">
                 <div class="panel-header">
                     <mat-icon>folder</mat-icon>
@@ -24,15 +28,25 @@
                 </div>
             </div>
         </div>
-        <div class="resizable-divider vertical-divider-left" (mousedown)="startDividerDrag($event, 'vertical-left')">
-            <div class="divider-handle"></div>
-        </div>
+        <app-resizable-panel 
+            type="vertical-left"
+            containerSelector=".editor-content"
+            leftPanelSelector=".editor-sidebar-left"
+            rightPanelSelector=".editor-sidebar-right"
+            viewportSelector=".editor-viewport"
+            (dimensionsChanged)="onPanelDimensionsChanged()">
+        </app-resizable-panel>
         <div class="editor-viewport" #viewer>
             <app-editable-scene #editableScene></app-editable-scene>
         </div>
-        <div class="resizable-divider vertical-divider-right" (mousedown)="startDividerDrag($event, 'vertical-right')">
-            <div class="divider-handle"></div>
-        </div>
+        <app-resizable-panel 
+            type="vertical-right"
+            containerSelector=".editor-content"
+            leftPanelSelector=".editor-sidebar-left"
+            rightPanelSelector=".editor-sidebar-right"
+            viewportSelector=".editor-viewport"
+            (dimensionsChanged)="onPanelDimensionsChanged()">
+        </app-resizable-panel>
         <div class="editor-sidebar editor-sidebar-right mat-elevation-z1">
             <div class="panel-header">
                 <mat-icon>tune</mat-icon>

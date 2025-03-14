@@ -35,6 +35,13 @@
     position: relative;
     background-color: #1e1e1e;
     overflow: hidden;
+    
+    /* Ensure the canvas fills the viewport */
+    canvas {
+        width: 100% !important;
+        height: 100% !important;
+        display: block;
+    }
 }
 
 .editor-panel {
@@ -233,55 +240,6 @@
             line-height: 22px;
             font-weight: 400;
             text-align: center;
-        }
-    }
-}
-
-/* Estilos comunes para todos los divisores */
-.resizable-divider {
-    background-color: #333333;
-    position: relative;
-    z-index: 10;
-    user-select: none;
-    touch-action: none;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-shrink: 0;
-    
-    &:hover {
-        background-color: #444444;
-    }
-    
-    &:active {
-        background-color: #555555;
-    }
-    
-    /* Divisor horizontal (para ajustar alturas) */
-    &:not(.vertical-divider-left):not(.vertical-divider-right) {
-        height: 8px;
-        width: 100%;
-        cursor: ns-resize;
-        
-        .divider-handle {
-            width: 30px;
-            height: 4px;
-            background-color: #666666;
-            border-radius: 2px;
-        }
-    }
-    
-    /* Divisores verticales (para ajustar anchos) */
-    &.vertical-divider-left, &.vertical-divider-right {
-        width: 8px;
-        height: 100%;
-        cursor: ew-resize;
-        
-        .divider-handle {
-            height: 30px;
-            width: 4px;
-            background-color: #666666;
-            border-radius: 2px;
         }
     }
 }
