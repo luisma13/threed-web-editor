@@ -5,13 +5,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { ResourceService } from './resource.service';
-import { TextureDialogComponent } from './texture-dialog/texture-dialog.component';
-import { MaterialDialogComponent } from './material-dialog/material-dialog.component';
 import { ResourceDialogService } from './resource-dialog.service';
 import { WebGLRenderer, Scene, PerspectiveCamera, SphereGeometry, Mesh, DirectionalLight, AmbientLight, Material, MeshStandardMaterial, Texture } from 'three';
 import { PLATFORM_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { ModelCacheComponent } from './model-cache/model-cache.component';
+import { MaterialService } from './material.service';
 
 @Component({
     standalone: true,
@@ -21,8 +20,6 @@ import { ModelCacheComponent } from './model-cache/model-cache.component';
         MatExpansionModule, 
         MatIconModule, 
         MatButtonModule,
-        TextureDialogComponent,
-        MaterialDialogComponent,
         ModelCacheComponent
     ],
     templateUrl: './resource-manager.component.html',
@@ -51,6 +48,7 @@ export class ResourceManagerComponent implements OnInit, AfterViewInit, OnDestro
         private dialog: MatDialog,
         private resourceDialogService: ResourceDialogService,
         private changeDetectorRef: ChangeDetectorRef,
+        private materialService: MaterialService,
         @Inject(PLATFORM_ID) platformId: Object
     ) {
         this.isBrowser = isPlatformBrowser(platformId);
@@ -85,9 +83,12 @@ export class ResourceManagerComponent implements OnInit, AfterViewInit, OnDestro
             }));
             
             // Re-render material previews when textures change
-            // This ensures materials using updated textures are properly displayed
             if (this.isInitialized && !this.isInitializing) {
                 console.log('Textures updated, re-rendering material previews');
+                // Update all materials that use the changed textures
+                textures.forEach((info, uuid) => {
+                    this.materialService.updateMaterialsUsingTexture(uuid);
+                });
                 setTimeout(() => {
                     this.renderAllMaterialPreviews();
                     this.changeDetectorRef.detectChanges(); // Force UI update

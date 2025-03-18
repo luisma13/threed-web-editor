@@ -160,14 +160,14 @@
                                 </button>
                             </div>
                             <div class="texture-input-container">
-                                <div class="texture-preview" *ngIf="albedoMap">
-                                    <img [src]="getTexturePreviewUrl(albedoMap)" alt="Albedo texture">
+                                <div class="texture-preview" *ngIf="albedoMapUuidTexture">
+                                    <img [src]="getTexturePreviewUrl(albedoMapUuidTexture)" alt="Albedo texture">
                                 </div>
                                 <div class="texture-actions">
                                     <button mat-stroked-button (click)="selectTexture('albedo')">
-                                        {{ albedoMap ? 'Change' : 'Select' }}
+                                        {{ albedoMapUuidTexture ? 'Change' : 'Select' }}
                                     </button>
-                                    <button mat-icon-button *ngIf="albedoMap" (click)="clearTexture('albedo')" color="warn">
+                                    <button mat-icon-button *ngIf="albedoMapUuidTexture" (click)="clearTexture('albedo')" color="warn">
                                         <mat-icon>clear</mat-icon>
                                     </button>
                                 </div>
@@ -185,14 +185,14 @@
                                 </button>
                             </div>
                             <div class="texture-input-container">
-                                <div class="texture-preview" *ngIf="normalMap">
-                                    <img [src]="getTexturePreviewUrl(normalMap)" alt="Normal texture">
+                                <div class="texture-preview" *ngIf="normalMapUuidTexture">
+                                    <img [src]="getTexturePreviewUrl(normalMapUuidTexture)" alt="Normal texture">
                                 </div>
                                 <div class="texture-actions">
                                     <button mat-stroked-button (click)="selectTexture('normal')">
-                                        {{ normalMap ? 'Change' : 'Select' }}
+                                        {{ normalMapUuidTexture ? 'Change' : 'Select' }}
                                     </button>
-                                    <button mat-icon-button *ngIf="normalMap" (click)="clearTexture('normal')" color="warn">
+                                    <button mat-icon-button *ngIf="normalMapUuidTexture" (click)="clearTexture('normal')" color="warn">
                                         <mat-icon>clear</mat-icon>
                                     </button>
                                 </div>
@@ -210,14 +210,14 @@
                                 </button>
                             </div>
                             <div class="texture-input-container">
-                                <div class="texture-preview" *ngIf="roughnessMap">
-                                    <img [src]="getTexturePreviewUrl(roughnessMap)" alt="Roughness texture">
+                                <div class="texture-preview" *ngIf="roughnessMapUuidTexture">
+                                    <img [src]="getTexturePreviewUrl(roughnessMapUuidTexture)" alt="Roughness texture">
                                 </div>
                                 <div class="texture-actions">
                                     <button mat-stroked-button (click)="selectTexture('roughness')">
-                                        {{ roughnessMap ? 'Change' : 'Select' }}
+                                        {{ roughnessMapUuidTexture ? 'Change' : 'Select' }}
                                     </button>
-                                    <button mat-icon-button *ngIf="roughnessMap" (click)="clearTexture('roughness')" color="warn">
+                                    <button mat-icon-button *ngIf="roughnessMapUuidTexture" (click)="clearTexture('roughness')" color="warn">
                                         <mat-icon>clear</mat-icon>
                                     </button>
                                 </div>
@@ -235,14 +235,14 @@
                                 </button>
                             </div>
                             <div class="texture-input-container">
-                                <div class="texture-preview" *ngIf="metalnessMap">
-                                    <img [src]="getTexturePreviewUrl(metalnessMap)" alt="Metalness texture">
+                                <div class="texture-preview" *ngIf="metalnessMapUuidTexture">
+                                    <img [src]="getTexturePreviewUrl(metalnessMapUuidTexture)" alt="Metalness texture">
                                 </div>
                                 <div class="texture-actions">
                                     <button mat-stroked-button (click)="selectTexture('metalness')">
-                                        {{ metalnessMap ? 'Change' : 'Select' }}
+                                        {{ metalnessMapUuidTexture ? 'Change' : 'Select' }}
                                     </button>
-                                    <button mat-icon-button *ngIf="metalnessMap" (click)="clearTexture('metalness')" color="warn">
+                                    <button mat-icon-button *ngIf="metalnessMapUuidTexture" (click)="clearTexture('metalness')" color="warn">
                                         <mat-icon>clear</mat-icon>
                                     </button>
                                 </div>
@@ -376,14 +376,14 @@
                                 </button>
                             </div>
                             <div class="texture-input-container">
-                                <div class="texture-preview" *ngIf="emissiveMap">
-                                    <img [src]="getTexturePreviewUrl(emissiveMap)" alt="Emissive texture">
+                                <div class="texture-preview" *ngIf="emissiveMapUuidTexture">
+                                    <img [src]="getTexturePreviewUrl(emissiveMapUuidTexture)" alt="Emissive texture">
                                 </div>
                                 <div class="texture-actions">
                                     <button mat-stroked-button (click)="selectTexture('emissive')">
-                                        {{ emissiveMap ? 'Change' : 'Select' }}
+                                        {{ emissiveMapUuidTexture ? 'Change' : 'Select' }}
                                     </button>
-                                    <button mat-icon-button *ngIf="emissiveMap" (click)="clearTexture('emissive')" color="warn">
+                                    <button mat-icon-button *ngIf="emissiveMapUuidTexture" (click)="clearTexture('emissive')" color="warn">
                                         <mat-icon>clear</mat-icon>
                                     </button>
                                 </div>

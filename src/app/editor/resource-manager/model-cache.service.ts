@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { ResourceService, ResourceInfo } from './resource.service';
+import { ResourceService } from './resource.service';
+import { TextureInfo } from './texture.service';
+import { MaterialInfo } from './material.service';
 import { 
     BufferGeometry, 
     Material, 
@@ -19,6 +21,9 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 import { PLATFORM_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import { GameObject } from '../../simple-engine/core/gameobject';
+import { EditableObjectComponent } from '../../simple-engine/components/editor/editable-object.component';
+import { ModelComponent } from '../../simple-engine/components/geometry/model.component';
 
 /**
  * Interface for cached model information
@@ -37,11 +42,17 @@ export interface CachedModelInfo {
     animations?: THREE.AnimationClip[]; // Animation clips for this model
 }
 
-/**
- * Interface for geometry resource information
- */
+// Define a generic ResourceInfo interface for geometries
+export interface ResourceInfo<T> {
+    resource: T;
+    refCount: number;
+    name: string;
+    uuid: string;
+}
+
+// Use the generic ResourceInfo for GeometryInfo
 export interface GeometryInfo extends ResourceInfo<BufferGeometry> {
-    // Additional geometry-specific properties can be added here
+    // Any additional properties specific to geometries can be added here
 }
 
 @Injectable({
@@ -249,11 +260,11 @@ export class ModelCacheService {
     /**
      * Process a material and its textures
      * @param material Material to process
-     * @param name Name for the material
+     * @param modelName Name for the model
      * @param textureUuids Array to store texture UUIDs
      * @returns UUID of the processed material
      */
-    private processMaterial(material: Material, name: string, textureUuids: string[]): string {
+    private processMaterial(material: Material, modelName: string, textureUuids: string[]): string {
         // Check if material is already in the resource service
         for (const [uuid, materialInfo] of this.resourceService.materials.entries()) {
             if (materialInfo.resource === material) {
@@ -262,48 +273,92 @@ export class ModelCacheService {
             }
         }
         
-        // Add material to resource service
-        const materialUuid = this.resourceService.addMaterial(material, name);
+        // log type of material
+        console.log('type of material', material);
+
+        // Generate material counter
+        let materialCounter = 1;
+        const materialPrefix = `${modelName}_mat_`;
+        while (Array.from(this.resourceService.materials.values()).some(m => m.name === `${materialPrefix}${materialCounter.toString().padStart(3, '0')}`)) {
+            materialCounter++;
+        }
+        const materialName = `${materialPrefix}${materialCounter.toString().padStart(3, '0')}`;
         
-        // Process textures if it's a MeshStandardMaterial
-        if (material instanceof MeshStandardMaterial) {
-            // Process all texture maps
-            const processTexture = (texture: Texture | null, mapName: string) => {
-                if (texture) {
-                    // Check if texture is already in the resource service
-                    for (const [uuid, textureInfo] of this.resourceService.textures.entries()) {
-                        if (textureInfo.resource === texture) {
-                            textureInfo.refCount++;
-                            textureUuids.push(uuid);
-                            return;
-                        }
+        // Add material to resource service
+        const materialUuid = this.resourceService.addMaterial(material, materialName);
+
+        // Initialize textureUuids object in userData
+        if (!material.userData) material.userData = {};
+        material.userData.textureUuids = {};
+        
+        // Process textures based on material type
+        const processTexture = (texture: Texture | null, mapType: string, mapKey: string) => {
+            if (texture) {
+                console.log(`Procesando textura ${mapType} para material ${materialName}:`, texture);
+                
+                // Check if texture is already in the resource service
+                for (const [uuid, textureInfo] of this.resourceService.textures.entries()) {
+                    if (textureInfo.resource === texture || textureInfo.resource.uuid === texture.uuid) {
+                        console.log(`Textura encontrada en ResourceService con UUID: ${uuid}`);
+                        textureInfo.refCount++;
+                        textureUuids.push(uuid);
+                        // Store the UUID in material's userData
+                        material.userData.textureUuids[mapKey] = uuid;
+                        return;
                     }
-                    
-                    // If texture has a source URL, add it to the resource service
-                    const textureName = `${name}_${mapName}`;
-                    const textureUuid = this.generateUUID();
-                    
-                    this.resourceService.textures.set(textureUuid, {
-                        resource: texture,
-                        refCount: 1,
-                        name: textureName,
-                        uuid: textureUuid
-                    });
-                    
-                    textureUuids.push(textureUuid);
                 }
-            };
-            
-            // Process all standard texture maps
-            processTexture(material.map, 'albedo');
-            processTexture(material.normalMap, 'normal');
-            processTexture(material.roughnessMap, 'roughness');
-            processTexture(material.metalnessMap, 'metalness');
-            processTexture(material.emissiveMap, 'emissive');
-            processTexture(material.aoMap, 'ao');
-            processTexture(material.displacementMap, 'displacement');
+                
+                // Generate texture counter
+                let textureCounter = 1;
+                const texturePrefix = `${modelName}_tex_`;
+                while (Array.from(this.resourceService.textures.values()).some(t => t.name === `${texturePrefix}${textureCounter.toString().padStart(3, '0')}_${mapType}`)) {
+                    textureCounter++;
+                }
+                const textureName = `${texturePrefix}${textureCounter.toString().padStart(3, '0')}_${mapType}`;
+                
+                // Add texture to resource service
+                const textureUuid = this.generateUUID();
+                console.log(`Añadiendo nueva textura al ResourceService con UUID: ${textureUuid}`);
+                
+                // Crear la textura accesible antes de añadirla al ResourceService
+                this.resourceService.textureService.createAccessibleTextureImage(texture);
+                
+                this.resourceService.textures.set(textureUuid, {
+                    resource: texture,
+                    refCount: 1,
+                    name: textureName,
+                    uuid: textureUuid
+                });
+                
+                textureUuids.push(textureUuid);
+                
+                // Store the UUID in material's userData
+                material.userData.textureUuids[mapKey] = textureUuid;
+            }
+        };
+
+        // Process textures for MeshStandardMaterial
+        if (material instanceof MeshStandardMaterial) {
+            processTexture(material.map, 'albedo', 'map');
+            processTexture(material.normalMap, 'normal', 'normalMap');
+            processTexture(material.roughnessMap, 'roughness', 'roughnessMap');
+            processTexture(material.metalnessMap, 'metalness', 'metalnessMap');
+            processTexture(material.emissiveMap, 'emissive', 'emissiveMap');
+            processTexture(material.aoMap, 'ao', 'aoMap');
+            processTexture(material.displacementMap, 'displacement', 'displacementMap');
+        }
+        // Process textures for MeshBasicMaterial
+        else if (material instanceof THREE.MeshBasicMaterial) {
+            console.log('Procesando MeshBasicMaterial:', material);
+            processTexture(material.map, 'albedo', 'map');
+            processTexture(material.alphaMap, 'alpha', 'alphaMap');
+            processTexture(material.aoMap, 'ao', 'aoMap');
+            processTexture(material.envMap, 'environment', 'envMap');
+            processTexture(material.lightMap, 'light', 'lightMap');
+            processTexture(material.specularMap, 'specular', 'specularMap');
         }
         
+        console.log(`UUIDs de texturas guardados en userData:`, material.userData.textureUuids);
         return materialUuid;
     }
     
@@ -565,36 +620,6 @@ export class ModelCacheService {
     }
     
     /**
-     * Añade un modelo al caché
-     * @param object Objeto 3D del modelo
-     * @param url URL del modelo
-     * @param modelType Tipo de modelo
-     * @param name Nombre del modelo
-     * @returns UUID del modelo añadido
-     */
-    addModel(object: THREE.Object3D, url: string, modelType: string, name: string): string {
-        const uuid = THREE.MathUtils.generateUUID();
-        
-        const cachedModel: CachedModelInfo = {
-            uuid,
-            rootObject: object,
-            url,
-            modelType,
-            name,
-            refCount: 0,
-            timestamp: Date.now(),
-            geometries: [],
-            materials: [],
-            textures: []
-        };
-        
-        this._cachedModels.set(uuid, cachedModel);
-        this._cachedModelsSubject.next(this._cachedModels);
-        
-        return uuid;
-    }
-    
-    /**
      * Añade animaciones a un modelo en caché
      * @param uuid UUID del modelo
      * @param animations Array de animaciones
@@ -609,5 +634,62 @@ export class ModelCacheService {
             return true;
         }
         return false;
+    }
+    
+    /**
+     * Creates a GameObject from a cached model, handling all resource management
+     * @param uuid UUID of the model to create GameObject from
+     * @returns The created GameObject or undefined if model not found
+     */
+    createGameObjectFromModel(uuid: string): GameObject | undefined {
+        try {
+            // Get the model info
+            const modelInfo = this.getModel(uuid);
+            if (!modelInfo) {
+                console.error(`Model not found: ${uuid}`);
+                return undefined;
+            }
+
+            // Increment reference count for the model
+            this.incrementReferenceCount(uuid);
+
+            // Create a new GameObject
+            const gameObject = new GameObject();
+            gameObject.name = modelInfo.name;
+
+            // Add the model as a child of the GameObject
+            const modelObject = modelInfo.rootObject.clone();
+            gameObject.add(modelObject);
+
+            // Add the EditableObjectComponent
+            const editableObjectComponent = new EditableObjectComponent();
+            gameObject.addComponent(editableObjectComponent);
+
+            // Add the ModelComponent and initialize it with model data
+            const modelComponent = new ModelComponent();
+
+            // Initialize with model object and animations
+            const animations = this.getModelAnimations(modelInfo.uuid);
+            modelComponent.initWithObject(modelObject, animations);
+            modelComponent.setModelData(modelInfo.url, modelInfo.modelType, modelInfo.uuid);
+            gameObject.addComponent(modelComponent);
+
+            // Store model UUID reference in GameObject's userData
+            gameObject.userData = gameObject.userData || {};
+            gameObject.userData['modelUuid'] = modelInfo.uuid;
+
+            // Set up mesh userData for selection
+            modelObject.traverse((child) => {
+                if (child instanceof THREE.Mesh) {
+                    child.userData = child.userData || {};
+                    child.userData['parentGameObject'] = gameObject;
+                }
+            });
+
+            return gameObject;
+        } catch (error) {
+            console.error('Error creating GameObject from model:', error);
+            return undefined;
+        }
     }
 } 

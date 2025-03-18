@@ -356,8 +356,6 @@ export class ModelCacheComponent implements OnInit, OnDestroy, AfterViewInit {
      * @param event Evento del mouse
      */
     addToScene(uuid: string, event: MouseEvent): void {
-        event.stopPropagation(); // Evitar que se seleccione el modelo
-        
         const model = this.modelCacheService.getModel(uuid);
         if (model) {            
             // Implementación real: crear un nuevo GameObject con el modelo

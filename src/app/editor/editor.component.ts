@@ -183,33 +183,12 @@ export class EditorComponent {
     incrementValue(object: any, property: string, axis: string, amount: number = 0.1) {
         if (object && object[property] && object[property][axis] !== undefined) {
             object[property][axis] += amount;
-            this.onTransformChange();
         }
     }
 
     decrementValue(object: any, property: string, axis: string, amount: number = 0.1) {
         if (object && object[property] && object[property][axis] !== undefined) {
             object[property][axis] -= amount;
-            this.onTransformChange();
-        }
-    }
-
-    /**
-     * Maneja los cambios en las propiedades de transformación
-     */
-    onTransformChange() {
-        if (this.objectSelected) {
-            // Actualizar la posición, rotación y escala del objeto seleccionado
-            this.objectSelected.updateMatrix();
-            this.objectSelected.updateMatrixWorld(true);
-            
-            // Notificar a los componentes que necesiten actualizarse
-            if (this.editorService.editableSceneComponent) {
-                this.editorService.editableSceneComponent.onChange(this.objectSelected);
-            }
-            
-            // Forzar la actualización de la UI
-            this.changeDetector.detectChanges();
         }
     }
 
@@ -251,29 +230,6 @@ export class EditorComponent {
         }
         
         this.changeDetector.detectChanges();
-    }
-
-    /**
-     * Selecciona por defecto el GameObject de Environment o el primero disponible
-     */
-    private selectDefaultGameObject() {
-        // Filtrar los GameObjects válidos que no son internos del editor
-        const validGameObjects = engine.gameObjects.filter(obj => 
-            obj && obj.userData && !obj.userData['isEditorCore'] && !obj.userData['hideInHierarchy']
-        );
-        
-        // Buscar el GameObject de Environment entre los válidos
-        let environmentObject = validGameObjects.find(obj => obj.name === 'Environment');
-        
-        // Si no se encuentra Environment, usar el primer GameObject válido
-        if (!environmentObject && validGameObjects.length > 0) {
-            environmentObject = validGameObjects[0];
-        }
-        
-        // Si se encontró un objeto, seleccionarlo
-        if (environmentObject) {
-            this.selectGameObject(environmentObject);
-        }
     }
 
     ngAfterViewInit() {

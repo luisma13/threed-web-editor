@@ -7,8 +7,8 @@ export class AddGameObjectAction extends Action<{ ext: string, url: string, game
     override async executeUndo() {
         engine.removeGameObjects(this.state.gameObject);
     }
-    override async executeRedo(editorService: EditorService) {
-        const gameObject = await editorService.addModelToScene(this.state.ext, this.state.url);
-        this.state.gameObject = gameObject;
+    override async executeRedo() {
+        // const gameObject = await editorService.addModelToScene(this.state.ext, this.state.url);
+        // this.state.gameObject = gameObject;
     }
 }

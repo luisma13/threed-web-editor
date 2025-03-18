@@ -62,10 +62,11 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
     wireframe: boolean = false;
     
     // Texture maps
-    albedoMap: string = '';
-    normalMap: string = '';
-    roughnessMap: string = '';
-    metalnessMap: string = '';
+    albedoMapUuidTexture: string = '';
+    normalMapUuidTexture: string = '';
+    roughnessMapUuidTexture: string = '';
+    metalnessMapUuidTexture: string = '';
+    emissiveMapUuidTexture: string = '';
 
     previewShape: string = 'sphere';
     lightIntensity: number = 1.0;
@@ -79,7 +80,7 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
     private camera!: PerspectiveCamera;
     private previewMesh!: Mesh;
     private animationFrameId: number = 0;
-    private previewMaterial!: MeshStandardMaterial;
+    private previewMaterial!: MeshStandardMaterial | THREE.MeshBasicMaterial;
 
     // Propiedades adicionales
     alphaTest: number = 0;
@@ -104,33 +105,62 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
         if (data.isEdit && data.material) {
             this.materialName = data.name || '';
             
-            // Verificar si es un MeshStandardMaterial
-            if (data.material instanceof MeshStandardMaterial) {
-                const material = data.material as MeshStandardMaterial;
+            // Verificar el tipo de material
+            if (data.material instanceof MeshStandardMaterial || data.material instanceof THREE.MeshBasicMaterial) {
+                const material = data.material;
+                this.materialType = material instanceof MeshStandardMaterial ? 'MeshStandardMaterial' : 'MeshBasicMaterial';
+                
+                console.log('Material recibido:', material);
+                console.log('Texturas disponibles en ResourceService:', Array.from(this.resourceService.textures.entries()));
                 
                 // Propiedades básicas
                 this.color = '#' + material.color.getHexString();
-                this.roughness = material.roughness;
-                this.metalness = material.metalness;
                 this.transparent = material.transparent;
                 this.opacity = material.opacity;
                 this.side = material.side;
-                this.flatShading = material.flatShading;
                 this.wireframe = material.wireframe;
+                
+                // Propiedades específicas de MeshStandardMaterial
+                if (material instanceof MeshStandardMaterial) {
+                    this.roughness = material.roughness;
+                    this.metalness = material.metalness;
+                    this.flatShading = material.flatShading;
+                    this.emissiveColor = '#' + material.emissive.getHexString();
+                    this.emissiveIntensity = material.emissiveIntensity;
+                }
                 
                 // Propiedades avanzadas
                 this.alphaTest = material.alphaTest;
                 this.depthTest = material.depthTest;
                 this.depthWrite = material.depthWrite;
-                this.emissiveColor = '#' + material.emissive.getHexString();
-                this.emissiveIntensity = material.emissiveIntensity;
                 
-                // Mapas de textura
-                this.albedoMap = material.map?.name || '';
-                this.normalMap = material.normalMap?.name || '';
-                this.roughnessMap = material.roughnessMap?.name || '';
-                this.metalnessMap = material.metalnessMap?.name || '';
-                this.emissiveMap = material.emissiveMap?.name || '';
+                // Obtener los UUIDs de las texturas del userData
+                const textureUuids = material.userData?.textureUuids || {};
+                console.log('UUIDs de texturas del material:', textureUuids);
+                
+                // Asignar los UUIDs a las propiedades correspondientes según el tipo de material
+                if (material instanceof MeshStandardMaterial) {
+                    this.albedoMapUuidTexture = textureUuids.map || '';
+                    this.normalMapUuidTexture = textureUuids.normalMap || '';
+                    this.roughnessMapUuidTexture = textureUuids.roughnessMap || '';
+                    this.metalnessMapUuidTexture = textureUuids.metalnessMap || '';
+                    this.emissiveMapUuidTexture = textureUuids.emissiveMap || '';
+                } else if (material instanceof THREE.MeshBasicMaterial) {
+                    // Para MeshBasicMaterial solo usamos el mapa de albedo (map)
+                    this.albedoMapUuidTexture = textureUuids.map || '';
+                    
+                    // Limpiar los otros mapas que no se usan en MeshBasicMaterial
+                    this.normalMapUuidTexture = '';
+                    this.roughnessMapUuidTexture = '';
+                    this.metalnessMapUuidTexture = '';
+                    this.emissiveMapUuidTexture = '';
+                    
+                    // Log para debug
+                    if (material.map) {
+                        console.log('MeshBasicMaterial tiene textura map:', material.map);
+                        console.log('UUID de la textura map:', material.map.uuid);
+                    }
+                }
             }
         }
     }
@@ -138,86 +168,7 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
     ngOnInit(): void {
         if (!this.isBrowser) return;
         
-        console.log('Inicializando diálogo de material con datos:', this.data);
-        
-        // Inicializar valores del formulario
-        if (this.data.isEdit && this.data.material) {
-            console.log(`Editando material existente con UUID: ${this.data.uuid}`);
-            
-            // Usar el material proporcionado para inicializar los valores
-            const material = this.data.material as MeshStandardMaterial;
-            
-            // Inicializar nombre
-            this.materialName = this.data.name || material.name || '';
-            
-            // Inicializar propiedades básicas
-            this.color = '#' + material.color.getHexString();
-            this.roughness = material.roughness;
-            this.metalness = material.metalness;
-            this.transparent = material.transparent;
-            this.opacity = material.opacity;
-            this.side = material.side;
-            this.flatShading = material.flatShading;
-            this.wireframe = material.wireframe;
-            
-            // Inicializar propiedades avanzadas
-            this.alphaTest = material.alphaTest;
-            this.depthTest = material.depthTest;
-            this.depthWrite = material.depthWrite;
-            
-            // Inicializar propiedades de emisión
-            this.emissiveColor = '#' + material.emissive.getHexString();
-            this.emissiveIntensity = material.emissiveIntensity;
-            
-            // Inicializar mapas de textura
-            this.albedoMap = material.map ? material.map.name : '';
-            this.normalMap = material.normalMap ? material.normalMap.name : '';
-            this.roughnessMap = material.roughnessMap ? material.roughnessMap.name : '';
-            this.metalnessMap = material.metalnessMap ? material.metalnessMap.name : '';
-            this.emissiveMap = material.emissiveMap ? material.emissiveMap.name : '';
-            
-            console.log('Material inicializado con valores:', {
-                name: this.materialName,
-                color: this.color,
-                roughness: this.roughness,
-                metalness: this.metalness,
-                transparent: this.transparent,
-                opacity: this.opacity,
-                side: this.side,
-                flatShading: this.flatShading,
-                wireframe: this.wireframe,
-                alphaTest: this.alphaTest,
-                depthTest: this.depthTest,
-                depthWrite: this.depthWrite,
-                emissiveColor: this.emissiveColor,
-                emissiveIntensity: this.emissiveIntensity,
-                albedoMap: this.albedoMap ? 'presente' : 'no presente',
-                normalMap: this.normalMap ? 'presente' : 'no presente',
-                roughnessMap: this.roughnessMap ? 'presente' : 'no presente',
-                metalnessMap: this.metalnessMap ? 'presente' : 'no presente',
-                emissiveMap: this.emissiveMap ? 'presente' : 'no presente'
-            });
-        } else {
-            console.log('Creando nuevo material');
-            
-            // Valores por defecto para un nuevo material
-            this.materialName = this.data.name || 'Nuevo Material';
-            this.color = '#cccccc';
-            this.roughness = 0.5;
-            this.metalness = 0.0;
-            this.transparent = false;
-            this.opacity = 1.0;
-            this.side = THREE.FrontSide;
-            this.flatShading = false;
-            this.wireframe = false;
-            this.alphaTest = 0.0;
-            this.depthTest = true;
-            this.depthWrite = true;
-            this.emissiveColor = '#000000';
-            this.emissiveIntensity = 0.0;
-        }
-        
-        // No inicializar el renderizador aquí, se hará en ngAfterViewInit
+        // No volver a inicializar las texturas aquí, ya se hizo en el constructor
         
         // Añadir estilos globales para el panel del diálogo
         const style = document.createElement('style');
@@ -278,8 +229,6 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
         }
         
         if (this.previewMaterial) {
-            // No disponer el material ya que puede ser usado en la escena
-            // Solo limpiar la referencia
             this.previewMaterial = null as any;
         }
         
@@ -334,8 +283,10 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
             this.directionalLight.position.set(1, 1, 1);
             this.scene.add(this.directionalLight);
             
-            // Crear el material de vista previa
-            this.previewMaterial = new MeshStandardMaterial();
+            // Crear el material de vista previa según el tipo
+            this.previewMaterial = this.materialType === 'MeshStandardMaterial' 
+                ? new MeshStandardMaterial()
+                : new THREE.MeshBasicMaterial();
             
             // Crear la geometría de la esfera
             const geometry = new SphereGeometry(1, 32, 32);
@@ -390,22 +341,24 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
             return;
         }
         
-        // Actualizar propiedades básicas
+        // Actualizar propiedades básicas comunes
         this.previewMaterial.color = new Color(this.color);
-        this.previewMaterial.roughness = this.roughness;
-        this.previewMaterial.metalness = this.metalness;
         this.previewMaterial.transparent = this.transparent;
         this.previewMaterial.opacity = this.opacity;
         this.previewMaterial.side = this.side as Side;
-        this.previewMaterial.flatShading = this.flatShading;
         this.previewMaterial.wireframe = this.wireframe;
-        
-        // Propiedades avanzadas
         this.previewMaterial.alphaTest = this.alphaTest;
         this.previewMaterial.depthTest = this.depthTest;
         this.previewMaterial.depthWrite = this.depthWrite;
+        
+        // Actualizar propiedades específicas según el tipo de material
+        if (this.previewMaterial instanceof MeshStandardMaterial) {
+            this.previewMaterial.roughness = this.roughness;
+            this.previewMaterial.metalness = this.metalness;
+            this.previewMaterial.flatShading = this.flatShading;
         this.previewMaterial.emissive = new Color(this.emissiveColor);
         this.previewMaterial.emissiveIntensity = this.emissiveIntensity;
+        }
         
         // Actualizar mapas de textura
         this.updateTextureMaps();
@@ -423,64 +376,58 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
             return;
         }
         
-        // Limpiar mapas existentes
+        // Limpiar mapas existentes según el tipo de material
+        if (this.previewMaterial instanceof MeshStandardMaterial) {
         this.previewMaterial.map = null;
         this.previewMaterial.normalMap = null;
         this.previewMaterial.roughnessMap = null;
         this.previewMaterial.metalnessMap = null;
         this.previewMaterial.emissiveMap = null;
+        } else if (this.previewMaterial instanceof THREE.MeshBasicMaterial) {
+            this.previewMaterial.map = null;
+            this.previewMaterial.alphaMap = null;
+            this.previewMaterial.envMap = null;
+            this.previewMaterial.lightMap = null;
+            this.previewMaterial.specularMap = null;
+        }
         
-        // Función auxiliar para obtener una textura por UUID o nombre
-        const getTextureByUuidOrName = (textureId: string): any => {
-            if (!textureId) return null;
+        // Obtener las texturas del ResourceService usando los UUIDs
+        const applyTexture = (uuid: string, textureType: string) => {
+            if (!uuid) return;
             
-            // Intentar obtener la textura directamente por UUID/clave
-            if (this.resourceService.textures.has(textureId)) {
-                return this.resourceService.textures.get(textureId)?.resource || null;
-            }
-            
-            // Si no se encuentra por UUID, intentar buscarla por nombre
-            console.warn(`No se encontró la textura "${textureId}" por UUID, intentando buscar por nombre...`);
-            const textureByName = Array.from(this.resourceService.textures.entries())
-                .find(([_, info]) => info.name === textureId);
-            
-            if (textureByName) {
-                console.log(`Textura encontrada por nombre: ${textureByName[0]}`);
+            const textureInfo = this.resourceService.textures.get(uuid);
+            if (textureInfo && textureInfo.resource) {
+                console.log(`Aplicando textura ${textureType}: ${uuid}`);
                 
-                // Actualizar la referencia en el campo correspondiente
-                if (this.albedoMap === textureId) this.albedoMap = textureByName[0];
-                if (this.normalMap === textureId) this.normalMap = textureByName[0];
-                if (this.roughnessMap === textureId) this.roughnessMap = textureByName[0];
-                if (this.metalnessMap === textureId) this.metalnessMap = textureByName[0];
-                if (this.emissiveMap === textureId) this.emissiveMap = textureByName[0];
-                
-                return textureByName[1].resource;
+                if (this.previewMaterial instanceof MeshStandardMaterial) {
+                    switch (textureType) {
+                        case 'albedo': this.previewMaterial.map = textureInfo.resource; break;
+                        case 'normal': this.previewMaterial.normalMap = textureInfo.resource; break;
+                        case 'roughness': this.previewMaterial.roughnessMap = textureInfo.resource; break;
+                        case 'metalness': this.previewMaterial.metalnessMap = textureInfo.resource; break;
+                        case 'emissive': this.previewMaterial.emissiveMap = textureInfo.resource; break;
+                    }
+                } else if (this.previewMaterial instanceof THREE.MeshBasicMaterial) {
+                    switch (textureType) {
+                        case 'albedo': this.previewMaterial.map = textureInfo.resource; break;
+                        case 'alpha': this.previewMaterial.alphaMap = textureInfo.resource; break;
+                        case 'environment': this.previewMaterial.envMap = textureInfo.resource; break;
+                        case 'light': this.previewMaterial.lightMap = textureInfo.resource; break;
+                        case 'specular': this.previewMaterial.specularMap = textureInfo.resource; break;
+                    }
+                }
             }
-            
-            console.error(`No se pudo encontrar la textura "${textureId}" ni por UUID ni por nombre`);
-            return null;
         };
         
-        // Obtener texturas del ResourceService
-        if (this.albedoMap) {
-            this.previewMaterial.map = getTextureByUuidOrName(this.albedoMap);
-        }
-        
-        if (this.normalMap) {
-            this.previewMaterial.normalMap = getTextureByUuidOrName(this.normalMap);
-        }
-        
-        if (this.roughnessMap) {
-            this.previewMaterial.roughnessMap = getTextureByUuidOrName(this.roughnessMap);
-        }
-        
-        if (this.metalnessMap) {
-            this.previewMaterial.metalnessMap = getTextureByUuidOrName(this.metalnessMap);
-        }
+        // Aplicar todas las texturas
+        applyTexture(this.albedoMapUuidTexture, 'albedo');
+        applyTexture(this.normalMapUuidTexture, 'normal');
+        applyTexture(this.roughnessMapUuidTexture, 'roughness');
+        applyTexture(this.metalnessMapUuidTexture, 'metalness');
+        applyTexture(this.emissiveMapUuidTexture, 'emissive');
 
-        if (this.emissiveMap) {
-            this.previewMaterial.emissiveMap = getTextureByUuidOrName(this.emissiveMap);
-        }
+        // Forzar actualización del material
+        this.previewMaterial.needsUpdate = true;
     }
 
     /**
@@ -513,45 +460,22 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
 
     /**
      * Obtiene la URL de vista previa de una textura
-     * @param texturePath Ruta de la textura
+     * @param uuid UUID de la textura
      * @returns URL de la imagen de vista previa
      */
-    getTexturePreviewUrl(texturePath: string): string | null {
-        if (!texturePath) {
-            console.warn('No se puede obtener la URL de vista previa: la ruta de la textura está vacía');
+    getTexturePreviewUrl(uuid: string): string | null {
+        if (!uuid) {
+            console.warn('No se puede obtener la URL de vista previa: UUID vacío');
             return null;
         }
         
-        // Intentar obtener la textura directamente por UUID/clave
-        if (this.resourceService.textures.has(texturePath)) {
-            const textureInfo = this.resourceService.textures.get(texturePath);
+        // Obtener la textura y usar getTexturePreviewUrl del ResourceService
+        const textureInfo = this.resourceService.textures.get(uuid);
             if (textureInfo && textureInfo.resource) {
-                // Usar el método centralizado del ResourceService
-                return this.resourceService.getTexturePreviewUrl(textureInfo.resource);
-            }
-        }
-        
-        // Si no se encuentra por UUID, intentar buscarla por nombre
-        console.warn(`No se encontró la textura "${texturePath}" por UUID, intentando buscar por nombre...`);
-        const textureByName = Array.from(this.resourceService.textures.entries())
-            .find(([_, info]) => info.name === texturePath);
-        
-        if (textureByName) {
-            console.log(`Textura encontrada por nombre: ${textureByName[0]}`);
-            const textureInfo = textureByName[1];
-            
-            // Actualizar la referencia en el campo correspondiente
-            if (this.albedoMap === texturePath) this.albedoMap = textureByName[0];
-            if (this.normalMap === texturePath) this.normalMap = textureByName[0];
-            if (this.roughnessMap === texturePath) this.roughnessMap = textureByName[0];
-            if (this.metalnessMap === texturePath) this.metalnessMap = textureByName[0];
-            if (this.emissiveMap === texturePath) this.emissiveMap = textureByName[0];
-            
-            // Usar el método centralizado del ResourceService
             return this.resourceService.getTexturePreviewUrl(textureInfo.resource);
         }
         
-        console.error(`No se pudo encontrar la textura "${texturePath}" ni por UUID ni por nombre`);
+        console.error(`No se pudo encontrar la textura con UUID: ${uuid}`);
         return null;
     }
 
@@ -562,19 +486,19 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
     clearTexture(type: 'albedo' | 'normal' | 'roughness' | 'metalness' | 'emissive'): void {
         switch (type) {
             case 'albedo':
-                this.albedoMap = '';
+                this.albedoMapUuidTexture = '';
                 break;
             case 'normal':
-                this.normalMap = '';
+                this.normalMapUuidTexture = '';
                 break;
             case 'roughness':
-                this.roughnessMap = '';
+                this.roughnessMapUuidTexture = '';
                 break;
             case 'metalness':
-                this.metalnessMap = '';
+                this.metalnessMapUuidTexture = '';
                 break;
             case 'emissive':
-                this.emissiveMap = '';
+                this.emissiveMapUuidTexture = '';
                 break;
         }
         
@@ -590,49 +514,30 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
         const dialogRef = this.dialog.open(TextureSelectionDialogComponent, {
             width: '500px',
             data: {
-                textures: Array.from(this.resourceService.textures.keys())
+                textures: Array.from(this.resourceService.textures.entries()).map(([uuid]) => uuid)
             }
         });
 
         dialogRef.afterClosed().subscribe(result => {
             if (result) {
-                console.log(`Textura seleccionada: ${result}`);
-                
-                // Verificar si la textura existe en el ResourceService
-                if (!this.resourceService.textures.has(result)) {
-                    console.warn(`La textura "${result}" no existe en el ResourceService. Puede ser una textura recién creada.`);
-                    
-                    // Intentar buscar la textura por nombre en lugar de por clave
-                    const textureByName = Array.from(this.resourceService.textures.entries())
-                        .find(([_, info]) => info.name === result);
-                    
-                    if (textureByName) {
-                        console.log(`Textura encontrada por nombre: ${textureByName[0]}`);
-                        result = textureByName[0]; // Usar la clave correcta
-                    } else {
-                        console.error(`No se pudo encontrar la textura "${result}" en el ResourceService.`);
-                        // Mostrar un mensaje al usuario
-                        alert(`Error: No se pudo encontrar la textura "${result}". Por favor, intenta seleccionar otra textura.`);
-                        return;
-                    }
-                }
+                console.log(`Textura seleccionada UUID: ${result}`);
                 
                 // Actualizar el campo correspondiente según el tipo
                 switch (type) {
                     case 'albedo':
-                        this.albedoMap = result;
+                        this.albedoMapUuidTexture = result;
                         break;
                     case 'normal':
-                        this.normalMap = result;
+                        this.normalMapUuidTexture = result;
                         break;
                     case 'roughness':
-                        this.roughnessMap = result;
+                        this.roughnessMapUuidTexture = result;
                         break;
                     case 'metalness':
-                        this.metalnessMap = result;
+                        this.metalnessMapUuidTexture = result;
                         break;
                     case 'emissive':
-                        this.emissiveMap = result;
+                        this.emissiveMapUuidTexture = result;
                         break;
                 }
                 
@@ -676,11 +581,11 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
         };
         
         // Añadir mapas de textura si están definidos
-        if (this.albedoMap) materialProperties.map = this.albedoMap;
-        if (this.normalMap) materialProperties.normalMap = this.normalMap;
-        if (this.roughnessMap) materialProperties.roughnessMap = this.roughnessMap;
-        if (this.metalnessMap) materialProperties.metalnessMap = this.metalnessMap;
-        if (this.emissiveMap) materialProperties.emissiveMap = this.emissiveMap;
+        if (this.albedoMapUuidTexture) materialProperties.map = this.albedoMapUuidTexture;
+        if (this.normalMapUuidTexture) materialProperties.normalMap = this.normalMapUuidTexture;
+        if (this.roughnessMapUuidTexture) materialProperties.roughnessMap = this.roughnessMapUuidTexture;
+        if (this.metalnessMapUuidTexture) materialProperties.metalnessMap = this.metalnessMapUuidTexture;
+        if (this.emissiveMapUuidTexture) materialProperties.emissiveMap = this.emissiveMapUuidTexture;
         
         // Crear el resultado
         const result = {
@@ -718,9 +623,6 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
                 break;
             case 'torus':
                 geometry = new TorusKnotGeometry(0.8, 0.3, 100, 16);
-                break;
-            case 'cylinder':
-                geometry = new CylinderGeometry(0.8, 0.8, 2, 32);
                 break;
             default:
                 geometry = new SphereGeometry(1, 32, 32);
@@ -762,29 +664,16 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
         }
     }
 
-    private initFormValues(): void {
-        this.materialName = this.previewMaterial.name || '';
-        this.color = '#' + this.previewMaterial.color.getHexString();
-        this.roughness = this.previewMaterial.roughness;
-        this.metalness = this.previewMaterial.metalness;
-        this.transparent = this.previewMaterial.transparent;
-        this.opacity = this.previewMaterial.opacity;
-        this.side = this.previewMaterial.side;
-        this.flatShading = this.previewMaterial.flatShading;
-        this.wireframe = this.previewMaterial.wireframe;
-        this.alphaTest = this.previewMaterial.alphaTest;
-        this.depthTest = this.previewMaterial.depthTest;
-        this.depthWrite = this.previewMaterial.depthWrite;
-        this.emissiveColor = '#' + this.previewMaterial.emissive.getHexString();
-        this.emissiveIntensity = this.previewMaterial.emissiveIntensity;
-        this.albedoMap = this.previewMaterial.map?.name || '';
-        this.normalMap = this.previewMaterial.normalMap?.name || '';
-        this.roughnessMap = this.previewMaterial.roughnessMap?.name || '';
-        this.metalnessMap = this.previewMaterial.metalnessMap?.name || '';
-        this.emissiveMap = this.previewMaterial.emissiveMap?.name || '';
+    /**
+     * Busca una textura en el ResourceService por su nombre
+     */
+    private findTextureByName(name: string): { uuid: string } | null {
+        for (const [uuid, info] of this.resourceService.textures.entries()) {
+            if (info.name === name) {
+                return { uuid };
+            }
+        }
+        return null;
     }
 
-    private generateUniqueName(): string {
-        return 'Material_' + Date.now();
-    }
 } 

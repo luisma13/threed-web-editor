@@ -88,6 +88,26 @@ export class ResourceDialogService {
       const materialInfo = this.resourceService.materials.get(materialUuid);
       if (materialInfo) {
         console.log(`Material encontrado: ${materialInfo.name} (UUID: ${materialUuid})`);
+        
+        // Si es un MeshStandardMaterial, preparar los UUIDs de las texturas
+        if (materialInfo.resource instanceof MeshStandardMaterial) {
+          const material = materialInfo.resource as MeshStandardMaterial;
+          
+          // Buscar los UUIDs de las texturas en el ResourceService
+          const textureUuids = {
+            map: this.findTextureUuidByResource(material.map),
+            normalMap: this.findTextureUuidByResource(material.normalMap),
+            roughnessMap: this.findTextureUuidByResource(material.roughnessMap),
+            metalnessMap: this.findTextureUuidByResource(material.metalnessMap),
+            emissiveMap: this.findTextureUuidByResource(material.emissiveMap)
+          };
+          
+          console.log('UUIDs de texturas encontrados:', textureUuids);
+          
+          // Añadir los UUIDs al material antes de pasarlo al diálogo
+          Object.assign(material.userData, { textureUuids });
+        }
+        
         dialogData.name = materialInfo.name;
         dialogData.material = materialInfo.resource;
         dialogData.uuid = materialUuid;
@@ -114,6 +134,31 @@ export class ResourceDialogService {
       panelClass: 'material-dialog-panel',
       data: dialogData
     }).afterClosed();
+  }
+
+  /**
+   * Busca el UUID de una textura en el ResourceService por su referencia
+   */
+  private findTextureUuidByResource(texture: THREE.Texture | null): string | null {
+    if (!texture) return null;
+    
+    console.log('Buscando UUID para textura:', texture);
+    console.log('UUID de la textura en Three.js:', texture.uuid);
+    console.log('Texturas disponibles:', Array.from(this.resourceService.textures.entries()).map(([uuid, info]) => ({
+      uuid,
+      name: info.name,
+      textureUuid: info.resource?.uuid
+    })));
+    
+    for (const [uuid, info] of this.resourceService.textures.entries()) {
+      if (info.resource === texture) {
+        console.log('Textura encontrada con UUID:', uuid);
+        return uuid;
+      }
+    }
+    
+    console.log('No se encontró UUID para la textura en ResourceService');
+    return null;
   }
 
   /**

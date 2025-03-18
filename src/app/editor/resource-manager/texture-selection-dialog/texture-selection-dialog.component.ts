@@ -250,4 +250,9 @@ export class TextureSelectionDialogComponent implements OnInit, OnDestroy {
         
         return null;
     }
+
+    getTextureName(uuid: string): string {
+        const textureInfo = this.resourceService.textures.get(uuid);
+        return textureInfo ? textureInfo.name : uuid;
+    }
 } 

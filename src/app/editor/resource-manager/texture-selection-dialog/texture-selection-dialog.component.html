@@ -17,10 +17,10 @@
             </button>
         </div>
         <mat-selection-list #textureList [multiple]="false">
-            <mat-list-option *ngFor="let texture of data.textures" [value]="texture">
+            <mat-list-option *ngFor="let uuid of data.textures" [value]="uuid">
                 <div class="texture-list-item">
-                    <img *ngIf="getTexturePreviewUrl(texture)" [src]="getTexturePreviewUrl(texture)" class="texture-thumbnail" alt="Texture preview">
-                    <span>{{ texture }}</span>
+                    <img *ngIf="getTexturePreviewUrl(uuid)" [src]="getTexturePreviewUrl(uuid)" class="texture-thumbnail" alt="Texture preview">
+                    <span>{{ getTextureName(uuid) }}</span>
                 </div>
             </mat-list-option>
         </mat-selection-list>
