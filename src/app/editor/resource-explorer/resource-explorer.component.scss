@@ -1,0 +1,225 @@
+.resource-explorer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #1e1e1e;
+  color: #ffffff;
+  user-select: none;
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border-bottom: 1px solid #333;
+    gap: 8px;
+
+    button {
+      color: #ffffff;
+    }
+  }
+
+  .folder-path {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    background-color: #252525;
+    border-bottom: 1px solid #333;
+    gap: 8px;
+
+    button {
+      color: #ffffff;
+      padding: 4px 8px;
+      
+      mat-icon {
+        margin-right: 4px;
+      }
+    }
+
+    .path-text {
+      color: #888;
+      font-size: 12px;
+    }
+  }
+
+  .resource-tree {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+
+    &.icon-view {
+      .icon-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 16px;
+        padding: 16px;
+      }
+
+      .icon-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 8px;
+        cursor: pointer;
+        border-radius: 4px;
+        text-align: center;
+        transition: background-color 0.2s;
+
+        &:hover {
+          background-color: #2a2a2a;
+        }
+
+        &.selected {
+          background-color: #0078d4;
+        }
+
+        &.folder-item {
+          .large-icon {
+            color: #ffd700;
+            font-size: 48px;
+            width: 48px;
+            height: 48px;
+          }
+        }
+
+        .icon-preview {
+          width: 64px;
+          height: 64px;
+          margin-bottom: 8px;
+          border-radius: 4px;
+          overflow: hidden;
+          background-color: #2a2a2a;
+
+          img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+        }
+
+        .large-icon {
+          font-size: 48px;
+          width: 48px;
+          height: 48px;
+          margin-bottom: 8px;
+          color: #888;
+        }
+
+        .item-name {
+          font-size: 12px;
+          max-width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          padding: 0 4px;
+        }
+
+        &[draggable="true"] {
+          cursor: grab;
+
+          &:active {
+            cursor: grabbing;
+          }
+        }
+      }
+    }
+
+    // List view styles
+    .folder, .subfolder {
+      display: flex;
+      align-items: center;
+      padding: 4px 8px;
+      cursor: pointer;
+      border-radius: 4px;
+      margin: 2px 0;
+      gap: 8px;
+
+      &:hover {
+        background-color: #2a2a2a;
+      }
+
+      &.selected {
+        background-color: #0078d4;
+      }
+
+      mat-icon {
+        color: #ffd700;
+      }
+    }
+
+    .subfolder {
+      margin-left: 24px;
+    }
+
+    .folder-contents {
+      margin-left: 16px;
+    }
+
+    .resource-item {
+      display: flex;
+      align-items: center;
+      padding: 4px 8px;
+      cursor: pointer;
+      border-radius: 4px;
+      margin: 2px 0;
+      gap: 8px;
+
+      &:hover {
+        background-color: #2a2a2a;
+      }
+
+      &.selected {
+        background-color: #0078d4;
+      }
+
+      .item-preview {
+        width: 24px;
+        height: 24px;
+        overflow: hidden;
+        border-radius: 2px;
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+      }
+
+      mat-icon {
+        color: #888;
+      }
+
+      &[draggable="true"] {
+        cursor: grab;
+
+        &:active {
+          cursor: grabbing;
+        }
+      }
+    }
+  }
+
+  .folder-name, .item-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+
+  &:hover {
+    background: #666;
+  }
+} 

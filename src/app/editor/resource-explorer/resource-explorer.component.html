@@ -1,0 +1,220 @@
+<!-- Hidden preview canvas for rendering -->
+<canvas #previewCanvas style="display: none; position: absolute; pointer-events: none;"></canvas>
+
+<div class="resource-explorer">
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <button mat-icon-button (click)="createFolder(selectedFolder)" matTooltip="New Folder">
+      <mat-icon>create_new_folder</mat-icon>
+    </button>
+    <button mat-icon-button [matMenuTriggerFor]="addMenu" matTooltip="Add Resource">
+      <mat-icon>add</mat-icon>
+    </button>
+    <button mat-icon-button (click)="toggleViewMode()" [matTooltip]="viewMode === 'list' ? 'Switch to Icons View' : 'Switch to List View'">
+      <mat-icon>{{ viewMode === 'list' ? 'grid_view' : 'list' }}</mat-icon>
+    </button>
+  </div>
+
+  <!-- Add Resource Menu -->
+  <mat-menu #addMenu="matMenu">
+    <button mat-menu-item (click)="onAddTexture()">
+      <mat-icon>texture</mat-icon>
+      <span>Add Texture</span>
+    </button>
+    <button mat-menu-item (click)="onAddMaterial()">
+      <mat-icon>format_paint</mat-icon>
+      <span>Add Material</span>
+    </button>
+    <button mat-menu-item>
+      <mat-icon>3d_rotation</mat-icon>
+      <span>Add Model</span>
+    </button>
+  </mat-menu>
+
+  <!-- Resource Tree -->
+  <div class="resource-tree" [class.icon-view]="viewMode === 'icons'">
+    <ng-container *ngFor="let folder of rootFolders">
+      <!-- List View -->
+      <ng-container *ngIf="viewMode === 'list'">
+        <!-- Folder Contents -->
+        <div class="folder-contents">
+          <!-- Subfolders -->
+          <div *ngFor="let subfolder of folder.subfolders" 
+               class="folder"
+               [class.selected]="selectedFolder === subfolder"
+               (click)="onFolderClick(subfolder)"
+               (dragover)="$event.preventDefault()"
+               (drop)="onItemDrop($event, subfolder)">
+            <mat-icon>{{ subfolder.isExpanded ? 'folder_open' : 'folder' }}</mat-icon>
+            <span class="folder-name">{{ subfolder.name }}</span>
+          </div>
+
+          <!-- Items -->
+          <div *ngFor="let item of folder.items" 
+               class="resource-item"
+               [class.selected]="selectedItem === item"
+               (click)="onItemClick(item, $event)"
+               draggable="true"
+               (dragstart)="onItemDragStart($event, item)"
+               [matMenuTriggerFor]="itemMenu"
+               [matMenuTriggerData]="{item: item}">
+            
+            <!-- Preview/Icon -->
+            <div class="item-preview" *ngIf="item.preview">
+              <img [src]="item.preview" [alt]="item.name">
+            </div>
+            <mat-icon *ngIf="!item.preview">
+              {{ item.type === 'material' ? 'format_paint' : 
+                 item.type === 'texture' ? 'texture' : '3d_rotation' }}
+            </mat-icon>
+            
+            <span class="item-name">{{ item.name }}</span>
+          </div>
+
+          <!-- Nested Folder Contents -->
+          <ng-container *ngFor="let subfolder of folder.subfolders">
+            <div class="folder-contents" *ngIf="subfolder.isExpanded">
+              <!-- Nested Subfolders -->
+              <div *ngFor="let nestedFolder of subfolder.subfolders" 
+                   class="subfolder"
+                   [class.selected]="selectedFolder === nestedFolder"
+                   (click)="onFolderClick(nestedFolder)"
+                   (dragover)="$event.preventDefault()"
+                   (drop)="onItemDrop($event, nestedFolder)">
+                <mat-icon>{{ nestedFolder.isExpanded ? 'folder_open' : 'folder' }}</mat-icon>
+                <span class="folder-name">{{ nestedFolder.name }}</span>
+              </div>
+
+              <!-- Nested Items -->
+              <div *ngFor="let item of subfolder.items" 
+                   class="resource-item"
+                   [class.selected]="selectedItem === item"
+                   (click)="onItemClick(item, $event)"
+                   draggable="true"
+                   (dragstart)="onItemDragStart($event, item)"
+                   [matMenuTriggerFor]="itemMenu"
+                   [matMenuTriggerData]="{item: item}">
+                
+                <!-- Preview/Icon -->
+                <div class="item-preview" *ngIf="item.preview">
+                  <img [src]="item.preview" [alt]="item.name">
+                </div>
+                <mat-icon *ngIf="!item.preview">
+                  {{ item.type === 'material' ? 'format_paint' : 
+                     item.type === 'texture' ? 'texture' : '3d_rotation' }}
+                </mat-icon>
+                
+                <span class="item-name">{{ item.name }}</span>
+              </div>
+            </div>
+          </ng-container>
+        </div>
+      </ng-container>
+
+      <!-- Icon View -->
+      <ng-container *ngIf="viewMode === 'icons'">
+        <!-- Current Folder Path -->
+        <div class="folder-path" *ngIf="selectedFolder && selectedFolder.path !== '/'">
+          <button mat-button (click)="navigateToParentFolder()">
+            <mat-icon>arrow_back</mat-icon>
+            Back
+          </button>
+          <span class="path-text">{{ selectedFolder.path }}</span>
+        </div>
+
+        <div class="icon-grid">
+          <!-- Show parent folder option if we're in a subfolder -->
+          <div *ngIf="selectedFolder && selectedFolder.path !== '/'"
+               class="icon-item folder-item"
+               (click)="navigateToParentFolder()">
+            <mat-icon class="large-icon">arrow_upward</mat-icon>
+            <span class="item-name">..</span>
+          </div>
+
+          <!-- Show current folder contents -->
+          <ng-container *ngIf="!selectedFolder">
+            <!-- Root level folders -->
+            <div *ngFor="let subfolder of folder.subfolders"
+                 class="icon-item folder-item"
+                 [class.selected]="selectedFolder === subfolder"
+                 (click)="onFolderClick(subfolder)"
+                 (dragover)="$event.preventDefault()"
+                 (drop)="onItemDrop($event, subfolder)">
+              <mat-icon class="large-icon">folder</mat-icon>
+              <span class="item-name">{{ subfolder.name }}</span>
+            </div>
+
+            <!-- Root level items -->
+            <div *ngFor="let item of folder.items"
+                 class="icon-item"
+                 [class.selected]="selectedItem === item"
+                 (click)="onItemClick(item, $event)"
+                 draggable="true"
+                 (dragstart)="onItemDragStart($event, item)"
+                 [matMenuTriggerFor]="itemMenu"
+                 [matMenuTriggerData]="{item: item}">
+              <div class="icon-preview" *ngIf="item.preview">
+                <img [src]="item.preview" [alt]="item.name">
+              </div>
+              <mat-icon class="large-icon" *ngIf="!item.preview">
+                {{ item.type === 'material' ? 'format_paint' : 
+                   item.type === 'texture' ? 'texture' : '3d_rotation' }}
+              </mat-icon>
+              <span class="item-name">{{ item.name }}</span>
+            </div>
+          </ng-container>
+
+          <ng-container *ngIf="selectedFolder">
+            <!-- Selected folder's subfolders -->
+            <div *ngFor="let subfolder of selectedFolder.subfolders"
+                 class="icon-item folder-item"
+                 [class.selected]="selectedFolder === subfolder"
+                 (click)="onFolderClick(subfolder)"
+                 (dragover)="$event.preventDefault()"
+                 (drop)="onItemDrop($event, subfolder)">
+              <mat-icon class="large-icon">folder</mat-icon>
+              <span class="item-name">{{ subfolder.name }}</span>
+            </div>
+
+            <!-- Selected folder's items -->
+            <div *ngFor="let item of selectedFolder.items"
+                 class="icon-item"
+                 [class.selected]="selectedItem === item"
+                 (click)="onItemClick(item, $event)"
+                 draggable="true"
+                 (dragstart)="onItemDragStart($event, item)"
+                 [matMenuTriggerFor]="itemMenu"
+                 [matMenuTriggerData]="{item: item}">
+              <div class="icon-preview" *ngIf="item.preview">
+                <img [src]="item.preview" [alt]="item.name">
+              </div>
+              <mat-icon class="large-icon" *ngIf="!item.preview">
+                {{ item.type === 'material' ? 'format_paint' : 
+                   item.type === 'texture' ? 'texture' : '3d_rotation' }}
+              </mat-icon>
+              <span class="item-name">{{ item.name }}</span>
+            </div>
+          </ng-container>
+        </div>
+      </ng-container>
+    </ng-container>
+  </div>
+
+  <!-- Item Context Menu -->
+  <mat-menu #itemMenu="matMenu">
+    <ng-template matMenuContent let-item="item">
+      <button mat-menu-item (click)="onEditResource(item)" *ngIf="item.type !== 'model'">
+        <mat-icon>edit</mat-icon>
+        <span>Edit</span>
+      </button>
+      <button mat-menu-item (click)="onRename(item)">
+        <mat-icon>drive_file_rename_outline</mat-icon>
+        <span>Rename</span>
+      </button>
+      <button mat-menu-item (click)="onDelete(item)">
+        <mat-icon>delete</mat-icon>
+        <span>Delete</span>
+      </button>
+    </ng-template>
+  </mat-menu>
+</div> 

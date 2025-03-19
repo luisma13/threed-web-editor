@@ -17,9 +17,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { ContextMenuService } from './context-menu/context-menu.service';
-import { ResourceManagerComponent } from './resource-manager/resource-manager.component';
 import { ResourceDialogService } from './resource-manager/resource-dialog.service';
 import { ResizablePanelComponent } from './resizable-panel/resizable-panel.component';
+import { ResourceExplorerComponent } from './resource-explorer/resource-explorer.component';
 
 export class EditorModule { }
 
@@ -40,7 +40,7 @@ export class EditorModule { }
         MatButtonModule,
         MatTooltipModule,
         DragDropModule,
-        ResourceManagerComponent,
+        ResourceExplorerComponent,
         ResizablePanelComponent
     ],
     templateUrl: './editor.component.html',
