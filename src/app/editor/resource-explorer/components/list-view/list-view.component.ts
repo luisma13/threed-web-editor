@@ -14,7 +14,7 @@ import { FolderItemComponent } from '../folder-item/folder-item.component';
       <app-resource-item
         *ngFor="let item of folder.items"
         [item]="item"
-        [selected]="selectedItem === item"
+        [selected]="selectedItems.has(item)"
         (itemClick)="itemClick.emit($event)"
         (itemContextMenu)="itemContextMenu.emit($event)"
         (itemDragStart)="itemDragStart.emit($event)">
@@ -36,7 +36,7 @@ import { FolderItemComponent } from '../folder-item/folder-item.component';
     <ng-template #folderContent let-folder>
       <app-list-view
         [folder]="folder"
-        [selectedItem]="selectedItem"
+        [selectedItems]="selectedItems"
         [selectedFolder]="selectedFolder"
         (itemClick)="itemClick.emit($event)"
         (itemContextMenu)="itemContextMenu.emit($event)"
@@ -54,7 +54,7 @@ import { FolderItemComponent } from '../folder-item/folder-item.component';
 })
 export class ListViewComponent {
   @Input() folder!: ResourceFolder;
-  @Input() selectedItem: ResourceItem | null = null;
+  @Input() selectedItems!: Set<ResourceItem>;
   @Input() selectedFolder: ResourceFolder | null = null;
 
   @Output() itemClick = new EventEmitter<{event: MouseEvent, item: ResourceItem}>();

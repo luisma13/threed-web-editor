@@ -17,6 +17,7 @@ import { ListViewComponent } from './components/list-view/list-view.component';
 import { IconViewComponent } from './components/icon-view/icon-view.component';
 import { MatDialog } from '@angular/material/dialog';
 import { ModelInspectorDialogComponent } from '../model-inspector/model-inspector-dialog.component';
+import { EditorService } from '../editor.service';
 
 export type ViewMode = 'list' | 'icons';
 export type ResourceType = 'material' | 'texture' | 'model';
@@ -61,7 +62,7 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
   private isBrowser: boolean;
 
   folders$ = this.resourceStructure.asObservable();
-  selectedItem: ResourceItem | null = null;
+  selectedItems: Set<ResourceItem> = new Set();
   selectedFolder: ResourceFolder | null = null;
   viewMode: ViewMode = 'list';
   
@@ -77,6 +78,7 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
     private changeDetectorRef: ChangeDetectorRef,
     private contextMenuService: ContextMenuService,
     private editorEventsService: EditorEventsService,
+    private editorService: EditorService,
     private dialog: MatDialog,
     @Inject(PLATFORM_ID) platformId: Object
   ) {
@@ -110,6 +112,7 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
           case 'edit': this.onEditResource(action.resource); break;
           case 'rename': this.onRename(action.resource); break;
           case 'delete': this.onDelete(action.resource); break;
+          case 'addToScene': this.onAddToScene(action.resource); break;
         }
       })
     );
@@ -296,21 +299,24 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
       folder.isExpanded = !folder.isExpanded;
       this.selectedFolder = folder;
     }
-    this.selectedItem = null;
+    this.selectedItems.clear();
   }
 
   navigateToParentFolder() {
     if (!this.selectedFolder) return;
     const parentPath = this.selectedFolder.path.split('/').slice(0, -1).join('/') || '/';
     this.selectedFolder = this.findFolder(parentPath);
-    this.selectedItem = null;
+    this.selectedItems.clear();
   }
 
   onItemClick(item: ResourceItem, event: MouseEvent) {
     event.stopPropagation();
-    this.selectedItem = item;
     
     if (event.button === 2) {
+      if (!this.selectedItems.has(item)) {
+        this.selectedItems.clear();
+        this.selectedItems.add(item);
+      }
       this.contextMenuService.showContextMenu(event, 'resource', item);
     } else if (event.detail === 2) { // Double click
       if (item.type === 'model') {
@@ -318,23 +324,66 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
       } else if (item.type === 'material' || item.type === 'texture') {
         this.onEditResource(item);
       }
+    } else { // Single click
+      if (event.ctrlKey || event.metaKey) {
+        // Toggle selection
+        if (this.selectedItems.has(item)) {
+          this.selectedItems.delete(item);
+        } else {
+          this.selectedItems.add(item);
+        }
+      } else if (event.shiftKey && this.selectedItems.size > 0) {
+        // Range selection
+        const items = this.getAllItems();
+        const lastSelected = items.find(i => this.selectedItems.has(i));
+        if (lastSelected) {
+          const start = items.indexOf(lastSelected);
+          const end = items.indexOf(item);
+          const range = items.slice(
+            Math.min(start, end),
+            Math.max(start, end) + 1
+          );
+          this.selectedItems.clear();
+          range.forEach(i => this.selectedItems.add(i));
+        }
+      } else {
+        // Single selection
+        this.selectedItems.clear();
+        this.selectedItems.add(item);
+      }
     }
+  }
+
+  private getAllItems(): ResourceItem[] {
+    const items: ResourceItem[] = [];
+    const collectItems = (folders: ResourceFolder[]) => {
+      for (const folder of folders) {
+        items.push(...folder.items);
+        collectItems(folder.subfolders);
+      }
+    };
+    collectItems(this.rootFolders);
+    return items;
   }
 
   onItemContextMenu(event: MouseEvent, item: ResourceItem) {
     event.preventDefault();
     event.stopPropagation();
-    this.selectedItem = item;
+    this.selectedItems.clear();
+    this.selectedItems.add(item);
     this.contextMenuService.showContextMenu(event, 'resource', item);
   }
 
   onItemDragStart(event: DragEvent, item: ResourceItem) {
     if (event.dataTransfer) {
+      const itemsToMove = this.selectedItems.has(item) 
+        ? Array.from(this.selectedItems)
+        : [item];
+      
       event.dataTransfer.setData('application/resource', JSON.stringify({
-        id: item.id,
-        type: item.type
+        items: itemsToMove.map(i => ({ id: i.id, type: i.type }))
       }));
-      event.dataTransfer.effectAllowed = 'copy';
+      event.dataTransfer.effectAllowed = 'move';
     }
   }
 
@@ -343,8 +392,12 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
     const data = event.dataTransfer?.getData('application/resource');
     if (!data) return;
 
-    const draggedItem = JSON.parse(data);
-    this.moveItemToFolder(draggedItem.id, targetFolder);
+    const draggedData = JSON.parse(data);
+    if (Array.isArray(draggedData.items)) {
+      draggedData.items.forEach((item: { id: string }) => {
+        this.moveItemToFolder(item.id, targetFolder);
+      });
+    }
   }
 
   moveItemToFolder(itemId: string, targetFolder: ResourceFolder) {
@@ -442,8 +495,53 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
     }
   }
 
-  onDelete(item: ResourceItem) {
-    if (confirm(`Are you sure you want to delete ${item.name}?`)) {
+  onDelete(itemOrFolder: ResourceItem | ResourceFolder) {
+    let itemsToDelete: ResourceItem[] = [];
+    let confirmMessage = '';
+
+    if ('type' in itemOrFolder) {
+      // Es un ResourceItem
+      itemsToDelete = Array.from(this.selectedItems.size > 1 ? this.selectedItems : [itemOrFolder]);
+      confirmMessage = this.selectedItems.size > 1 
+        ? `Are you sure you want to delete ${this.selectedItems.size} items?`
+        : `Are you sure you want to delete ${itemOrFolder.name}?`;
+    } else {
+      // Es un ResourceFolder
+      itemsToDelete = this.getResourcesInFolder(itemOrFolder);
+      confirmMessage = `Are you sure you want to delete the folder "${itemOrFolder.name}" and all its contents (${itemsToDelete.length} items)?`;
+    }
+
+    if (confirm(confirmMessage)) {
+      this.deleteResourcesRecursively(itemsToDelete);
+      
+      if (!('type' in itemOrFolder)) {
+        // Si era una carpeta, la eliminamos de la estructura
+        const parent = this.findParentFolder(itemOrFolder);
+        if (parent) {
+          parent.subfolders = parent.subfolders.filter(f => f !== itemOrFolder);
+          this.resourceStructure.next([...this.rootFolders]);
+        }
+      }
+      
+      this.selectedItems.clear();
+    }
+  }
+
+  private findParentFolder(folder: ResourceFolder): ResourceFolder | null {
+    const findParent = (folders: ResourceFolder[], target: ResourceFolder): ResourceFolder | null => {
+      for (const f of folders) {
+        if (f.subfolders.includes(target)) return f;
+        const found = findParent(f.subfolders, target);
+        if (found) return found;
+      }
+      return null;
+    };
+    return findParent(this.rootFolders, folder);
+  }
+
+  private deleteResourcesRecursively(items: ResourceItem[]): void {
+    const uniqueItems = new Set(items);
+    uniqueItems.forEach(item => {
       switch (item.type) {
         case 'material':
           this.materialManager.releaseMaterial(item.id);
@@ -455,7 +553,15 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
           this.modelCache.releaseModel(item.id);
           break;
       }
-    }
+    });
+  }
+
+  private getResourcesInFolder(folder: ResourceFolder): ResourceItem[] {
+    const resources: ResourceItem[] = [...folder.items];
+    folder.subfolders.forEach(subfolder => {
+      resources.push(...this.getResourcesInFolder(subfolder));
+    });
+    return resources;
   }
 
   onInspectModel(item: ResourceItem) {
@@ -474,5 +580,26 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
         this.modelCache.updateModel(item.id, result);
       }
     });
+  }
+
+  onAddToScene(item: ResourceItem) {
+    if (item.type !== 'model') return;
+
+    const modelInfo = item.resource as CachedModelInfo;
+    if (!modelInfo) return;
+
+    // Crear un nuevo GameObject
+    const newGameObject = this.editorService.newGameObject();
+    newGameObject.name = item.name;
+
+    // Clonar el modelo y asignarlo al GameObject
+    const clonedModel = modelInfo.rootObject.clone();
+    newGameObject.add(clonedModel);
+
+    // Actualizar la escena
+    if (this.editorService.editableSceneComponent) {
+        this.editorService.editableSceneComponent.selectObject(newGameObject);
+        this.editorService.editableSceneComponent.selectedObject.next(newGameObject);
+    }
   }
 } 

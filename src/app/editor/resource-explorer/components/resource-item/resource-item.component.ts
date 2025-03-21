@@ -10,10 +10,12 @@ import { ResourceItem } from '../../resource-explorer.component';
   template: `
     <div class="resource-item"
          [class.selected]="selected"
+         [class.dragging]="dragging"
          (click)="onClick($event)"
          (contextmenu)="onContextMenu($event)"
          draggable="true"
-         (dragstart)="onDragStart($event)">
+         (dragstart)="onDragStart($event)"
+         (dragend)="dragging = false">
       <div class="item-preview" *ngIf="item.preview">
         <img [src]="item.preview" [alt]="item.name">
         <div class="type-indicator">
@@ -51,6 +53,10 @@ import { ResourceItem } from '../../resource-explorer.component';
 
     .resource-item.selected {
       background-color: #0078d4;
+    }
+
+    .resource-item.dragging {
+      opacity: 0.5;
     }
 
     .item-preview {
@@ -119,6 +125,8 @@ import { ResourceItem } from '../../resource-explorer.component';
 export class ResourceItemComponent {
   @Input() item!: ResourceItem;
   @Input() selected: boolean = false;
+  dragging: boolean = false;
+
   @Output() itemClick = new EventEmitter<{event: MouseEvent, item: ResourceItem}>();
   @Output() itemContextMenu = new EventEmitter<{event: MouseEvent, item: ResourceItem}>();
   @Output() itemDragStart = new EventEmitter<{event: DragEvent, item: ResourceItem}>();
@@ -134,6 +142,7 @@ export class ResourceItemComponent {
   }
 
   onDragStart(event: DragEvent) {
+    this.dragging = true;
     this.itemDragStart.emit({event, item: this.item});
   }
 } 

@@ -22,7 +22,9 @@ import { ResourceFolder, ResourceItem } from '../../resource-explorer.component'
       <!-- Show parent folder option if we're in a subfolder -->
       <div *ngIf="selectedFolder && selectedFolder.path !== '/'"
            class="icon-item folder-item"
-           (click)="navigateBack.emit()">
+           (click)="navigateBack.emit()"
+           (dragover)="$event.preventDefault()"
+           (drop)="onParentFolderDrop($event)">
         <mat-icon class="large-icon">arrow_upward</mat-icon>
         <span class="item-name">..</span>
       </div>
@@ -43,7 +45,7 @@ import { ResourceFolder, ResourceItem } from '../../resource-explorer.component'
         <!-- Root level items -->
         <div *ngFor="let item of folder.items"
              class="icon-item"
-             [class.selected]="selectedItem === item"
+             [class.selected]="selectedItems.has(item)"
              (click)="onItemClick($event, item)"
              (contextmenu)="onItemContextMenu($event, item)"
              draggable="true"
@@ -81,7 +83,7 @@ import { ResourceFolder, ResourceItem } from '../../resource-explorer.component'
         <!-- Selected folder's items -->
         <div *ngFor="let item of selectedFolder.items"
              class="icon-item"
-             [class.selected]="selectedItem === item"
+             [class.selected]="selectedItems.has(item)"
              (click)="onItemClick($event, item)"
              (contextmenu)="onItemContextMenu($event, item)"
              draggable="true"
@@ -234,7 +236,7 @@ import { ResourceFolder, ResourceItem } from '../../resource-explorer.component'
 })
 export class IconViewComponent {
   @Input() folder!: ResourceFolder;
-  @Input() selectedItem: ResourceItem | null = null;
+  @Input() selectedItems!: Set<ResourceItem>;
   @Input() selectedFolder: ResourceFolder | null = null;
 
   @Output() itemClick = new EventEmitter<{event: MouseEvent, item: ResourceItem}>();
@@ -262,5 +264,33 @@ export class IconViewComponent {
 
   onItemDrop(event: DragEvent, folder: ResourceFolder) {
     this.itemDrop.emit({event, folder});
+  }
+
+  onParentFolderDrop(event: DragEvent) {
+    if (!this.selectedFolder) return;
+    
+    const parentPath = this.selectedFolder.path.split('/').slice(0, -1).join('/') || '/';
+    const parentFolder = this.findParentFolder(parentPath);
+    
+    if (parentFolder) {
+      this.itemDrop.emit({event, folder: parentFolder});
+    }
+  }
+
+  private findParentFolder(path: string): ResourceFolder | null {
+    if (path === '/') return this.folder;
+
+    const findFolder = (folder: ResourceFolder, targetPath: string): ResourceFolder | null => {
+      if (folder.path === targetPath) return folder;
+      
+      for (const subfolder of folder.subfolders) {
+        const found = findFolder(subfolder, targetPath);
+        if (found) return found;
+      }
+      
+      return null;
+    };
+
+    return findFolder(this.folder, path);
   }
 } 

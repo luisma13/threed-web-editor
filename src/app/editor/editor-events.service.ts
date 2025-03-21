@@ -4,7 +4,7 @@ import { GameObject } from '../simple-engine/core/gameobject';
 import { ResourceItem } from './resource-explorer/resource-explorer.component';
 
 export interface ResourceAction {
-  action: 'edit' | 'rename' | 'delete' | 'inspect';
+  action: 'edit' | 'rename' | 'delete' | 'inspect' | 'addToScene';
   resource: ResourceItem;
   data?: any;
 }

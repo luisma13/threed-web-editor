@@ -122,6 +122,7 @@ export class ContextMenuComponent {
 
     // Menú para recursos
     private resourceMenuItems: MenuItem[] = [
+        { label: 'Add to Scene', action: 'resource:addToScene', icon: 'add_box' },
         { label: 'Inspect', action: 'resource:inspect', icon: 'visibility', disabled: false },
         { label: 'Edit', action: 'resource:edit', icon: 'edit' },
         { label: 'Rename', action: 'resource:rename', icon: 'drive_file_rename_outline' },
@@ -204,10 +205,11 @@ export class ContextMenuComponent {
                 this.updateMenuItemState('component:paste', !this.editorService.hasCopiedComponent());
                 break;
             case 'resource':
-                // Para recursos, ocultar la opción de editar si es un modelo
+                // Para recursos, ocultar opciones según el tipo
                 const isModel = contextObject?.type === 'model';
                 this.currentMenuItems = [...this.resourceMenuItems].filter(item => 
-                    !(isModel && item.action === 'resource:edit')
+                    !((!isModel && item.action === 'resource:addToScene') || // Ocultar Add to Scene si no es modelo
+                     (isModel && item.action === 'resource:edit')) // Ocultar Edit si es modelo
                 );
                 break;
             default:
@@ -381,6 +383,11 @@ export class ContextMenuComponent {
             case 'resource':
                 const resource = this.contextObject;
                 switch (type) {
+                    case 'addToScene':
+                        if (resource.type === 'model') {
+                            this.editorEventsService.onResourceAction.next({ action: 'addToScene', resource });
+                        }
+                        break;
                     case 'inspect':
                         if (resource.type === 'model') {
                             this.editorEventsService.onResourceAction.next({ action: 'inspect', resource });

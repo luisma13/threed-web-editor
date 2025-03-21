@@ -38,7 +38,7 @@
       <ng-container *ngIf="viewMode === 'list'">
         <app-list-view
           [folder]="folder"
-          [selectedItem]="selectedItem"
+          [selectedItems]="selectedItems"
           [selectedFolder]="selectedFolder"
           (itemClick)="onItemClick($event.item, $event.event)"
           (itemContextMenu)="onItemContextMenu($event.event, $event.item)"
@@ -52,7 +52,7 @@
       <ng-container *ngIf="viewMode === 'icons'">
         <app-icon-view
           [folder]="folder"
-          [selectedItem]="selectedItem"
+          [selectedItems]="selectedItems"
           [selectedFolder]="selectedFolder"
           (itemClick)="onItemClick($event.item, $event.event)"
           (itemContextMenu)="onItemContextMenu($event.event, $event.item)"
@@ -64,22 +64,4 @@
       </ng-container>
     </ng-container>
   </div>
-
-  <!-- Item Context Menu -->
-  <mat-menu #itemMenu="matMenu">
-    <ng-template matMenuContent let-item="item">
-      <button mat-menu-item (click)="onEditResource(item)" *ngIf="item.type !== 'model'">
-        <mat-icon>edit</mat-icon>
-        <span>Edit</span>
-      </button>
-      <button mat-menu-item (click)="onRename(item)">
-        <mat-icon>drive_file_rename_outline</mat-icon>
-        <span>Rename</span>
-      </button>
-      <button mat-menu-item (click)="onDelete(item)">
-        <mat-icon>delete</mat-icon>
-        <span>Delete</span>
-      </button>
-    </ng-template>
-  </mat-menu>
 </div> 
