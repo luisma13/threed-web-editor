@@ -1,35 +1,29 @@
-import { ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, Output, QueryList, ViewChild, ViewChildren, OnInit, OnDestroy } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, Output, ViewChild, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { EditorService } from '../editor.service';
 import { GameObject } from '../../simple-engine/core/gameobject';
 import { engine } from '../../simple-engine/core/engine/engine';
-import { GameObjectsDraggableComponent } from '../gameobject-draggables/gameobjects-draggables.component';
-import { EditorComponent } from '../editor.component';
+import { GameObjectsDraggableService } from '../gameobject-draggables/gameobjects-draggables.component';
 import { ContextMenuService } from '../context-menu/context-menu.service';
-import { Subscription } from 'rxjs';
 
 @Component({
     standalone: true,
     selector: 'app-game-object',
     imports: [CommonModule, MatIconModule, MatButtonModule],
     templateUrl: './gameobject.component.html',
-    styleUrls: ['./gameobject.component.scss']
+    styleUrls: ['./gameobject.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class GameObjectComponent implements OnInit, OnDestroy {
-
     @ViewChild('title', { static: true }) title: ElementRef;
     @Input() gameObject: GameObject;
     @Input() isRoot: boolean;
-    @Input() gameObjectsHtmlElements: GameObjectComponent[];
-    @Input() dragGameObject: GameObject;
-    @Input() dragGameobjectExpandOverGameobject: GameObject;
     @Output() onSortRoot: EventEmitter<{ position: "below" | "above", onDroppedGameobject: GameObject, movedGameObject: GameObject }> = new EventEmitter();
     
     isSelected: boolean;
     showChildren: boolean = false;
-    private subscriptions: Subscription[] = [];
 
     /* Drag and drop */
     dragGameobjectExpandOverWaitTimeMs = 300;
@@ -38,118 +32,22 @@ export class GameObjectComponent implements OnInit, OnDestroy {
 
     constructor(
         private editorService: EditorService,
-        private changeDetectorRef: ChangeDetectorRef,
-        private contextMenuService: ContextMenuService
-    ) { }
+        public changeDetectorRef: ChangeDetectorRef,
+        private contextMenuService: ContextMenuService,
+        private draggableService: GameObjectsDraggableService
+    ) {}
 
     ngOnInit() {
-        GameObjectsDraggableComponent.gameObjectsHtmlElements.push(this);
-        
-        // Suscribirse a cambios en el nombre del GameObject
-        if (this.gameObject) {
-            this.subscriptions.push(
-                this.gameObject.onNameChanged.subscribe(() => {
-                    this.changeDetectorRef.detectChanges();
-                })
-            );
-            
-            // Suscribirse a cambios en la jerarquía
-            this.subscriptions.push(
-                engine.onGameobjectHerarchyChanged.subscribe((changedGameObject) => {
-                    // Si el objeto que cambió es este, actualizar la vista
-                    if (changedGameObject === this.gameObject) {
-                        this.changeDetectorRef.detectChanges();
-                    }
-                })
-            );
-            
-            // Suscribirse a eliminaciones de GameObjects
-            this.subscriptions.push(
-                engine.onGameobjectRemoved.subscribe((removedGameObject) => {
-                    // Si el objeto eliminado es hijo de este, actualizar la vista
-                    if (this.gameObject.childrenGameObjects && 
-                        this.gameObject.childrenGameObjects.indexOf(removedGameObject) !== -1) {
-                        this.changeDetectorRef.detectChanges();
-                    }
-                })
-            );
-        }
+        this.draggableService.registerGameObject(this);
     }
 
     ngOnDestroy() {
-        // Limpiar suscripciones
-        this.subscriptions.forEach(sub => sub.unsubscribe());
-        this.subscriptions = [];
-        
-        // Eliminar de la lista de elementos HTML
-        const index = GameObjectsDraggableComponent.gameObjectsHtmlElements.indexOf(this);
-        if (index !== -1) {
-            GameObjectsDraggableComponent.gameObjectsHtmlElements.splice(index, 1);
-        }
-    }
-
-    ngAfterViewInit() {
-    }
-
-    onClick(event) {
-        event.preventDefault();
-        event.stopPropagation();
-        this.isSelected = !this.isSelected;
-        if (this.isSelected) {
-            this.editorService.editableSceneComponent.selectedObject.next(this.gameObject);
-        } else {
-            this.editorService.editableSceneComponent.selectedObject.next(undefined);
-        }
-        this.changeDetectorRef.detectChanges();
-    }
-    
-    /**
-     * Maneja el evento de clic derecho en el GameObject
-     * @param event Evento del mouse
-     */
-    onContextMenu(event: MouseEvent) {
-        event.preventDefault();
-        event.stopPropagation();
-        
-        // Seleccionar el GameObject si no está seleccionado
-        if (!this.isSelected) {
-            this.isSelected = true;
-            this.editorService.editableSceneComponent.selectedObject.next(this.gameObject);
-            this.changeDetectorRef.detectChanges();
-        }
-        
-        // Caso especial para el Player
-        if (this.gameObject.name === 'Player') {
-            // Forzar la posición del menú contextual
-            const rect = event.target['getBoundingClientRect']();
-            const x = rect ? rect.left + rect.width / 2 : event.clientX;
-            const y = rect ? rect.top + rect.height / 2 : event.clientY;
-            
-            // Crear un nuevo evento con las coordenadas correctas
-            const newEvent = new MouseEvent('contextmenu', {
-                bubbles: true,
-                cancelable: true,
-                view: window,
-                clientX: x,
-                clientY: y
-            });
-            
-            // Mostrar el menú contextual para el GameObject
-            this.contextMenuService.showContextMenu(newEvent, 'gameObject', this.gameObject);
-        } else {
-            // Mostrar el menú contextual para el GameObject
-            this.contextMenuService.showContextMenu(event, 'gameObject', this.gameObject);
-        }
-    }
-
-    toggleChildren() {
-        this.showChildren = !this.showChildren;
+        this.draggableService.unregisterGameObject(this);
     }
 
     handleDragStart(event, gameObject) {
-        // Required by Firefox (https://stackoverflow.com/questions/19055264/why-doesnt-html5-drag-and-drop-work-in-firefox)
         event.dataTransfer.setData('foo', 'bar');
-        GameObjectsDraggableComponent.dragGameObject = gameObject;
+        this.draggableService.dragGameObject = gameObject;
     }
 
     handleDragOver(event, gameobject: GameObject) {
@@ -162,28 +60,27 @@ export class GameObjectComponent implements OnInit, OnDestroy {
         const uuid = component.id;
         const onGameobject = engine.gameObjects.find((go) => go.uuid === uuid);
 
-        // Handle node expand
-        if (GameObjectsDraggableComponent.dragGameobjectExpandOverGameobject && onGameobject === GameObjectsDraggableComponent.dragGameobjectExpandOverGameobject) {
+        if (this.draggableService.dragGameobjectExpandOverGameobject && onGameobject === this.draggableService.dragGameobjectExpandOverGameobject) {
             if ((Date.now() - this.dragGameobjectExpandOverTime) > this.dragGameobjectExpandOverWaitTimeMs) {
-                for (const go of GameObjectsDraggableComponent.gameObjectsHtmlElements) {
-                    if (go.gameObject === onGameobject) {
-                        go.showChildren = true;
-                        break;
-                    }
+                const component = this.draggableService.getGameObjectComponent(onGameobject.uuid);
+                if (component) {
+                    component.showChildren = true;
+                    component.changeDetectorRef.markForCheck();
                 }
             }
         } else {
-            GameObjectsDraggableComponent.dragGameobjectExpandOverGameobject = onGameobject;
+            this.draggableService.dragGameobjectExpandOverGameobject = onGameobject;
             this.dragGameobjectExpandOverTime = new Date().getTime();
         }
 
-        for (const go of GameObjectsDraggableComponent.gameObjectsHtmlElements) {
-            if (go.gameObject !== onGameobject && go.gameObject !== GameObjectsDraggableComponent.dragGameObject) {
-                go.cleanDragStyles();
+        // Clean styles for all components except the current one
+        const components = this.draggableService.getAllComponents();
+        for (const component of components) {
+            if (component.gameObject !== onGameobject && component.gameObject !== this.draggableService.dragGameObject) {
+                component.cleanDragStyles();
             }
         }
 
-        // Handle drag area
         const percentageY = event.offsetY / event.target.clientHeight;
         if (0 <= percentageY && percentageY <= 0.25) {
             this.dragGameobjectExpandOverArea = 1;
@@ -193,7 +90,7 @@ export class GameObjectComponent implements OnInit, OnDestroy {
             this.dragGameobjectExpandOverArea = 0;
         }
 
-        this.changeDetectorRef.detectChanges();
+        this.changeDetectorRef.markForCheck();
     }
 
     cleanDragStyles() {
@@ -213,23 +110,23 @@ export class GameObjectComponent implements OnInit, OnDestroy {
             const parent = onGameobject.parentGameObject;
 
             if (!parent) {
-                GameObjectsDraggableComponent.dragGameObject.unparentGameObject();
-                this.onSortRoot.emit({ position, onDroppedGameobject: onGameobject, movedGameObject: GameObjectsDraggableComponent.dragGameObject });
+                this.draggableService.dragGameObject.unparentGameObject();
+                this.onSortRoot.emit({ position, onDroppedGameobject: onGameobject, movedGameObject: this.draggableService.dragGameObject });
                 return;
             }
 
-            parent.addGameObject(GameObjectsDraggableComponent.dragGameObject);
-            const indexDrag = parent.childrenGameObjects.indexOf(GameObjectsDraggableComponent.dragGameObject);
+            parent.addGameObject(this.draggableService.dragGameObject);
+            const indexDrag = parent.childrenGameObjects.indexOf(this.draggableService.dragGameObject);
             const indexOnGameobject = parent.childrenGameObjects.indexOf(onGameobject);
             parent.childrenGameObjects.splice(indexDrag, 1);
-            parent.childrenGameObjects.splice(position === "above" ? indexOnGameobject : indexOnGameobject + 1, 0, GameObjectsDraggableComponent.dragGameObject);
+            parent.childrenGameObjects.splice(position === "above" ? indexOnGameobject : indexOnGameobject + 1, 0, this.draggableService.dragGameObject);
         }
 
-        if (onGameobject && onGameobject !== GameObjectsDraggableComponent.dragGameObject) {
+        if (onGameobject && onGameobject !== this.draggableService.dragGameObject) {
             const actions = {
                 "above": () => insertOnParent("above"),
                 "below": () => insertOnParent("below"),
-                "center": () => onGameobject.addGameObject(GameObjectsDraggableComponent.dragGameObject)
+                "center": () => onGameobject.addGameObject(this.draggableService.dragGameObject)
             }
             actions[this.dragGameobjectExpandOverArea === 0 ? "center" : this.dragGameobjectExpandOverArea === 1 ? "above" : "below"]();
         }
@@ -237,18 +134,18 @@ export class GameObjectComponent implements OnInit, OnDestroy {
     }
 
     handleDragEnd(event, gameObject) {
-        GameObjectsDraggableComponent.dragGameObject = null;
-        GameObjectsDraggableComponent.dragGameobjectExpandOverGameobject = null;
+        this.draggableService.dragGameObject = null;
+        this.draggableService.dragGameobjectExpandOverGameobject = null;
         this.dragGameobjectExpandOverTime = 0;
         this.dragGameobjectExpandOverArea = NaN;
         event.preventDefault();
-        this.changeDetectorRef.detectChanges();
+        this.changeDetectorRef.markForCheck();
     }
 
     getStyle(gameObject) {
-        if (GameObjectsDraggableComponent.dragGameObject === gameObject) {
+        if (this.draggableService.dragGameObject === gameObject) {
             return 'drag-start';
-        } else if (GameObjectsDraggableComponent.dragGameobjectExpandOverGameobject === gameObject) {
+        } else if (this.draggableService.dragGameobjectExpandOverGameobject === gameObject) {
             switch (this.dragGameobjectExpandOverArea) {
                 case 1:
                     return 'drop-above';
@@ -261,14 +158,23 @@ export class GameObjectComponent implements OnInit, OnDestroy {
         return 'drop-none';
     }
 
-    /**
-     * Función de seguimiento para ngFor que mejora el rendimiento
-     * @param index Índice del elemento
-     * @param item GameObject a seguir
-     * @returns UUID del GameObject
-     */
-    trackByUuid(index: number, item: GameObject): string {
-        return item.uuid;
+    onClick(event: MouseEvent) {
+        event.stopPropagation();
+        this.editorService.editableSceneComponent?.selectedObject.next(this.gameObject);
     }
 
+    onContextMenu(event: MouseEvent) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.contextMenuService.showContextMenu(event, 'gameObject', this.gameObject);
+    }
+
+    toggleChildren() {
+        this.showChildren = !this.showChildren;
+        this.changeDetectorRef.markForCheck();
+    }
+
+    trackByUuid(index: number, item: GameObject) {
+        return item.uuid;
+    }
 }

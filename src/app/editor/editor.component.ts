@@ -8,7 +8,7 @@ import { ContextMenuComponent } from './context-menu/context-menu.component';
 import { FormsModule } from '@angular/forms';
 import { ToolbarComponent } from './toolbar/toolbar.component';
 import { MatIconModule } from '@angular/material/icon';
-import { GameObjectsDraggableComponent } from './gameobject-draggables/gameobjects-draggables.component';
+import { GameObjectsDraggableComponent, GameObjectsDraggableService } from './gameobject-draggables/gameobjects-draggables.component';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -42,6 +42,7 @@ export class EditorModule { }
         ResourceExplorerComponent,
         ResizablePanelComponent
     ],
+    providers: [GameObjectsDraggableService],
     templateUrl: './editor.component.html',
     styleUrl: './editor.component.scss',
     schemas: [CUSTOM_ELEMENTS_SCHEMA]
@@ -61,7 +62,8 @@ export class EditorComponent {
         private changeDetector: ChangeDetectorRef,
         private contextMenuService: ContextMenuService,
         private resourceDialogService: ResourceDialogService,
-        @Inject(PLATFORM_ID) private platformId: Object
+        @Inject(PLATFORM_ID) private platformId: Object,
+        private draggableService: GameObjectsDraggableService
     ) {
         afterNextRender(() => this.initScene());
     }
@@ -98,9 +100,11 @@ export class EditorComponent {
 
             // Verificar que el objeto no sea undefined o null
             if (object) {
-                for (const go of GameObjectsDraggableComponent.gameObjectsHtmlElements) {
-                    if (go) {
-                        go.isSelected = go.gameObject === object;
+                const components = this.draggableService.getAllComponents();
+                for (const component of components) {
+                    if (component) {
+                        component.isSelected = component.gameObject === object;
+                        component.changeDetectorRef.markForCheck();
                     }
                 }
 
@@ -123,7 +127,6 @@ export class EditorComponent {
 
         this.viewer.nativeElement.ondragover = (event) => event.preventDefault();
         this.viewer.nativeElement.ondrop = (event) => this.onDragged(event);
-        
         
         // Seleccionar el objeto Environment por defecto
         if (environmentObject) {
@@ -191,9 +194,11 @@ export class EditorComponent {
         this.editorService.editableSceneComponent?.selectObject(gameObject);
         
         // Actualizar la UI para mostrar el objeto seleccionado
-        for (const go of GameObjectsDraggableComponent.gameObjectsHtmlElements) {
-            if (go) {
-                go.isSelected = go.gameObject === gameObject;
+        const components = this.draggableService.getAllComponents();
+        for (const component of components) {
+            if (component) {
+                component.isSelected = component.gameObject === gameObject;
+                component.changeDetectorRef.markForCheck();
             }
         }
         
