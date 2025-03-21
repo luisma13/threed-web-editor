@@ -18,6 +18,7 @@ import {
 } from 'three';
 import { SimpleEventEmitter } from '../utils/event-emitter';
 import { TextureManager } from './texture-manager';
+import { PreviewRenderer } from '../services/preview-renderer';
 
 /**
  * Interface for material information
@@ -46,16 +47,16 @@ export interface MaterialUpdateEvent {
     newMaterial: Material;
 }
 
-/**
- * MaterialManager class for managing materials in the simple engine
- */
 export class MaterialManager {
     private static instance: MaterialManager;
     private _materials = new Map<string, MaterialInfo>();
     private _materialPreviews = new Map<string, string>();
     private textureManager: TextureManager;
+    private previewRenderer: PreviewRenderer;
 
-    private constructor() { }
+    private constructor() {
+        this.previewRenderer = PreviewRenderer.getInstance();
+    }
 
     /**
      * Get the singleton instance of MaterialManager
@@ -108,50 +109,7 @@ export class MaterialManager {
      * Create a preview for a material
      */
     private createMaterialPreview(material: Material): string {
-        const size = 128;
-        const canvas = document.createElement('canvas');
-        canvas.width = size;
-        canvas.height = size;
-
-        const renderer = new WebGLRenderer({
-            canvas: canvas,
-            alpha: true,
-            antialias: true
-        });
-
-        const scene = new Scene();
-        const camera = new PerspectiveCamera(45, 1, 0.1, 100);
-        camera.position.set(0, 0, 4);
-
-        // Create a sphere to showcase the material
-        const geometry = new SphereGeometry(1, 32, 32);
-        const mesh = new Mesh(geometry, material);
-        scene.add(mesh);
-
-        // Add some lights
-        const ambientLight = new AmbientLight(0xffffff, 0.5);
-        scene.add(ambientLight);
-
-        const directionalLight = new DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(1, 1, 2);
-        scene.add(directionalLight);
-
-        // Rotate the sphere slightly
-        mesh.rotation.y = Math.PI / 4;
-        mesh.rotation.x = Math.PI / 6;
-
-        // Render
-        renderer.setSize(size, size);
-        renderer.render(scene, camera);
-
-        // Get data URL
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-
-        // Clean up
-        geometry.dispose();
-        renderer.dispose();
-
-        return dataUrl;
+        return this.previewRenderer.createMaterialPreview(material);
     }
 
     /**
@@ -304,7 +262,7 @@ export class MaterialManager {
         if (properties.emissiveMap) material.userData.textureUuids.emissiveMap = properties.emissiveMap;
 
         // Add the material to the manager
-                return material;
+        return material;
     }
 
     /**

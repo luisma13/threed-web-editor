@@ -1,0 +1,89 @@
+<div class="model-inspector-dialog">
+    <div class="dialog-header">
+        <h2 mat-dialog-title>Model Inspector - {{data.resource.name}}</h2>
+        <button mat-icon-button (click)="close()">
+            <mat-icon>close</mat-icon>
+        </button>
+    </div>
+
+    <mat-dialog-content>
+        <div class="inspector-content">
+            <!-- 3D Viewer -->
+            <div class="model-viewer" #modelViewer></div>
+
+            <!-- Properties Panel -->
+            <div class="properties-panel">
+                <mat-tab-group>
+                    <!-- General Info -->
+                    <mat-tab label="Info">
+                        <div class="tab-content">
+                            <mat-form-field appearance="outline">
+                                <mat-label>Name</mat-label>
+                                <input matInput [(ngModel)]="modelInfo.name" (change)="onPropertyChange()">
+                            </mat-form-field>
+
+                            <div class="info-row">
+                                <span class="label">Type:</span>
+                                <span>{{modelInfo.modelType}}</span>
+                            </div>
+
+                            <div class="info-row">
+                                <span class="label">Geometries:</span>
+                                <span>{{modelInfo.geometries?.length || 0}}</span>
+                            </div>
+
+                            <div class="info-row">
+                                <span class="label">Materials:</span>
+                                <span>{{modelInfo.materials?.length || 0}}</span>
+                            </div>
+
+                            <div class="info-row">
+                                <span class="label">Textures:</span>
+                                <span>{{modelInfo.textures?.length || 0}}</span>
+                            </div>
+
+                            <div class="info-row">
+                                <span class="label">Animations:</span>
+                                <span>{{modelInfo.animations?.length || 0}}</span>
+                            </div>
+                        </div>
+                    </mat-tab>
+
+                    <!-- Materials -->
+                    <mat-tab label="Materials">
+                        <div class="tab-content materials-list">
+                            <div *ngFor="let materialId of modelInfo.materials" class="material-item">
+                                <span class="material-name">{{getMaterialName(materialId)}}</span>
+                                <button mat-icon-button (click)="editMaterial(materialId)">
+                                    <mat-icon>edit</mat-icon>
+                                </button>
+                            </div>
+                        </div>
+                    </mat-tab>
+
+                    <!-- Animations -->
+                    <mat-tab label="Animations" *ngIf="modelInfo.animations?.length">
+                        <div class="tab-content animations-list">
+                            <div *ngFor="let animation of modelInfo.animations" class="animation-item">
+                                <span class="animation-name">{{animation.name}}</span>
+                                <div class="animation-controls">
+                                    <button mat-icon-button (click)="handleAnimationControl('play', animation)">
+                                        <mat-icon>play_arrow</mat-icon>
+                                    </button>
+                                    <button mat-icon-button (click)="handleAnimationControl('stop')">
+                                        <mat-icon>stop</mat-icon>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </mat-tab>
+                </mat-tab-group>
+            </div>
+        </div>
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="end">
+        <button mat-button (click)="close()">Close</button>
+        <button mat-button color="primary" (click)="save()">Save</button>
+    </mat-dialog-actions>
+</div> 

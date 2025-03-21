@@ -5,6 +5,7 @@ import {
     Wrapping 
 } from 'three';
 import { SimpleEventEmitter } from '../utils/event-emitter';
+import { PreviewRenderer } from '../services/preview-renderer';
 
 /**
  * Interface for texture information
@@ -33,20 +34,20 @@ export interface TextureUpdateEvent {
     newTexture: Texture;
 }
 
-/**
- * TextureManager class for managing textures in the simple engine
- */
 export class TextureManager {
     private static instance: TextureManager;
     private _textures = new Map<string, TextureInfo>();
     private _textureLoader = new TextureLoader();
     private _blobUrls = new Map<string, string>();
     private _texturePreviewsMap = new Map<string, TexturePreview>();
+    private previewRenderer: PreviewRenderer;
     
     // Event emitter for texture updates
     textureUpdated = new SimpleEventEmitter<TextureUpdateEvent>();
 
-    private constructor() {}
+    private constructor() {
+        this.previewRenderer = PreviewRenderer.getInstance();
+    }
 
     /**
      * Get the singleton instance of TextureManager
@@ -269,41 +270,7 @@ export class TextureManager {
         }
 
         try {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-
-            if (!ctx) {
-                console.warn('Could not get 2D context');
-                return;
-            }
-
-            const maxSize = 128;
-            let width = maxSize;
-            let height = maxSize;
-
-            if (texture.image instanceof HTMLImageElement || texture.image instanceof HTMLCanvasElement) {
-                width = Math.min(texture.image.width || 64, maxSize);
-                height = Math.min(texture.image.height || 64, maxSize);
-            } else if (texture.image instanceof ImageBitmap) {
-                width = Math.min(texture.image.width, maxSize);
-                height = Math.min(texture.image.height, maxSize);
-            } else if (texture.image instanceof ImageData) {
-                width = Math.min(texture.image.width, maxSize);
-                height = Math.min(texture.image.height, maxSize);
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-
-            if (texture.image instanceof HTMLImageElement || texture.image instanceof HTMLCanvasElement) {
-                ctx.drawImage(texture.image, 0, 0, width, height);
-            } else if (texture.image instanceof ImageBitmap) {
-                ctx.drawImage(texture.image, 0, 0, width, height);
-            } else if (texture.image instanceof ImageData) {
-                ctx.putImageData(texture.image, 0, 0);
-            }
-
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            const dataUrl = this.previewRenderer.createTexturePreview(texture);
 
             // Find the UUID for this texture
             let textureUuid: string | undefined;

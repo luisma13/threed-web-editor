@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 import { Object3D } from 'three';
 import { ModelManager, CachedModelInfo } from '../../simple-engine/managers/model-manager';
 
@@ -8,23 +8,38 @@ import { ModelManager, CachedModelInfo } from '../../simple-engine/managers/mode
 })
 export class ModelCacheAdapter {
     private modelManager: ModelManager;
-    private modelsSubject = new BehaviorSubject<Map<string, CachedModelInfo>>(new Map());
+    private _models = new BehaviorSubject<Map<string, CachedModelInfo>>(new Map());
+
+    modelsObservable = this._models.asObservable();
 
     constructor() {
         this.modelManager = ModelManager.getInstance();
-        // Inicializar con los modelos actuales
-        this.modelsSubject.next(this.modelManager.getAllModels());
+        this.updateModelsList();
     }
 
-    get modelsObservable(): Observable<Map<string, CachedModelInfo>> {
-        return this.modelsSubject.asObservable();
+    private updateModelsList() {
+        this._models.next(this.modelManager.getAllModels());
     }
 
-    private notifyModelChange() {
-        this.modelsSubject.next(this.modelManager.getAllModels());
+    getModel(id: string): CachedModelInfo | undefined {
+        return this.modelManager.getModel(id);
     }
 
-    async loadModel(path: string, modelType, fileName?: string): Promise<Object3D | undefined> {
+    releaseModel(id: string) {
+        this.modelManager.releaseModel(id);
+        this.updateModelsList();
+    }
+
+    updateModel(id: string, modelInfo: CachedModelInfo) {
+        const model = this.modelManager.getModel(id);
+        if (model) {
+            // Update only editable properties
+            model.name = modelInfo.name;
+            this.updateModelsList();
+        }
+    }
+
+    async loadModel(path: string, modelType: string, fileName?: string): Promise<Object3D | undefined> {
         try {
             // Remove file extension from the name if present
             const cleanFileName = fileName ? fileName.split('.')[0] : undefined;
@@ -43,7 +58,7 @@ export class ModelCacheAdapter {
             }
             
             console.log('Model loaded with name:', modelInfo.name);
-            this.notifyModelChange();
+            this.updateModelsList();
             return modelInfo.rootObject;
         } catch (error) {
             console.error('Error loading model:', error);
@@ -51,23 +66,8 @@ export class ModelCacheAdapter {
         }
     }
 
-    getModel(uuid: string): Object3D | undefined {
-        const modelInfo = this.modelManager.getModel(uuid);
-        return modelInfo?.rootObject;
-    }
-
-    releaseModel(uuid: string): void {
-        this.modelManager.releaseModel(uuid);
-        this.notifyModelChange();
-    }
-
-    updateModelName(uuid: string, newName: string): boolean {
-        const modelInfo = this.modelManager.getModel(uuid);
-        if (modelInfo) {
-            modelInfo.name = newName;
-            return true;
-        }
-        return false;
+    getModelPreview(uuid: string): string | null {
+        return this.modelManager.getModelPreview(uuid);
     }
 
     disposeAllModels(): void {
@@ -77,9 +77,4 @@ export class ModelCacheAdapter {
     getInternalManager(): ModelManager {
         return this.modelManager;
     }
-
-    getModelPreview(uuid: string): string | null {
-        return this.modelManager.getModelPreview(uuid);
-    }
-
 } 

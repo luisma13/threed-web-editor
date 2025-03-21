@@ -1,10 +1,11 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { GameObject } from '../simple-engine/core/gameobject';
+import { ResourceItem } from './resource-explorer/resource-explorer.component';
 
 export interface ResourceAction {
-  action: 'edit' | 'rename' | 'delete';
-  resource: any;
+  action: 'edit' | 'rename' | 'delete' | 'inspect';
+  resource: ResourceItem;
   data?: any;
 }
 

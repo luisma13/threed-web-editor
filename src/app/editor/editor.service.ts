@@ -695,15 +695,18 @@ export class EditorService {
      */
     async addModelToSceneFromCache(uuid: string): Promise<GameObject | undefined> {
         try {
-            const model = this.modelCache.getModel(uuid);
-            if (!model) {
+            const modelInfo = this.modelCache.getModel(uuid);
+            if (!modelInfo) {
                 return undefined;
             }
 
             // Crear un nuevo GameObject para el modelo
             const gameObject = new GameObject();
-            gameObject.name = model.name || 'Model';
-            gameObject.add(model.clone());
+            gameObject.name = modelInfo.name || 'Model';
+            
+            // Clonar el objeto raíz del modelo
+            const clonedModel = modelInfo.rootObject.clone();
+            gameObject.add(clonedModel);
 
             // Añadir el EditableObjectComponent
             gameObject.addComponent(new EditableObjectComponent());

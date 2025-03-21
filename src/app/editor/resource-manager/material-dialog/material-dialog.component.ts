@@ -19,6 +19,7 @@ import * as THREE from 'three';
 import { TextureSelectionDialogComponent } from '../texture-selection-dialog/texture-selection-dialog.component';
 import { TextureManagerAdapter } from '../texture-manager-adapter.service';
 import { MaterialManagerAdapter } from '../material-manager-adapter.service';
+import { RendererPoolService } from '../../services/renderer-pool.service';
 
 export interface MaterialDialogData {
     isEdit: boolean;
@@ -61,7 +62,7 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
     side: number = 0; // THREE.FrontSide
     flatShading: boolean = false;
     wireframe: boolean = false;
-    
+
     // Texture maps
     albedoMapUuidTexture: string = '';
     normalMapUuidTexture: string = '';
@@ -75,7 +76,7 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
     private directionalLight!: DirectionalLight;
 
     @ViewChild('previewCanvas') previewCanvasRef!: ElementRef<HTMLCanvasElement>;
-    
+
     private renderer!: WebGLRenderer;
     private scene!: Scene;
     private camera!: PerspectiveCamera;
@@ -100,28 +101,29 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
         private dialog: MatDialog,
         @NgInject(PLATFORM_ID) platformId: Object,
         private textureManager: TextureManagerAdapter,
-        private materialManager: MaterialManagerAdapter
+        private materialManager: MaterialManagerAdapter,
+        private rendererPool: RendererPoolService
     ) {
         this.isBrowser = isPlatformBrowser(platformId);
-        
+
         if (data.isEdit && data.material) {
             this.materialName = data.name || '';
-            
+
             // Verificar el tipo de material
             if (data.material instanceof MeshStandardMaterial || data.material instanceof THREE.MeshBasicMaterial) {
                 const material = data.material;
                 this.materialType = material instanceof MeshStandardMaterial ? 'MeshStandardMaterial' : 'MeshBasicMaterial';
-                
+
                 console.log('Material recibido:', material);
                 console.log('Texturas disponibles:', Array.from(this.textureManager.textures.entries()));
-                
+
                 // Propiedades básicas
                 this.color = '#' + material.color.getHexString();
                 this.transparent = material.transparent;
                 this.opacity = material.opacity;
                 this.side = material.side;
                 this.wireframe = material.wireframe;
-                
+
                 // Propiedades específicas de MeshStandardMaterial
                 if (material instanceof MeshStandardMaterial) {
                     this.roughness = material.roughness;
@@ -130,16 +132,16 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
                     this.emissiveColor = '#' + material.emissive.getHexString();
                     this.emissiveIntensity = material.emissiveIntensity;
                 }
-                
+
                 // Propiedades avanzadas
                 this.alphaTest = material.alphaTest;
                 this.depthTest = material.depthTest;
                 this.depthWrite = material.depthWrite;
-                
+
                 // Obtener los UUIDs de las texturas del userData
                 const textureUuids = material.userData?.textureUuids || {};
                 console.log('UUIDs de texturas del material:', textureUuids);
-                
+
                 // Asignar los UUIDs a las propiedades correspondientes según el tipo de material
                 if (material instanceof MeshStandardMaterial) {
                     this.albedoMapUuidTexture = textureUuids.map || '';
@@ -150,13 +152,13 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
                 } else if (material instanceof THREE.MeshBasicMaterial) {
                     // Para MeshBasicMaterial solo usamos el mapa de albedo (map)
                     this.albedoMapUuidTexture = textureUuids.map || '';
-                    
+
                     // Limpiar los otros mapas que no se usan en MeshBasicMaterial
                     this.normalMapUuidTexture = '';
                     this.roughnessMapUuidTexture = '';
                     this.metalnessMapUuidTexture = '';
                     this.emissiveMapUuidTexture = '';
-                    
+
                     // Log para debug
                     if (material.map) {
                         console.log('MeshBasicMaterial tiene textura map:', material.map);
@@ -169,9 +171,9 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
 
     ngOnInit(): void {
         if (!this.isBrowser) return;
-        
+
         // No volver a inicializar las texturas aquí, ya se hizo en el constructor
-        
+
         // Añadir estilos globales para el panel del diálogo
         const style = document.createElement('style');
         style.textContent = `
@@ -186,14 +188,14 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
             }
         `;
         document.head.appendChild(style);
-        
+
         // Guardar referencia al elemento de estilo para limpiarlo cuando se destruya el componente
         this.styleElement = style;
     }
 
     ngAfterViewInit(): void {
         if (!this.isBrowser) return;
-        
+
         // Usar requestAnimationFrame para asegurarse de que el DOM está listo
         requestAnimationFrame(() => {
             if (this.previewCanvasRef && this.previewCanvasRef.nativeElement) {
@@ -208,35 +210,57 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
 
     ngOnDestroy(): void {
         if (!this.isBrowser) return;
-        
+
+        // Cancelar animación
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = 0;
         }
-        
-        if (this.renderer) {
-            // Forzar la pérdida de contexto para liberar recursos GPU inmediatamente
-            try {
-                const gl = this.renderer.getContext();
-                const ext = (gl as any).getExtension('WEBGL_lose_context');
-                if (ext) {
-                    ext.loseContext();
+
+        // Limpiar escena y recursos
+        if (this.scene) {
+            this.scene.traverse((object) => {
+                if (object instanceof Mesh) {
+                    if (object.geometry) {
+                        object.geometry.dispose();
+                    }
+                    if (object.material) {
+                        if (Array.isArray(object.material)) {
+                            object.material.forEach(material => {
+                                Object.values(material).forEach(value => {
+                                    if (value instanceof THREE.Texture) {
+                                        value.dispose();
+                                    }
+                                });
+                                material.dispose();
+                            });
+                        } else {
+                            Object.values(object.material).forEach(value => {
+                                if (value instanceof THREE.Texture) {
+                                    value.dispose();
+                                }
+                            });
+                            object.material.dispose();
+                        }
+                    }
                 }
-            } catch (e) {
-                console.warn('Error forcing context loss in material dialog:', e);
+            });
+            this.scene = null!;
+        }
+
+        // Devolver el renderer al pool
+        if (this.renderer) {
+            if (this.renderer.domElement && this.renderer.domElement.parentNode) {
+                this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
             }
-            
-            this.renderer.dispose();
-            this.renderer.forceContextLoss();
-            this.renderer.domElement = null as any;
+            this.rendererPool.releaseRenderer(this.renderer);
+            this.renderer = null!;
         }
-        
-        if (this.previewMaterial) {
-            this.previewMaterial = null as any;
-        }
-        
-        // Eliminar los estilos globales
+
+        // Eliminar estilos globales
         if (this.styleElement) {
             document.head.removeChild(this.styleElement);
+            this.styleElement = null;
         }
     }
 
@@ -248,90 +272,104 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
             console.warn('No se puede inicializar el renderizador: el elemento canvas no está disponible');
             return;
         }
-        
-        const canvas = this.previewCanvasRef.nativeElement;
-        
+
+        const container = this.previewCanvasRef.nativeElement;
+
         try {
-            // Crear el renderizador con opciones optimizadas
-            this.renderer = new WebGLRenderer({ 
-                canvas, 
+            this.renderer = this.rendererPool.acquireRenderer({
                 antialias: true,
                 alpha: true,
-                powerPreference: 'low-power', // Usar modo de baja potencia para mejor rendimiento
-                preserveDrawingBuffer: false // Mejor rendimiento y menos uso de memoria
+                powerPreference: 'high-performance',
+                preserveDrawingBuffer: false,
+                pixelRatio: Math.min(window.devicePixelRatio, 2)
             });
-            this.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-            this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // Limitar el pixel ratio para mejor rendimiento
+
+            const rect = container.getBoundingClientRect();
+            const width = Math.floor(rect.width);
+            const height = Math.floor(rect.height);
             
-            // Establecer el color de fondo según la preferencia
-            if (this.darkBackground) {
-                this.renderer.setClearColor(0x222222);
-            } else {
-                this.renderer.setClearColor(0xeeeeee);
+            this.renderer.setSize(width, height, false);
+            this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(this.renderer.domElement);
+            this.renderer.setClearColor(this.darkBackground ? 0x222222 : 0xeeeeee, 1);
+
+            // Asegurarse de que el canvas del renderer tenga el tamaño correcto
+            this.renderer.domElement.style.width = '100%';
+            this.renderer.domElement.style.height = '100%';
+
+            if (!this.scene) {
+                this.scene = new Scene();
+                this.camera = new PerspectiveCamera(45, width / height, 0.1, 100);
+                this.camera.position.set(0, 0, 3);
+                this.camera.lookAt(0, 0, 0);
+
+                const ambientLight = new AmbientLight(0x404040, 0.5);
+                this.scene.add(ambientLight);
+
+                this.directionalLight = new DirectionalLight(0xffffff, this.lightIntensity);
+                this.directionalLight.position.set(1, 1, 1);
+                this.scene.add(this.directionalLight);
+
+                this.previewMaterial = this.materialType === 'MeshStandardMaterial'
+                    ? new MeshStandardMaterial()
+                    : new THREE.MeshBasicMaterial();
+
+                const geometry = new SphereGeometry(1, 32, 32);
+                this.previewMesh = new Mesh(geometry, this.previewMaterial);
+                this.scene.add(this.previewMesh);
             }
-            
-            // Crear la escena
-            this.scene = new Scene();
-            
-            // Crear la cámara
-            this.camera = new PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
-            this.camera.position.set(0, 0, 3);
-            
-            // Añadir luces
-            const ambientLight = new AmbientLight(0x404040);
-            this.scene.add(ambientLight);
-            
-            this.directionalLight = new DirectionalLight(0xffffff, this.lightIntensity);
-            this.directionalLight.position.set(1, 1, 1);
-            this.scene.add(this.directionalLight);
-            
-            // Crear el material de vista previa según el tipo
-            this.previewMaterial = this.materialType === 'MeshStandardMaterial' 
-                ? new MeshStandardMaterial()
-                : new THREE.MeshBasicMaterial();
-            
-            // Crear la geometría de la esfera
-            const geometry = new SphereGeometry(1, 32, 32);
-            
-            // Crear el mesh
-            this.previewMesh = new Mesh(geometry, this.previewMaterial);
-            this.scene.add(this.previewMesh);
-            
-            // Añadir listener para pérdida de contexto
-            canvas.addEventListener('webglcontextlost', (event) => {
-                console.warn('WebGL context lost in material dialog');
-                event.preventDefault();
+
+            this.updatePreviewMaterial();
+            this.renderer.render(this.scene, this.camera);
+
+            if (!this.animationFrameId) {
+                this.animate();
+            }
+
+            const resizeObserver = new ResizeObserver(() => {
+                if (!this.renderer || !this.camera) return;
                 
-                // Cancelar la animación si está en curso
-                if (this.animationFrameId) {
-                    cancelAnimationFrame(this.animationFrameId);
-                    this.animationFrameId = 0;
-                }
-            }, false);
+                const rect = container.getBoundingClientRect();
+                const width = Math.floor(rect.width);
+                const height = Math.floor(rect.height);
+                
+                this.camera.aspect = width / height;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(width, height, false);
+            });
             
-            canvas.addEventListener('webglcontextrestored', () => {
-                console.log('WebGL context restored in material dialog');
-                // Reiniciar la animación cuando se restaure el contexto
-                if (!this.animationFrameId) {
-                    this.animate();
-                }
-            }, false);
-            
-            // Iniciar la animación
-            this.animate();
+            resizeObserver.observe(container);
+            this.dialogRef.beforeClosed().subscribe(() => resizeObserver.disconnect());
+
         } catch (error) {
-            console.error('Error initializing preview renderer:', error);
-            // Mostrar un mensaje de error en el canvas
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-                ctx.fillStyle = '#333333';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#ff5555';
-                ctx.font = '14px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('Error initializing 3D preview', canvas.width / 2, canvas.height / 2);
-            }
+            console.error('Error al inicializar el renderer:', error);
+            this.handleRenderError(container, error);
         }
+    }
+
+    private handleRenderError(container: HTMLElement, error: any): void {
+        // Limpiar recursos existentes
+        if (this.renderer) {
+            this.rendererPool.releaseRenderer(this.renderer);
+            this.renderer = null!;
+        }
+
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = 0;
+        }
+
+        // Mostrar mensaje de error en el DOM
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'render-error';
+        errorDiv.innerHTML = `
+            <div class="error-message">
+                <mat-icon>error</mat-icon>
+                <span>Error en la previsualización 3D</span>
+                <small>${error.message || 'Error desconocido'}</small>
+            </div>
+        `;
+        container.appendChild(errorDiv);
     }
 
     /**
@@ -342,7 +380,7 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
             console.warn('No se puede actualizar el material de vista previa: el material no está disponible');
             return;
         }
-        
+
         // Actualizar propiedades básicas comunes
         this.previewMaterial.color = new Color(this.color);
         this.previewMaterial.transparent = this.transparent;
@@ -352,19 +390,19 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
         this.previewMaterial.alphaTest = this.alphaTest;
         this.previewMaterial.depthTest = this.depthTest;
         this.previewMaterial.depthWrite = this.depthWrite;
-        
+
         // Actualizar propiedades específicas según el tipo de material
         if (this.previewMaterial instanceof MeshStandardMaterial) {
             this.previewMaterial.roughness = this.roughness;
             this.previewMaterial.metalness = this.metalness;
             this.previewMaterial.flatShading = this.flatShading;
-        this.previewMaterial.emissive = new Color(this.emissiveColor);
-        this.previewMaterial.emissiveIntensity = this.emissiveIntensity;
+            this.previewMaterial.emissive = new Color(this.emissiveColor);
+            this.previewMaterial.emissiveIntensity = this.emissiveIntensity;
         }
-        
+
         // Actualizar mapas de textura
         this.updateTextureMaps();
-        
+
         // Marcar el material como necesitado de actualización
         this.previewMaterial.needsUpdate = true;
     }
@@ -377,7 +415,7 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
             console.warn('No se pueden actualizar los mapas de textura: el material no está disponible');
             return;
         }
-        
+
         // Limpiar mapas existentes según el tipo de material
         if (this.previewMaterial instanceof MeshStandardMaterial) {
             this.previewMaterial.map = null;
@@ -392,15 +430,15 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
             this.previewMaterial.lightMap = null;
             this.previewMaterial.specularMap = null;
         }
-        
+
         // Obtener las texturas del TextureManager usando los UUIDs
         const applyTexture = (uuid: string, textureType: string) => {
             if (!uuid) return;
-            
+
             const textureInfo = this.textureManager.textures.get(uuid);
             if (textureInfo && textureInfo.resource) {
                 console.log(`Aplicando textura ${textureType}: ${uuid}`);
-                
+
                 if (this.previewMaterial instanceof MeshStandardMaterial) {
                     switch (textureType) {
                         case 'albedo': this.previewMaterial.map = textureInfo.resource; break;
@@ -420,7 +458,7 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
                 }
             }
         };
-        
+
         // Aplicar todas las texturas
         applyTexture(this.albedoMapUuidTexture, 'albedo');
         applyTexture(this.normalMapUuidTexture, 'normal');
@@ -436,27 +474,24 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
      * Anima la vista previa del material
      */
     private animate(): void {
-        // Si el renderizador no está disponible, no hacer nada
         if (!this.renderer || !this.scene || !this.camera || !this.previewMesh) {
             console.warn('No se puede animar: faltan elementos necesarios');
             return;
         }
-        
-        this.animationFrameId = requestAnimationFrame(() => this.animate());
-        
-        // Rotar la esfera para ver el material desde diferentes ángulos
-        this.previewMesh.rotation.x += 0.005;
-        this.previewMesh.rotation.y += 0.01;
-        
+
         try {
+            // Rotar el mesh
+            this.previewMesh.rotation.x += 0.005;
+            this.previewMesh.rotation.y += 0.01;
+
+            // Renderizar la escena
             this.renderer.render(this.scene, this.camera);
+
+            // Solicitar el siguiente frame solo si el componente sigue activo
+            this.animationFrameId = requestAnimationFrame(() => this.animate());
         } catch (error) {
-            console.error('Error rendering material preview:', error);
-            // Cancelar la animación si hay un error
-            if (this.animationFrameId) {
-                cancelAnimationFrame(this.animationFrameId);
-                this.animationFrameId = 0;
-            }
+            console.error('Error en el bucle de animación:', error);
+            this.handleRenderError(this.previewCanvasRef.nativeElement, error);
         }
     }
 
@@ -470,13 +505,13 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
             console.warn('No se puede obtener la URL de vista previa: UUID vacío');
             return null;
         }
-        
+
         // Primero intentar obtener la previsualización directamente por UUID
         const preview = this.textureManager.getTexturePreview(uuid);
         if (preview) {
             return preview;
         }
-        
+
         // Si no hay previsualización guardada, intentar obtenerla de la textura
         const textureInfo = this.textureManager.textures.get(uuid);
         if (textureInfo && textureInfo.resource) {
@@ -487,7 +522,7 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
                 return previewUrl;
             }
         }
-        
+
         console.error(`No se pudo encontrar la previsualización para la textura: ${uuid}`);
         return null;
     }
@@ -514,7 +549,7 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
                 this.emissiveMapUuidTexture = '';
                 break;
         }
-        
+
         // Actualizar la vista previa del material
         this.updatePreviewMaterial();
     }
@@ -534,7 +569,7 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
         dialogRef.afterClosed().subscribe(result => {
             if (result) {
                 console.log(`Textura seleccionada UUID: ${result}`);
-                
+
                 // Actualizar el campo correspondiente según el tipo
                 switch (type) {
                     case 'albedo':
@@ -553,7 +588,7 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
                         this.emissiveMapUuidTexture = result;
                         break;
                 }
-                
+
                 // Actualizar la vista previa del material
                 this.updatePreviewMaterial();
             }
@@ -574,7 +609,7 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
     onConfirm(): void {
         console.log('Confirmando diálogo de material');
         console.log('Datos originales:', this.data);
-        
+
         // Crear un objeto con las propiedades del material
         const materialProperties: any = {
             name: this.materialName,
@@ -592,14 +627,14 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
             emissiveColor: this.emissiveColor,
             emissiveIntensity: this.emissiveIntensity
         };
-        
+
         // Añadir mapas de textura si están definidos
         if (this.albedoMapUuidTexture) materialProperties.map = this.albedoMapUuidTexture;
         if (this.normalMapUuidTexture) materialProperties.normalMap = this.normalMapUuidTexture;
         if (this.roughnessMapUuidTexture) materialProperties.roughnessMap = this.roughnessMapUuidTexture;
         if (this.metalnessMapUuidTexture) materialProperties.metalnessMap = this.metalnessMapUuidTexture;
         if (this.emissiveMapUuidTexture) materialProperties.emissiveMap = this.emissiveMapUuidTexture;
-        
+
         // Crear el resultado
         const result = {
             isEdit: this.data.isEdit,
@@ -608,9 +643,9 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
             uuid: this.data.uuid,
             data: this.data
         };
-        
+
         console.log('Resultado del diálogo:', result);
-        
+
         // Devolver el resultado
         this.dialogRef.close(result);
     }
@@ -621,10 +656,10 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
      */
     changePreviewShape(shape: string): void {
         if (!this.scene || !this.previewMesh) return;
-        
+
         // Eliminar el mesh actual de la escena
         this.scene.remove(this.previewMesh);
-        
+
         // Crear la nueva geometría según la forma seleccionada
         let geometry;
         switch (shape) {
@@ -641,13 +676,13 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
                 geometry = new SphereGeometry(1, 32, 32);
                 break;
         }
-        
+
         // Crear el nuevo mesh con la geometría seleccionada y el material actual
         this.previewMesh = new Mesh(geometry, this.previewMaterial);
-        
+
         // Añadir el nuevo mesh a la escena
         this.scene.add(this.previewMesh);
-        
+
         // Actualizar la variable de estado
         this.previewShape = shape;
     }
@@ -667,7 +702,7 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
      */
     toggleBackground(isDark: boolean): void {
         this.darkBackground = isDark;
-        
+
         if (this.renderer) {
             if (isDark) {
                 this.renderer.setClearColor(0x222222);

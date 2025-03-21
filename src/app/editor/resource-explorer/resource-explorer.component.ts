@@ -15,6 +15,8 @@ import { ContextMenuService } from '../context-menu/context-menu.service';
 import { EditorEventsService } from '../editor-events.service';
 import { ListViewComponent } from './components/list-view/list-view.component';
 import { IconViewComponent } from './components/icon-view/icon-view.component';
+import { MatDialog } from '@angular/material/dialog';
+import { ModelInspectorDialogComponent } from '../model-inspector/model-inspector-dialog.component';
 
 export type ViewMode = 'list' | 'icons';
 export type ResourceType = 'material' | 'texture' | 'model';
@@ -75,6 +77,7 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
     private changeDetectorRef: ChangeDetectorRef,
     private contextMenuService: ContextMenuService,
     private editorEventsService: EditorEventsService,
+    private dialog: MatDialog,
     @Inject(PLATFORM_ID) platformId: Object
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
@@ -103,6 +106,7 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
       ),
       this.editorEventsService.onResourceAction.subscribe(action => {
         switch (action.action) {
+          case 'inspect': this.onInspectModel(action.resource); break;
           case 'edit': this.onEditResource(action.resource); break;
           case 'rename': this.onRename(action.resource); break;
           case 'delete': this.onDelete(action.resource); break;
@@ -308,6 +312,12 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
     
     if (event.button === 2) {
       this.contextMenuService.showContextMenu(event, 'resource', item);
+    } else if (event.detail === 2) { // Double click
+      if (item.type === 'model') {
+        this.editorEventsService.onResourceAction.next({ action: 'inspect', resource: item });
+      } else if (item.type === 'material' || item.type === 'texture') {
+        this.onEditResource(item);
+      }
     }
   }
 
@@ -446,5 +456,23 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
           break;
       }
     }
+  }
+
+  onInspectModel(item: ResourceItem) {
+    if (item.type !== 'model') return;
+
+    const dialogRef = this.dialog.open(ModelInspectorDialogComponent, {
+      data: { resource: item },
+      panelClass: 'model-inspector-dialog-container',
+      maxWidth: '100vw',
+      maxHeight: '100vh'
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        // Handle model updates if needed
+        this.modelCache.updateModel(item.id, result);
+      }
+    });
   }
 } 

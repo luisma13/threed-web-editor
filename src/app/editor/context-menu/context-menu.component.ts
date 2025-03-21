@@ -122,6 +122,7 @@ export class ContextMenuComponent {
 
     // Menú para recursos
     private resourceMenuItems: MenuItem[] = [
+        { label: 'Inspect', action: 'resource:inspect', icon: 'visibility', disabled: false },
         { label: 'Edit', action: 'resource:edit', icon: 'edit' },
         { label: 'Rename', action: 'resource:rename', icon: 'drive_file_rename_outline' },
         { label: 'Delete', action: 'resource:delete', icon: 'delete' }
@@ -380,6 +381,11 @@ export class ContextMenuComponent {
             case 'resource':
                 const resource = this.contextObject;
                 switch (type) {
+                    case 'inspect':
+                        if (resource.type === 'model') {
+                            this.editorEventsService.onResourceAction.next({ action: 'inspect', resource });
+                        }
+                        break;
                     case 'edit':
                         this.editorEventsService.onResourceAction.next({ action: 'edit', resource });
                         break;

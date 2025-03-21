@@ -1,0 +1,98 @@
+.model-inspector-dialog {
+    width: 800px;
+    height: 600px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    border-bottom: 1px solid rgba(0,0,0,0.12);
+    flex-shrink: 0;
+}
+
+mat-dialog-content {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.inspector-content {
+    display: flex;
+    flex: 1;
+    gap: 16px;
+    padding: 16px;
+    min-height: 0;
+    height: 100%;
+}
+
+.model-viewer {
+    flex: 1;
+    min-width: 0;
+    background: #2a2a2a;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+}
+
+::ng-deep .model-viewer canvas {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    outline: none !important;
+}
+
+.properties-panel {
+    width: 300px;
+    overflow: auto;
+    flex-shrink: 0;
+}
+
+.tab-content {
+    padding: 16px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding: 8px;
+    background: rgba(0,0,0,0.04);
+    border-radius: 4px;
+}
+
+.label {
+    color: rgba(0,0,0,0.6);
+}
+
+.material-item, 
+.animation-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    margin-bottom: 8px;
+    background: rgba(0,0,0,0.04);
+    border-radius: 4px;
+}
+
+mat-form-field {
+    width: 100%;
+    margin-bottom: 16px;
+}
+
+mat-dialog-actions {
+    flex-shrink: 0;
+    padding: 16px;
+    margin: 0;
+} 

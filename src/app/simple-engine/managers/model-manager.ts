@@ -6,15 +6,7 @@ import {
     Texture,
     MeshStandardMaterial,
     LoadingManager,
-    AnimationClip,
-    WebGLRenderer,
-    Scene,
-    PerspectiveCamera,
-    AmbientLight,
-    DirectionalLight,
-    Box3,
-    Vector3,
-    Color
+    AnimationClip
 } from 'three';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -26,6 +18,7 @@ import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 import { MaterialManager } from './material-manager';
 import { TextureManager } from './texture-manager';
 import { SimpleEventEmitter } from '../utils/event-emitter';
+import { PreviewRenderer } from '../services/preview-renderer';
 
 /**
  * Interface for cached model information
@@ -71,9 +64,6 @@ export interface ModelPreview {
     timestamp: number;
 }
 
-/**
- * ModelManager class for managing 3D models in the simple engine
- */
 export class ModelManager {
     private static instance: ModelManager;
     private _cachedModels = new Map<string, CachedModelInfo>();
@@ -88,10 +78,12 @@ export class ModelManager {
     // References to other managers
     private materialManager: MaterialManager;
     private textureManager: TextureManager;
+    private previewRenderer: PreviewRenderer;
 
     private constructor() {
         this.materialManager = MaterialManager.getInstance();
         this.textureManager = TextureManager.getInstance();
+        this.previewRenderer = PreviewRenderer.getInstance();
         this.initLoaders();
     }
 
@@ -493,68 +485,7 @@ export class ModelManager {
      * Create a preview for a model
      */
     private createModelPreview(model: Object3D): string {
-        const size = 128;
-        const canvas = document.createElement('canvas');
-        canvas.width = size;
-        canvas.height = size;
-
-        const renderer = new WebGLRenderer({
-            canvas: canvas,
-            alpha: true,
-            antialias: true
-        });
-
-        const scene = new Scene();
-        scene.background = null; // Transparent background
-
-        const camera = new PerspectiveCamera(35, 1, 0.1, 1000);
-
-        // Add lights
-        const ambientLight = new AmbientLight(0xffffff, 0.7);
-        scene.add(ambientLight);
-
-        const directionalLight = new DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(2, 1, 1);
-        scene.add(directionalLight);
-
-        // Add model to scene
-        const previewModel = model.clone();
-        scene.add(previewModel);
-
-        // Calculate bounding box and adjust camera
-        const box = new Box3().setFromObject(previewModel);
-        const center = box.getCenter(new Vector3());
-        const size3D = box.getSize(new Vector3());
-        const maxDim = Math.max(size3D.x, size3D.y, size3D.z);
-        
-        // Adjust camera position for a side view
-        const distance = maxDim * 1.5; // Acercar la cámara
-        camera.position.set(
-            distance * 1.2,  // Más hacia el lateral
-            distance * 0.3,  // Más bajo
-            distance * 0.8   // Menos profundidad
-        );
-        camera.lookAt(center);
-
-        // Rotate model for better side view
-        previewModel.rotation.y = Math.PI / 6; // 30 grados, mejor para ver el lateral y algo del frente
-
-        // Render
-        renderer.setSize(size, size);
-        renderer.render(scene, camera);
-
-        // Get data URL
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-
-        // Clean up
-        renderer.dispose();
-        previewModel.traverse((obj) => {
-            if (obj instanceof Mesh) {
-                obj.geometry.dispose();
-            }
-        });
-
-        return dataUrl;
+        return this.previewRenderer.createModelPreview(model);
     }
 
     /**

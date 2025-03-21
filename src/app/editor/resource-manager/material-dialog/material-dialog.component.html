@@ -3,58 +3,58 @@
     <mat-dialog-content>
         <div class="dialog-content">
             <div class="preview-section">
-                <div class="preview-container">
-                    <canvas #previewCanvas class="preview-canvas"></canvas>
+                <div class="preview-container" #previewCanvas>
+                    <!-- El renderer añadirá su propio canvas aquí -->
+                </div>
                     
-                    <div class="preview-controls">
-                        <div class="shape-selector">
-                            <button mat-icon-button 
-                                    [class.active]="previewShape === 'sphere'" 
-                                    (click)="changePreviewShape('sphere')"
-                                    [matTooltip]="'Show sphere preview'"
-                                    matTooltipPosition="right"
-                                    [matTooltipShowDelay]="300">
-                                <mat-icon>radio_button_unchecked</mat-icon>
-                            </button>
-                            <button mat-icon-button 
-                                    [class.active]="previewShape === 'cube'" 
-                                    (click)="changePreviewShape('cube')"
-                                    [matTooltip]="'Show cube preview'"
-                                    matTooltipPosition="right"
-                                    [matTooltipShowDelay]="300">
-                                <mat-icon>crop_square</mat-icon>
-                            </button>
-                            <button mat-icon-button 
-                                    [class.active]="previewShape === 'torus'" 
-                                    (click)="changePreviewShape('torus')"
-                                    [matTooltip]="'Show torus preview'"
-                                    matTooltipPosition="right"
-                                    [matTooltipShowDelay]="300">
-                                <mat-icon>trip_origin</mat-icon>
-                            </button>
-                        </div>
-                        
-                        <div class="light-controls">
-                            <mat-slider min="0" max="2" step="0.1" [discrete]="false">
-                                <input matSliderThumb [(ngModel)]="lightIntensity" (ngModelChange)="updateLighting()">
-                            </mat-slider>
-                            <button mat-icon-button 
-                                    [class.active]="darkBackground" 
-                                    (click)="toggleBackground(true)"
-                                    [matTooltip]="'Dark background'"
-                                    matTooltipPosition="right"
-                                    [matTooltipShowDelay]="300">
-                                <mat-icon>brightness_3</mat-icon>
-                            </button>
-                            <button mat-icon-button 
-                                    [class.active]="!darkBackground" 
-                                    (click)="toggleBackground(false)"
-                                    [matTooltip]="'Light background'"
-                                    matTooltipPosition="right"
-                                    [matTooltipShowDelay]="300">
-                                <mat-icon>wb_sunny</mat-icon>
-                            </button>
-                        </div>
+                <div class="preview-controls">
+                    <div class="shape-selector">
+                        <button mat-icon-button 
+                                [class.active]="previewShape === 'sphere'" 
+                                (click)="changePreviewShape('sphere')"
+                                [matTooltip]="'Show sphere preview'"
+                                matTooltipPosition="right"
+                                [matTooltipShowDelay]="300">
+                            <mat-icon>radio_button_unchecked</mat-icon>
+                        </button>
+                        <button mat-icon-button 
+                                [class.active]="previewShape === 'cube'" 
+                                (click)="changePreviewShape('cube')"
+                                [matTooltip]="'Show cube preview'"
+                                matTooltipPosition="right"
+                                [matTooltipShowDelay]="300">
+                            <mat-icon>crop_square</mat-icon>
+                        </button>
+                        <button mat-icon-button 
+                                [class.active]="previewShape === 'torus'" 
+                                (click)="changePreviewShape('torus')"
+                                [matTooltip]="'Show torus preview'"
+                                matTooltipPosition="right"
+                                [matTooltipShowDelay]="300">
+                            <mat-icon>trip_origin</mat-icon>
+                        </button>
+                    </div>
+                    
+                    <div class="light-controls">
+                        <mat-slider min="0" max="2" step="0.1" [discrete]="false">
+                            <input matSliderThumb [(ngModel)]="lightIntensity" (ngModelChange)="updateLighting()">
+                        </mat-slider>
+                        <button mat-icon-button 
+                                [class.active]="darkBackground" 
+                                (click)="toggleBackground(true)"
+                                [matTooltip]="'Dark background'"
+                                matTooltipPosition="right"
+                                [matTooltipShowDelay]="300">
+                            <mat-icon>brightness_3</mat-icon>
+                        </button>
+                        <button mat-icon-button 
+                                [class.active]="!darkBackground" 
+                                (click)="toggleBackground(false)"
+                                [matTooltip]="'Light background'"
+                                matTooltipPosition="right"
+                                [matTooltipShowDelay]="300">
+                            <mat-icon>wb_sunny</mat-icon>
+                        </button>
                     </div>
                 </div>
             </div>
