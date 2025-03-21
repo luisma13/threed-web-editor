@@ -304,7 +304,7 @@ export class MaterialManager {
         if (properties.emissiveMap) material.userData.textureUuids.emissiveMap = properties.emissiveMap;
 
         // Add the material to the manager
-        return material;
+                return material;
     }
 
     /**

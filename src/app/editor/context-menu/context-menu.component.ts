@@ -10,6 +10,7 @@ import { GameObject } from '../../simple-engine/core/gameobject';
 import { SphereComponent } from '../../simple-engine/components/geometry/sphere.component';
 import { PlaneComponent } from '../../simple-engine/components/geometry/plane.component';
 import { CylinderComponent } from '../../simple-engine/components/geometry/cylinder.component';
+import { EditorEventsService } from '../editor-events.service';
 
 export interface MenuItem {
   label?: string;
@@ -20,7 +21,7 @@ export interface MenuItem {
   type?: 'normal' | 'separator';
 }
 
-export type ContextType = 'scene' | 'gameObject' | 'component' | null;
+export type ContextType = 'scene' | 'gameObject' | 'component' | 'resource' | null;
 
 @Component({
     standalone: true,
@@ -119,10 +120,18 @@ export class ContextMenuComponent {
         { label: 'Paste Values', action: 'component:paste', icon: 'paste', disabled: true }
     ];
 
+    // Menú para recursos
+    private resourceMenuItems: MenuItem[] = [
+        { label: 'Edit', action: 'resource:edit', icon: 'edit' },
+        { label: 'Rename', action: 'resource:rename', icon: 'drive_file_rename_outline' },
+        { label: 'Delete', action: 'resource:delete', icon: 'delete' }
+    ];
+
     constructor(
         private editorService: EditorService,
         private changeDetectorRef: ChangeDetectorRef,
-        private dialog: MatDialog
+        private dialog: MatDialog,
+        private editorEventsService: EditorEventsService
     ) {}
 
     ngOnInit() {        
@@ -165,11 +174,9 @@ export class ContextMenuComponent {
         const windowWidth = window.innerWidth;
         const windowHeight = window.innerHeight;
         
-        // Obtener las coordenadas del evento
         let x = event.clientX;
         let y = event.clientY;
         
-        // Asegurarse de que el menú no se salga de la ventana
         if (x + 180 > windowWidth) {
             x = windowWidth - 180;
         }
@@ -193,18 +200,21 @@ export class ContextMenuComponent {
                 break;
             case 'component':
                 this.currentMenuItems = [...this.componentMenuItems];
-                // Actualizar el estado del botón de pegar según si hay un componente copiado
                 this.updateMenuItemState('component:paste', !this.editorService.hasCopiedComponent());
+                break;
+            case 'resource':
+                // Para recursos, ocultar la opción de editar si es un modelo
+                const isModel = contextObject?.type === 'model';
+                this.currentMenuItems = [...this.resourceMenuItems].filter(item => 
+                    !(isModel && item.action === 'resource:edit')
+                );
                 break;
             default:
                 this.currentMenuItems = [...this.viewerMenuItems];
         }
         
-        // Forzar la visibilidad del menú
         setTimeout(() => {
             this.isVisible = true;
-            
-            // Forzar la detección de cambios
             this.changeDetectorRef.detectChanges();
         }, 0);
     }
@@ -365,6 +375,27 @@ export class ContextMenuComponent {
                         break;
                     default:
                         console.warn(`Unhandled load type: ${type}`);
+                }
+                break;
+            case 'resource':
+                const resource = this.contextObject;
+                switch (type) {
+                    case 'edit':
+                        this.editorEventsService.onResourceAction.next({ action: 'edit', resource });
+                        break;
+                    case 'rename':
+                        const newName = prompt('Enter new name:', resource.name);
+                        if (newName) {
+                            this.editorEventsService.onResourceAction.next({ action: 'rename', resource, data: newName });
+                        }
+                        break;
+                    case 'delete':
+                        if (confirm(`Are you sure you want to delete ${resource.name}?`)) {
+                            this.editorEventsService.onResourceAction.next({ action: 'delete', resource });
+                        }
+                        break;
+                    default:
+                        console.warn(`Unhandled resource action: ${type}`);
                 }
                 break;
             default:

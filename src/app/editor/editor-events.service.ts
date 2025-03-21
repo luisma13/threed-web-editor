@@ -2,6 +2,12 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { GameObject } from '../simple-engine/core/gameobject';
 
+export interface ResourceAction {
+  action: 'edit' | 'rename' | 'delete';
+  resource: any;
+  data?: any;
+}
+
 /**
  * Service to handle events between EditorService and HistoryService
  * This service breaks the circular dependency between them
@@ -21,6 +27,9 @@ export class EditorEventsService {
   // Scene change events
   private sceneChangeSubject = new Subject<void>();
   sceneChange$ = this.sceneChangeSubject.asObservable();
+
+  // Resource action events
+  onResourceAction = new Subject<ResourceAction>();
   
   constructor() { }
   

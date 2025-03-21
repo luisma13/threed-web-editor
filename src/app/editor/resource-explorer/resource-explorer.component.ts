@@ -11,19 +11,24 @@ import { ResourceDialogService } from '../resource-manager/resource-dialog.servi
 import { BehaviorSubject, Subscription } from 'rxjs';
 import { Material, Texture } from 'three';
 import { CachedModelInfo } from '../../simple-engine/managers/model-manager';
+import { ContextMenuService } from '../context-menu/context-menu.service';
+import { EditorEventsService } from '../editor-events.service';
+import { ListViewComponent } from './components/list-view/list-view.component';
+import { IconViewComponent } from './components/icon-view/icon-view.component';
 
-type ViewMode = 'list' | 'icons';
+export type ViewMode = 'list' | 'icons';
+export type ResourceType = 'material' | 'texture' | 'model';
 
-interface ResourceItem {
+export interface ResourceItem {
   id: string;
   name: string;
-  type: 'material' | 'texture' | 'model';
+  type: ResourceType;
   preview?: string;
   resource: Material | Texture | CachedModelInfo;
   path: string;
 }
 
-class ResourceFolder {
+export class ResourceFolder {
   constructor(
     public name: string,
     public path: string,
@@ -41,7 +46,9 @@ class ResourceFolder {
     MatIconModule,
     MatButtonModule,
     MatMenuModule,
-    MatTooltipModule
+    MatTooltipModule,
+    ListViewComponent,
+    IconViewComponent
   ],
   templateUrl: './resource-explorer.component.html',
   styleUrls: ['./resource-explorer.component.scss']
@@ -55,7 +62,7 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
   selectedItem: ResourceItem | null = null;
   selectedFolder: ResourceFolder | null = null;
   viewMode: ViewMode = 'list';
-
+  
   rootFolders: ResourceFolder[] = [
     new ResourceFolder('Root', '/')
   ];
@@ -66,6 +73,8 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
     private modelCache: ModelCacheAdapter,
     private resourceDialogService: ResourceDialogService,
     private changeDetectorRef: ChangeDetectorRef,
+    private contextMenuService: ContextMenuService,
+    private editorEventsService: EditorEventsService,
     @Inject(PLATFORM_ID) platformId: Object
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
@@ -73,23 +82,7 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     if (!this.isBrowser) return;
-
-    // Subscribe to resource changes
-    this.subscriptions.push(
-      this.materialManager.materialsObservable.subscribe(materials => {
-        this.updateResources('material', materials);
-      }),
-
-      this.textureManager.texturesObservable.subscribe(textures => {
-        this.updateResources('texture', textures);
-      }),
-
-      this.modelCache.modelsObservable.subscribe(models => {
-        this.updateResources('model', models);
-      })
-    );
-
-    // Initialize structure
+    this.initializeSubscriptions();
     this.resourceStructure.next(this.rootFolders);
   }
 
@@ -97,158 +90,180 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
     this.subscriptions.forEach(sub => sub.unsubscribe());
   }
 
-  private findItemById(id: string): ResourceItem | null {
-    const findInFolder = (folders: ResourceFolder[]): ResourceItem | null => {
-      for (const folder of folders) {
-        const item = folder.items.find(i => i.id === id);
-        if (item) return item;
-        const found = findInFolder(folder.subfolders);
-        if (found) return found;
-      }
-      return null;
-    };
-    return findInFolder(this.rootFolders);
+  private initializeSubscriptions(): void {
+    this.subscriptions.push(
+      this.materialManager.materialsObservable.subscribe(materials => 
+        this.updateResources('material', materials)
+      ),
+      this.textureManager.texturesObservable.subscribe(textures => 
+        this.updateResources('texture', textures)
+      ),
+      this.modelCache.modelsObservable.subscribe(models => 
+        this.updateResources('model', models)
+      ),
+      this.editorEventsService.onResourceAction.subscribe(action => {
+        switch (action.action) {
+          case 'edit': this.onEditResource(action.resource); break;
+          case 'rename': this.onRename(action.resource); break;
+          case 'delete': this.onDelete(action.resource); break;
+        }
+      })
+    );
   }
 
-  private updateResources(type: 'material' | 'texture' | 'model', resources: Map<string, any>) {
+  private getResourcePreview(type: ResourceType, id: string): string | undefined {
+    switch (type) {
+      case 'material': return this.materialManager.getMaterialPreview(id);
+      case 'texture': return this.textureManager.getTexturePreview(id);
+      case 'model': return this.modelCache.getModelPreview(id);
+      default: return undefined;
+    }
+  }
+
+  private createResourceItem(id: string, info: any, type: ResourceType): ResourceItem {
+    return {
+      id,
+      name: info.name,
+      type,
+      preview: this.getResourcePreview(type, id),
+      resource: info.resource || info,
+      path: `/${info.name}`
+    };
+  }
+
+  private updateModelResources(modelItem: ResourceItem, rootFolder: ResourceFolder): void {
+    const modelInfo = modelItem.resource as CachedModelInfo;
+    let modelFolder = this.findFolder(`/${modelItem.name}`);
+    
+    if (!modelFolder) {
+      modelFolder = new ResourceFolder(modelItem.name, `/${modelItem.name}`);
+      rootFolder.subfolders.push(modelFolder);
+    }
+
+    modelFolder.items = [];
+    modelFolder.items.push({
+      ...modelItem,
+      path: `/${modelItem.name}/${modelItem.name}`
+    });
+
+    this.updateModelTextures(modelInfo, modelFolder, rootFolder);
+    this.updateModelMaterials(modelInfo, modelFolder, rootFolder);
+    modelFolder.isExpanded = true;
+  }
+
+  private updateModelTextures(modelInfo: CachedModelInfo, modelFolder: ResourceFolder, rootFolder: ResourceFolder): void {
+    if (!modelInfo.textures) return;
+
+    const addedTextures = new Set<string>();
+    modelInfo.textures.forEach(textureId => {
+      if (addedTextures.has(textureId)) return;
+      
+      const textureInfo = this.textureManager.textures.get(textureId);
+      if (textureInfo) {
+        rootFolder.items = rootFolder.items.filter(item => item.id !== textureId);
+        
+        if (!modelFolder.items.some(item => item.id === textureId)) {
+          modelFolder.items.push({
+            id: textureId,
+            name: textureInfo.name,
+            type: 'texture',
+            preview: this.textureManager.getTexturePreview(textureId),
+            resource: textureInfo.resource,
+            path: `/${modelFolder.name}/${textureInfo.name}`
+          });
+        }
+        
+        addedTextures.add(textureId);
+      }
+    });
+  }
+
+  private updateModelMaterials(modelInfo: CachedModelInfo, modelFolder: ResourceFolder, rootFolder: ResourceFolder): void {
+    if (!modelInfo.materials) return;
+
+    modelInfo.materials.forEach(materialId => {
+      const materialInfo = this.materialManager.materials.get(materialId);
+      if (materialInfo) {
+        rootFolder.items = rootFolder.items.filter(item => item.id !== materialId);
+        modelFolder.items.push({
+          id: materialId,
+          name: materialInfo.name,
+          type: 'material',
+          preview: this.materialManager.getMaterialPreview(materialId),
+          resource: materialInfo.resource,
+          path: `/${modelFolder.name}/${materialInfo.name}`
+        });
+      }
+    });
+  }
+
+  private updateStandaloneResources(items: ResourceItem[], rootFolder: ResourceFolder): void {
+    items.forEach(item => {
+      if (!this.isItemInModelFolders(item.id)) {
+        const existingItem = this.findItemById(item.id);
+        if (existingItem) {
+          this.updateExistingItem(existingItem, item);
+        } else {
+          rootFolder.items.push(item);
+        }
+      } else {
+        this.updateItemInModelFolders(item);
+      }
+    });
+  }
+
+  private updateExistingItem(existingItem: ResourceItem, newItem: ResourceItem): void {
+    existingItem.preview = newItem.preview;
+    existingItem.name = newItem.name;
+    existingItem.resource = newItem.resource;
+  }
+
+  private updateItemInModelFolders(item: ResourceItem): void {
+    this.rootFolders.forEach(folder => {
+      folder.subfolders.forEach(modelFolder => {
+        const existingItem = modelFolder.items.find(i => i.id === item.id);
+        if (existingItem) {
+          this.updateExistingItem(existingItem, item);
+        }
+      });
+    });
+  }
+
+  private updateResources(type: ResourceType, resources: Map<string, any>): void {
     const rootFolder = this.findFolder('/');
     if (!rootFolder) return;
 
-    const items = Array.from(resources.entries()).map(([id, info]) => {
-      let preview: string | undefined;
-
-      if (type === 'material') {
-        preview = this.materialManager.getMaterialPreview(id);
-      } else if (type === 'texture') {
-        preview = this.textureManager.getTexturePreview(id);
-      } else if (type === 'model') {
-        preview = this.modelCache.getModelPreview(id);
-      }
-
-      return {
-        id,
-        name: info.name,
-        type,
-        preview,
-        resource: info.resource || info,
-        path: `/${info.name}`
-      };
-    });
+    const items = Array.from(resources.entries())
+      .map(([id, info]) => this.createResourceItem(id, info, type));
 
     if (type === 'model') {
-      // Para cada modelo, crear una carpeta y organizar sus recursos
-      items.forEach(modelItem => {
-        const modelInfo = modelItem.resource as CachedModelInfo;
-
-        // Crear o encontrar la carpeta del modelo
-        let modelFolder = this.findFolder(`/${modelItem.name}`);
-        if (!modelFolder) {
-          modelFolder = new ResourceFolder(modelItem.name, `/${modelItem.name}`);
-          rootFolder.subfolders.push(modelFolder);
-        }
-
-        // Limpiar items antiguos de la carpeta del modelo
-        modelFolder.items = [];
-
-        // Añadir el modelo a su carpeta
-        modelFolder.items.push({
-          ...modelItem,
-          path: `/${modelItem.name}/${modelItem.name}`
-        });
-
-        // Mover las texturas asociadas a la carpeta del modelo
-        if (modelInfo.textures) {
-          const addedTextures = new Set<string>();
-          modelInfo.textures.forEach(textureId => {
-            if (addedTextures.has(textureId)) return; // Skip if already added
-            
-            const textureInfo = this.textureManager.textures.get(textureId);
-            if (textureInfo) {
-              // Eliminar la textura de la carpeta raíz si existe
-              rootFolder.items = rootFolder.items.filter(item => item.id !== textureId);
-
-              // Verificar si la textura ya existe en la carpeta del modelo
-              const textureExists = modelFolder!.items.some(item => item.id === textureId);
-              if (!textureExists) {
-                // Añadir la textura a la carpeta del modelo
-                modelFolder!.items.push({
-                  id: textureId,
-                  name: textureInfo.name,
-                  type: 'texture',
-                  preview: this.textureManager.getTexturePreview(textureId),
-                  resource: textureInfo.resource,
-                  path: `/${modelItem.name}/${textureInfo.name}`
-                });
-              }
-              
-              addedTextures.add(textureId);
-            }
-          });
-        }
-
-        // Mover los materiales asociados a la carpeta del modelo
-        if (modelInfo.materials) {
-          modelInfo.materials.forEach(materialId => {
-            const materialInfo = this.materialManager.materials.get(materialId);
-            if (materialInfo) {
-              // Eliminar el material de la carpeta raíz si existe
-              rootFolder.items = rootFolder.items.filter(item => item.id !== materialId);
-
-              // Añadir el material a la carpeta del modelo
-              modelFolder!.items.push({
-                id: materialId,
-                name: materialInfo.name,
-                type: 'material',
-                preview: this.materialManager.getMaterialPreview(materialId),
-                resource: materialInfo.resource,
-                path: `/${modelItem.name}/${materialInfo.name}`
-              });
-            }
-          });
-        }
-
-        // Expandir la carpeta del modelo por defecto
-        modelFolder.isExpanded = true;
-      });
-    } else {
-      // Para texturas y materiales que no están asociados a ningún modelo
-      items.forEach(item => {
-        // Solo añadir el item si no está ya en alguna carpeta de modelo
-        if (!this.isItemInModelFolders(item.id)) {
-          const existingItem = this.findItemById(item.id);
-          if (existingItem) {
-            // Actualizar el item existente
-            existingItem.preview = item.preview;
-            existingItem.name = item.name;
-            existingItem.resource = item.resource;
-          } else {
-            // Añadir nuevo item a la carpeta raíz
-            rootFolder.items.push(item);
-          }
-        } else {
-          // Actualizar el item en la carpeta del modelo
-          this.rootFolders.forEach(folder => {
-            folder.subfolders.forEach(modelFolder => {
-              const existingItem = modelFolder.items.find(i => i.id === item.id);
-              if (existingItem) {
-                existingItem.preview = item.preview;
-                existingItem.name = item.name;
-                existingItem.resource = item.resource;
-              }
-            });
-          });
-        }
-      });
+      items.forEach(modelItem => this.updateModelResources(modelItem, rootFolder));
+            } else {
+      this.updateStandaloneResources(items, rootFolder);
     }
 
     this.resourceStructure.next([...this.rootFolders]);
     this.changeDetectorRef.detectChanges();
   }
 
-  private isItemInModelFolders(itemId: string): boolean {
-    return this.rootFolders.some(folder => 
-      folder.subfolders.some(modelFolder => 
-        modelFolder.items.some(item => item.id === itemId)
+  // Métodos de búsqueda y utilidad
+  private findItemById(id: string): ResourceItem | null {
+    const findInFolder = (folders: ResourceFolder[]): ResourceItem | null => {
+      for (const folder of folders) {
+        const item = folder.items.find(i => i.id === id);
+        if (item) return item;
+        const foundInSubfolders = findInFolder(folder.subfolders);
+        if (foundInSubfolders) return foundInSubfolders;
+      }
+      return null;
+    };
+    return findInFolder(this.rootFolders);
+  }
+
+  private isItemInModelFolders(id: string): boolean {
+    return this.rootFolders.some(folder =>
+      folder.subfolders.some(modelFolder =>
+        modelFolder.items.some(item => item.id === id)
       )
     );
   }
@@ -257,14 +272,15 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
     const findFolderRecursive = (folders: ResourceFolder[], targetPath: string): ResourceFolder | null => {
       for (const folder of folders) {
         if (folder.path === targetPath) return folder;
-        const found = findFolderRecursive(folder.subfolders, targetPath);
-        if (found) return found;
+        const foundInSubfolders = findFolderRecursive(folder.subfolders, targetPath);
+        if (foundInSubfolders) return foundInSubfolders;
       }
       return null;
     };
     return findFolderRecursive(this.rootFolders, path);
   }
 
+  // Métodos de UI
   toggleViewMode() {
     this.viewMode = this.viewMode === 'list' ? 'icons' : 'list';
   }
@@ -281,7 +297,6 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
 
   navigateToParentFolder() {
     if (!this.selectedFolder) return;
-
     const parentPath = this.selectedFolder.path.split('/').slice(0, -1).join('/') || '/';
     this.selectedFolder = this.findFolder(parentPath);
     this.selectedItem = null;
@@ -290,6 +305,17 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
   onItemClick(item: ResourceItem, event: MouseEvent) {
     event.stopPropagation();
     this.selectedItem = item;
+    
+    if (event.button === 2) {
+      this.contextMenuService.showContextMenu(event, 'resource', item);
+    }
+  }
+
+  onItemContextMenu(event: MouseEvent, item: ResourceItem) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.selectedItem = item;
+    this.contextMenuService.showContextMenu(event, 'resource', item);
   }
 
   onItemDragStart(event: DragEvent, item: ResourceItem) {
@@ -312,7 +338,6 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
   }
 
   moveItemToFolder(itemId: string, targetFolder: ResourceFolder) {
-    // Find the item and its current folder
     let sourceFolder: ResourceFolder | null = null;
     let item: ResourceItem | null = null;
 
@@ -332,9 +357,7 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
     findItem(this.rootFolders);
 
     if (sourceFolder && item) {
-      // Remove from source folder
       sourceFolder.items = sourceFolder.items.filter(i => i.id !== itemId);
-      // Add to target folder
       targetFolder.items.push({
         ...item,
         path: `${targetFolder.path}/${item.name}`
@@ -343,46 +366,7 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
     }
   }
 
-  onRename(item: ResourceItem | ResourceFolder) {
-    const newName = prompt('Enter new name:', item instanceof ResourceFolder ? item.name : item.name);
-    if (newName && newName !== item.name) {
-      if ('type' in item) {
-        // It's a ResourceItem
-        switch (item.type) {
-          case 'material':
-            this.materialManager.updateMaterialName(item.id, newName);
-            break;
-          case 'texture':
-            this.textureManager.updateTextureName(item.id, newName);
-            break;
-          case 'model':
-            // Implement model rename logic
-            break;
-        }
-      } else {
-        // It's a ResourceFolder
-        item.name = newName;
-        this.resourceStructure.next([...this.rootFolders]);
-      }
-    }
-  }
-
-  onDelete(item: ResourceItem) {
-    if (confirm(`Are you sure you want to delete ${item.name}?`)) {
-      switch (item.type) {
-        case 'material':
-          this.materialManager.releaseMaterial(item.id);
-          break;
-        case 'texture':
-          this.textureManager.releaseTexture(item.id);
-          break;
-        case 'model':
-          this.modelCache.releaseModel(item.id);
-          break;
-      }
-    }
-  }
-
+  // Métodos de gestión de recursos
   createFolder(parentFolder: ResourceFolder | null = null) {
     const name = prompt('Enter folder name:');
     if (name) {
@@ -423,6 +407,44 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
           this.resourceDialogService.processTextureDialogResult(result);
         }
       });
+    }
+  }
+
+  onRename(item: ResourceItem | ResourceFolder) {
+    const newName = prompt('Enter new name:', item instanceof ResourceFolder ? item.name : item.name);
+    if (newName && newName !== item.name) {
+      if ('type' in item) {
+        switch (item.type) {
+          case 'material':
+            this.materialManager.updateMaterialName(item.id, newName);
+            break;
+          case 'texture':
+            this.textureManager.updateTextureName(item.id, newName);
+            break;
+          case 'model':
+            // Implement model rename logic
+            break;
+        }
+      } else {
+        item.name = newName;
+        this.resourceStructure.next([...this.rootFolders]);
+      }
+    }
+  }
+
+  onDelete(item: ResourceItem) {
+    if (confirm(`Are you sure you want to delete ${item.name}?`)) {
+      switch (item.type) {
+        case 'material':
+          this.materialManager.releaseMaterial(item.id);
+          break;
+        case 'texture':
+          this.textureManager.releaseTexture(item.id);
+          break;
+        case 'model':
+          this.modelCache.releaseModel(item.id);
+          break;
+      }
     }
   }
 } 

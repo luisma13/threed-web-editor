@@ -730,7 +730,7 @@ export class EditorService {
     }
 
     /**
-     * Clona un modelo del caché
+     * Añade un modelo a la escena desde el caché
      * @param uuid UUID del modelo en caché
      * @returns Promise con el GameObject clonado
      */
