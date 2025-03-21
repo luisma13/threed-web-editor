@@ -1,11 +1,11 @@
-import { 
-    Material, 
-    MeshStandardMaterial, 
-    Color, 
-    FrontSide, 
-    BackSide, 
-    DoubleSide, 
-    Side, 
+import {
+    Material,
+    MeshStandardMaterial,
+    Color,
+    FrontSide,
+    BackSide,
+    DoubleSide,
+    Side,
     Texture,
     MeshBasicMaterial,
     WebGLRenderer,
@@ -55,10 +55,7 @@ export class MaterialManager {
     private _materialPreviews = new Map<string, string>();
     private textureManager: TextureManager;
 
-    // Event emitter for material updates
-    materialUpdated = new SimpleEventEmitter<MaterialUpdateEvent>();
-
-    private constructor() {}
+    private constructor() { }
 
     /**
      * Get the singleton instance of MaterialManager
@@ -75,7 +72,7 @@ export class MaterialManager {
      */
     setTextureManager(textureManager: TextureManager): void {
         this.textureManager = textureManager;
-        
+
         // Subscribe to texture updates
         this.textureManager.textureUpdated.subscribe(event => {
             this.updateMaterialsUsingTexture(event.uuid);
@@ -100,7 +97,7 @@ export class MaterialManager {
      * Generate a UUID for new resources
      */
     private generateUUID(): string {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
             const r = Math.random() * 16 | 0;
             const v = c === 'x' ? r : (r & 0x3 | 0x8);
             return v.toString(16);
@@ -115,45 +112,45 @@ export class MaterialManager {
         const canvas = document.createElement('canvas');
         canvas.width = size;
         canvas.height = size;
-        
+
         const renderer = new WebGLRenderer({
             canvas: canvas,
             alpha: true,
             antialias: true
         });
-        
+
         const scene = new Scene();
         const camera = new PerspectiveCamera(45, 1, 0.1, 100);
         camera.position.set(0, 0, 4);
-        
+
         // Create a sphere to showcase the material
         const geometry = new SphereGeometry(1, 32, 32);
         const mesh = new Mesh(geometry, material);
         scene.add(mesh);
-        
+
         // Add some lights
         const ambientLight = new AmbientLight(0xffffff, 0.5);
         scene.add(ambientLight);
-        
+
         const directionalLight = new DirectionalLight(0xffffff, 0.8);
         directionalLight.position.set(1, 1, 2);
         scene.add(directionalLight);
-        
+
         // Rotate the sphere slightly
         mesh.rotation.y = Math.PI / 4;
         mesh.rotation.x = Math.PI / 6;
-        
+
         // Render
         renderer.setSize(size, size);
         renderer.render(scene, camera);
-        
+
         // Get data URL
         const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        
+
         // Clean up
         geometry.dispose();
         renderer.dispose();
-        
+
         return dataUrl;
     }
 
@@ -162,7 +159,7 @@ export class MaterialManager {
      */
     addMaterial(material: Material, name: string): string {
         const uuid = this.generateUUID();
-        
+
         this._materials.set(uuid, {
             resource: material,
             refCount: 1,
@@ -177,13 +174,6 @@ export class MaterialManager {
         } catch (error) {
             console.warn('Failed to create material preview:', error);
         }
-
-        // Emit material updated event for new material
-        this.materialUpdated.emit({
-            uuid: uuid,
-            oldMaterial: material.clone(),
-            newMaterial: material
-        });
 
         return uuid;
     }
@@ -314,8 +304,7 @@ export class MaterialManager {
         if (properties.emissiveMap) material.userData.textureUuids.emissiveMap = properties.emissiveMap;
 
         // Add the material to the manager
-        const uuid = this.addMaterial(material, name);
-                return material;
+        return material;
     }
 
     /**
@@ -349,7 +338,6 @@ export class MaterialManager {
         }
 
         const material = materialInfo.resource;
-        const oldMaterial = material.clone();
 
         // Update name if provided
         if (properties.name !== undefined) {
@@ -435,15 +423,15 @@ export class MaterialManager {
             material.depthWrite = properties.depthWrite;
         }
 
+        try {
+            const previewUrl = this.createMaterialPreview(material);
+            this.saveMaterialPreview(uuid, previewUrl);
+        } catch (error) {
+            console.warn('Failed to create material preview:', error);
+        }
+
         // Mark material as needing update
         material.needsUpdate = true;
-
-        // Emit update event
-        this.materialUpdated.emit({
-            uuid: uuid,
-            oldMaterial: oldMaterial,
-            newMaterial: material
-        });
     }
 
     /**
@@ -523,7 +511,7 @@ export class MaterialManager {
      */
     findMaterialsUsingTexture(textureUuid: string): string[] {
         const materialsUsingTexture: string[] = [];
-        
+
         this._materials.forEach((info, uuid) => {
             const material = info.resource;
             if (material instanceof MeshStandardMaterial) {
@@ -533,7 +521,7 @@ export class MaterialManager {
                 }
             }
         });
-        
+
         return materialsUsingTexture;
     }
 
@@ -542,13 +530,12 @@ export class MaterialManager {
      */
     updateMaterialsUsingTexture(textureUuid: string): void {
         const materialsToUpdate = this.findMaterialsUsingTexture(textureUuid);
-        
+
         materialsToUpdate.forEach(materialUuid => {
             const materialInfo = this._materials.get(materialUuid);
             if (materialInfo && materialInfo.resource instanceof MeshStandardMaterial) {
                 const material = materialInfo.resource;
-                const oldMaterial = material.clone();
-                
+
                 // Update material's textures
                 const textureUuids = material.userData?.textureUuids || {};
                 Object.entries(textureUuids).forEach(([mapType, uuid]) => {
@@ -557,15 +544,8 @@ export class MaterialManager {
                         material[mapType] = texture || null;
                     }
                 });
-                
+
                 material.needsUpdate = true;
-                
-                // Emit update event
-                this.materialUpdated.emit({
-                    uuid: materialUuid,
-                    oldMaterial: oldMaterial,
-                    newMaterial: material
-                });
             }
         });
     }

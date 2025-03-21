@@ -471,13 +471,24 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
             return null;
         }
         
-        // Obtener la textura y usar getTexturePreviewUrl del TextureManager
-        const textureInfo = this.textureManager.textures.get(uuid);
-        if (textureInfo && textureInfo.resource) {
-            return this.textureManager.getTexturePreviewUrl(textureInfo.resource);
+        // Primero intentar obtener la previsualización directamente por UUID
+        const preview = this.textureManager.getTexturePreview(uuid);
+        if (preview) {
+            return preview;
         }
         
-        console.error(`No se pudo encontrar la textura con UUID: ${uuid}`);
+        // Si no hay previsualización guardada, intentar obtenerla de la textura
+        const textureInfo = this.textureManager.textures.get(uuid);
+        if (textureInfo && textureInfo.resource) {
+            const previewUrl = this.textureManager.getTexturePreviewUrl(textureInfo.resource);
+            if (previewUrl) {
+                // Guardar la previsualización para futuros usos
+                this.textureManager.saveTexturePreview(uuid, previewUrl);
+                return previewUrl;
+            }
+        }
+        
+        console.error(`No se pudo encontrar la previsualización para la textura: ${uuid}`);
         return null;
     }
 

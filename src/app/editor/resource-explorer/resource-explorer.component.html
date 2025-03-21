@@ -49,12 +49,19 @@
                [matMenuTriggerData]="{item: item}">
             <div class="item-preview" *ngIf="item.preview">
               <img [src]="item.preview" [alt]="item.name">
+              <div class="type-indicator">
+                <mat-icon>{{ item.type === 'material' ? 'format_paint' : 
+                             item.type === 'texture' ? 'texture' : '3d_rotation' }}</mat-icon>
+              </div>
             </div>
             <mat-icon *ngIf="!item.preview">
               {{ item.type === 'material' ? 'format_paint' : 
                  item.type === 'texture' ? 'texture' : '3d_rotation' }}
             </mat-icon>
-            <span class="item-name">{{ item.name }}</span>
+            <div class="item-info">
+              <span class="item-name">{{ item.name }}</span>
+              <span class="item-type">{{ item.type }}</span>
+            </div>
           </div>
 
           <!-- Subfolders -->
@@ -81,12 +88,19 @@
                    [matMenuTriggerData]="{item: item}">
                 <div class="item-preview" *ngIf="item.preview">
                   <img [src]="item.preview" [alt]="item.name">
+                  <div class="type-indicator">
+                    <mat-icon>{{ item.type === 'material' ? 'format_paint' : 
+                                 item.type === 'texture' ? 'texture' : '3d_rotation' }}</mat-icon>
+                  </div>
                 </div>
                 <mat-icon *ngIf="!item.preview">
                   {{ item.type === 'material' ? 'format_paint' : 
                      item.type === 'texture' ? 'texture' : '3d_rotation' }}
                 </mat-icon>
-                <span class="item-name">{{ item.name }}</span>
+                <div class="item-info">
+                  <span class="item-name">{{ item.name }}</span>
+                  <span class="item-type">{{ item.type }}</span>
+                </div>
               </div>
 
               <!-- Nested Subfolders -->
@@ -149,12 +163,19 @@
                  [matMenuTriggerData]="{item: item}">
               <div class="icon-preview" *ngIf="item.preview">
                 <img [src]="item.preview" [alt]="item.name">
+                <div class="type-indicator">
+                  <mat-icon>{{ item.type === 'material' ? 'format_paint' : 
+                               item.type === 'texture' ? 'texture' : '3d_rotation' }}</mat-icon>
+                </div>
               </div>
               <mat-icon class="large-icon" *ngIf="!item.preview">
                 {{ item.type === 'material' ? 'format_paint' : 
                    item.type === 'texture' ? 'texture' : '3d_rotation' }}
               </mat-icon>
-              <span class="item-name">{{ item.name }}</span>
+              <div class="item-info">
+                <span class="item-name">{{ item.name }}</span>
+                <span class="item-type">{{ item.type }}</span>
+              </div>
             </div>
           </ng-container>
 
@@ -181,12 +202,19 @@
                  [matMenuTriggerData]="{item: item}">
               <div class="icon-preview" *ngIf="item.preview">
                 <img [src]="item.preview" [alt]="item.name">
+                <div class="type-indicator">
+                  <mat-icon>{{ item.type === 'material' ? 'format_paint' : 
+                               item.type === 'texture' ? 'texture' : '3d_rotation' }}</mat-icon>
+                </div>
               </div>
               <mat-icon class="large-icon" *ngIf="!item.preview">
                 {{ item.type === 'material' ? 'format_paint' : 
                    item.type === 'texture' ? 'texture' : '3d_rotation' }}
               </mat-icon>
-              <span class="item-name">{{ item.name }}</span>
+              <div class="item-info">
+                <span class="item-name">{{ item.name }}</span>
+                <span class="item-type">{{ item.type }}</span>
+              </div>
             </div>
           </ng-container>
         </div>

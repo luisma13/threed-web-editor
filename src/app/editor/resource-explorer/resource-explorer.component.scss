@@ -82,17 +82,63 @@
         }
 
         .icon-preview {
-          width: 64px;
-          height: 64px;
+          width: 80px;
+          height: 80px;
           margin-bottom: 8px;
           border-radius: 4px;
           overflow: hidden;
           background-color: #2a2a2a;
+          position: relative;
 
           img {
             width: 100%;
             height: 100%;
             object-fit: cover;
+          }
+
+          .type-indicator {
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 50%;
+            padding: 2px;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            mat-icon {
+              font-size: 14px;
+              width: 14px;
+              height: 14px;
+              color: #fff;
+            }
+          }
+        }
+
+        .item-info {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 2px;
+          width: 100%;
+
+          .item-name {
+            font-size: 12px;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding: 0 4px;
+            color: #fff;
+          }
+
+          .item-type {
+            font-size: 10px;
+            color: #888;
+            text-transform: capitalize;
           }
         }
 
@@ -102,15 +148,6 @@
           height: 48px;
           margin-bottom: 8px;
           color: #888;
-        }
-
-        .item-name {
-          font-size: 12px;
-          max-width: 100%;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          padding: 0 4px;
         }
 
         &[draggable="true"] {
@@ -157,11 +194,12 @@
     .resource-item {
       display: flex;
       align-items: center;
-      padding: 4px 8px;
+      padding: 8px;
       cursor: pointer;
       border-radius: 4px;
       margin: 2px 0;
-      gap: 8px;
+      gap: 12px;
+      transition: background-color 0.2s;
 
       &:hover {
         background-color: #2a2a2a;
@@ -172,20 +210,65 @@
       }
 
       .item-preview {
-        width: 24px;
-        height: 24px;
+        width: 40px;
+        height: 40px;
         overflow: hidden;
-        border-radius: 2px;
+        border-radius: 4px;
+        position: relative;
+        background-color: #2a2a2a;
 
         img {
           width: 100%;
           height: 100%;
           object-fit: cover;
         }
+
+        .type-indicator {
+          position: absolute;
+          bottom: -4px;
+          right: -4px;
+          background-color: #333;
+          border-radius: 50%;
+          padding: 2px;
+          width: 16px;
+          height: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid #1e1e1e;
+
+          mat-icon {
+            font-size: 12px;
+            width: 12px;
+            height: 12px;
+            color: #fff;
+          }
+        }
       }
 
       mat-icon {
         color: #888;
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+      }
+
+      .item-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        flex: 1;
+
+        .item-name {
+          font-size: 13px;
+          color: #fff;
+        }
+
+        .item-type {
+          font-size: 11px;
+          color: #888;
+          text-transform: capitalize;
+        }
       }
 
       &[draggable="true"] {

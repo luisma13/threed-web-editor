@@ -157,21 +157,7 @@ export class MaterialSelectorComponent implements OnInit, OnDestroy {
   ) {}
   
   ngOnInit(): void {
-    // Suscribirse a los cambios en los materiales
-    this.materialsSubscription = this.materialManager.materialsSubject.subscribe(materials => {
-      this.materials = Array.from(materials.entries()).map(([uuid, info]) => ({
-        id: uuid,
-        resource: info.resource,
-        name: info.name
-      }));
-      this.filterMaterials();
-    });
-    
-    // Suscribirse a los cambios en las previsualizaciones
-    this.materialPreviewsSubscription = this.materialManager.materialPreviewsSubject.subscribe(() => {
-      // Forzar actualización de la vista cuando cambian las previsualizaciones
-      this.filteredMaterials = [...this.filteredMaterials];
-    });
+
   }
   
   ngOnDestroy(): void {

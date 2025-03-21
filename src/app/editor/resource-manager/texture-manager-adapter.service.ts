@@ -9,33 +9,29 @@ import { EventEmitter } from '@angular/core';
 })
 export class TextureManagerAdapter {
     private textureManager: TextureManager;
-    private _texturesSubject = new BehaviorSubject<Map<string, TextureInfo>>(new Map());
-    
-    // Angular EventEmitter for texture updates
-    textureUpdated = new EventEmitter<{uuid: string, oldTexture: Texture, newTexture: Texture}>();
+    private texturesSubject = new BehaviorSubject<Map<string, TextureInfo>>(new Map());
 
     constructor() {
         this.textureManager = TextureManager.getInstance();
-        
-        // Subscribe to texture manager updates and forward them to Angular
-        this.textureManager.textureUpdated.subscribe((event) => {
-            this.textureUpdated.emit(event);
-        });
-
-        // Initialize the BehaviorSubject with current textures
-        this._texturesSubject.next(this.textureManager.textures);
+        // Inicializar con las texturas actuales
+        this.texturesSubject.next(this.textureManager.textures);
     }
 
     get textures() {
         return this.textureManager.textures;
     }
 
-    get texturesSubject(): Observable<Map<string, TextureInfo>> {
-        return this._texturesSubject.asObservable();
+    get texturesObservable(): Observable<Map<string, TextureInfo>> {
+        return this.texturesSubject.asObservable();
+    }
+
+    private notifyTextureChange() {
+        this.texturesSubject.next(this.textureManager.textures);
     }
 
     saveTexturePreview(uuid: string, dataUrl: string): void {
         this.textureManager.saveTexturePreview(uuid, dataUrl);
+        this.notifyTextureChange();
     }
 
     getTexturePreview(uuid: string): string | null {
@@ -67,12 +63,12 @@ export class TextureManagerAdapter {
         flipY?: boolean;
     } = {}, customFileName?: string): Promise<TextureInfo> {
         const texture = await this.textureManager.createTextureFromFile(file, options, customFileName);
-        this._texturesSubject.next(this.textureManager.textures);
         
         const textureEntry = Array.from(this.textures.entries())
             .find(([_, info]) => info.resource === texture);
             
         if (textureEntry) {
+            this.notifyTextureChange();
             return textureEntry[1];
         }
         throw new Error('Texture was created but not found in manager');
@@ -86,13 +82,12 @@ export class TextureManagerAdapter {
         flipY?: boolean;
     } = {}): Promise<Texture> {
         const texture = await this.textureManager.loadTexture(path, options);
-        this._texturesSubject.next(this.textureManager.textures);
         return texture;
     }
 
     releaseTexture(uuid: string): void {
         this.textureManager.releaseTexture(uuid);
-        this._texturesSubject.next(this.textureManager.textures);
+        this.notifyTextureChange();
     }
 
     getTexture(uuid: string): Texture | undefined {
@@ -101,7 +96,6 @@ export class TextureManagerAdapter {
 
     disposeAllTextures(): void {
         this.textureManager.disposeAllTextures();
-        this._texturesSubject.next(this.textureManager.textures);
     }
 
     createAccessibleTextureImage(texture: Texture): void {

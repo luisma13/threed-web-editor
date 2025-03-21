@@ -17,8 +17,6 @@ import { ComponentInfo } from './component-selector/component-selector-dialog.co
 import { Component } from "../simple-engine/core/component";
 import { BoxComponent } from "../simple-engine/components/geometry/box.component";
 import { BoxColliderComponent } from "../simple-engine/components/geometry/box-collider.component";
-import { TextureManagerAdapter } from './resource-manager/texture-manager-adapter.service';
-import { MaterialManagerAdapter } from './resource-manager/material-manager-adapter.service';
 import { ModelCacheAdapter } from './resource-manager/model-cache-adapter.service';
 import { EditorEventsService } from './editor-events.service';
 
@@ -54,8 +52,6 @@ export class EditorService {
     constructor(
         private sceneExportService: SceneExportService,
         @Inject(PLATFORM_ID) private platformId: Object,
-        private textureManager: TextureManagerAdapter,
-        private materialManager: MaterialManagerAdapter,
         private modelCache: ModelCacheAdapter,
         private editorEventsService: EditorEventsService
     ) {
@@ -329,7 +325,7 @@ export class EditorService {
     async loadModelWithCache(url: string, modelType: string, fileName: string): Promise<GameObject | undefined> {
         try {
             console.log('Loading model with name:', fileName);
-            const model = await this.modelCache.loadModel(url, fileName);
+            const model = await this.modelCache.loadModel(url, modelType, fileName);
             if (!model) {
                 return undefined;
             }

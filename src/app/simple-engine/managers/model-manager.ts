@@ -6,7 +6,15 @@ import {
     Texture,
     MeshStandardMaterial,
     LoadingManager,
-    AnimationClip
+    AnimationClip,
+    WebGLRenderer,
+    Scene,
+    PerspectiveCamera,
+    AmbientLight,
+    DirectionalLight,
+    Box3,
+    Vector3,
+    Color
 } from 'three';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -56,20 +64,26 @@ export interface ModelUpdateEvent {
 }
 
 /**
+ * Interface for model preview data
+ */
+export interface ModelPreview {
+    dataUrl: string;
+    timestamp: number;
+}
+
+/**
  * ModelManager class for managing 3D models in the simple engine
  */
 export class ModelManager {
     private static instance: ModelManager;
     private _cachedModels = new Map<string, CachedModelInfo>();
     private _geometries = new Map<string, GeometryInfo>();
+    private _modelPreviews = new Map<string, string>();
 
     // Loaders
     private gltfLoader: GLTFLoader | null = null;
     private fbxLoader: FBXLoader | null = null;
     private objLoader: OBJLoader | null = null;
-
-    // Event emitter for model updates
-    modelUpdated = new SimpleEventEmitter<ModelUpdateEvent>();
 
     // References to other managers
     private materialManager: MaterialManager;
@@ -226,6 +240,14 @@ export class ModelManager {
 
             // Store the model in the cache
             this._cachedModels.set(modelUuid, modelInfo);
+
+            // Create and save preview
+            try {
+                const previewUrl = this.createModelPreview(rootObject);
+                this.saveModelPreview(modelUuid, previewUrl);
+            } catch (error) {
+                console.warn('Failed to create model preview:', error);
+            }
 
             return modelInfo;
         } catch (error) {
@@ -419,6 +441,7 @@ export class ModelManager {
         // Clear all maps
         this._geometries.clear();
         this._cachedModels.clear();
+        this._modelPreviews.clear();
     }
 
     /**
@@ -457,5 +480,101 @@ export class ModelManager {
             }
         }
         return undefined;
+    }
+
+    /**
+     * Get all cached models
+     */
+    public getAllModels(): Map<string, CachedModelInfo> {
+        return this._cachedModels;
+    }
+
+    /**
+     * Create a preview for a model
+     */
+    private createModelPreview(model: Object3D): string {
+        const size = 128;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+
+        const renderer = new WebGLRenderer({
+            canvas: canvas,
+            alpha: true,
+            antialias: true
+        });
+
+        const scene = new Scene();
+        scene.background = null; // Transparent background
+
+        const camera = new PerspectiveCamera(35, 1, 0.1, 1000);
+
+        // Add lights
+        const ambientLight = new AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+
+        const directionalLight = new DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(2, 1, 1);
+        scene.add(directionalLight);
+
+        // Add model to scene
+        const previewModel = model.clone();
+        scene.add(previewModel);
+
+        // Calculate bounding box and adjust camera
+        const box = new Box3().setFromObject(previewModel);
+        const center = box.getCenter(new Vector3());
+        const size3D = box.getSize(new Vector3());
+        const maxDim = Math.max(size3D.x, size3D.y, size3D.z);
+        
+        // Adjust camera position for a side view
+        const distance = maxDim * 1.5; // Acercar la cámara
+        camera.position.set(
+            distance * 1.2,  // Más hacia el lateral
+            distance * 0.3,  // Más bajo
+            distance * 0.8   // Menos profundidad
+        );
+        camera.lookAt(center);
+
+        // Rotate model for better side view
+        previewModel.rotation.y = Math.PI / 6; // 30 grados, mejor para ver el lateral y algo del frente
+
+        // Render
+        renderer.setSize(size, size);
+        renderer.render(scene, camera);
+
+        // Get data URL
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+        // Clean up
+        renderer.dispose();
+        previewModel.traverse((obj) => {
+            if (obj instanceof Mesh) {
+                obj.geometry.dispose();
+            }
+        });
+
+        return dataUrl;
+    }
+
+    /**
+     * Save model preview
+     */
+    saveModelPreview(uuid: string, dataUrl: string): void {
+        this._modelPreviews.set(uuid, dataUrl);
+    }
+
+    /**
+     * Get model preview
+     */
+    getModelPreview(uuid: string): string | null {
+        return this._modelPreviews.get(uuid) || null;
+    }
+
+    /**
+     * Delete model preview
+     */
+    deleteModelPreview(uuid: string): void {
+        this._modelPreviews.delete(uuid);
     }
 } 

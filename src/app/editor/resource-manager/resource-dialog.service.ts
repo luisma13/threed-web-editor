@@ -5,8 +5,7 @@ import { TextureDialogComponent, TextureDialogData } from './texture-dialog/text
 import { MaterialDialogComponent, MaterialDialogData } from './material-dialog/material-dialog.component';
 import { TextureManagerAdapter } from './texture-manager-adapter.service';
 import { MaterialManagerAdapter } from './material-manager-adapter.service';
-import { ModelCacheAdapter } from './model-cache-adapter.service';
-import { Texture, TextureEncoding, MeshStandardMaterial } from 'three';
+import { TextureEncoding, MeshStandardMaterial } from 'three';
 
 @Injectable({
   providedIn: 'root'
@@ -15,8 +14,7 @@ export class ResourceDialogService {
   constructor(
     private dialog: MatDialog,
     private textureManager: TextureManagerAdapter,
-    private materialManager: MaterialManagerAdapter,
-    private modelCache: ModelCacheAdapter
+    private materialManager: MaterialManagerAdapter
   ) {}
 
   /**

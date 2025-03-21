@@ -161,11 +161,6 @@ export class TextureManager {
             if (options.generateMipmaps !== undefined) texture.generateMipmaps = options.generateMipmaps;
             if (options.flipY !== undefined) texture.flipY = options.flipY;
 
-            // Create preview
-            if (texture.image) {
-                this.createAccessibleTextureImage(texture);
-            }
-
             // Store the texture
             this._textures.set(uuid, {
                 resource: texture,
@@ -173,6 +168,11 @@ export class TextureManager {
                 name: fileName,
                 uuid: uuid
             });
+
+            // Generate preview immediately after texture is loaded
+            if (texture.image) {
+                this.createAccessibleTextureImage(texture);
+            }
 
             // Store blob URL for cleanup
             this._blobUrls.set(uuid, blobUrl);
@@ -217,11 +217,6 @@ export class TextureManager {
             if (options.generateMipmaps !== undefined) texture.generateMipmaps = options.generateMipmaps;
             if (options.flipY !== undefined) texture.flipY = options.flipY;
 
-            // Create preview
-            if (texture.image) {
-                this.createAccessibleTextureImage(texture);
-            }
-
             // Store texture
             this._textures.set(uuid, {
                 resource: texture,
@@ -229,6 +224,11 @@ export class TextureManager {
                 name: textureName,
                 uuid: uuid
             });
+
+            // Generate preview immediately after texture is loaded
+            if (texture.image) {
+                this.createAccessibleTextureImage(texture);
+            }
 
             if (isBlob) {
                 this._blobUrls.set(uuid, path);
@@ -269,16 +269,6 @@ export class TextureManager {
         }
 
         try {
-            if (texture.image.src) {
-                console.log('Texture already has src:', texture.image.src);
-                return;
-            }
-
-            if (texture.uuid && this.getTexturePreview(texture.uuid)) {
-                console.log('Preview already exists in cache for texture:', texture.uuid);
-                return;
-            }
-
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
 
@@ -314,9 +304,23 @@ export class TextureManager {
             }
 
             const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-            if (texture.uuid) {
-                this.saveTexturePreview(texture.uuid, dataUrl);
+
+            // Find the UUID for this texture
+            let textureUuid: string | undefined;
+            for (const [uuid, info] of this._textures.entries()) {
+                if (info.resource === texture) {
+                    textureUuid = uuid;
+                    break;
+                }
             }
+
+            if (!textureUuid) {
+                console.warn('Could not find UUID for texture when saving preview');
+                return;
+            }
+
+            this.saveTexturePreview(textureUuid, dataUrl);
+            console.log('Preview created for texture:', textureUuid);
         } catch (e) {
             console.error('Error creating accessible image for texture:', e);
         }
@@ -370,11 +374,9 @@ export class TextureManager {
                     texture.name = `${modelName}_Texture_${i + 1}`;
                 }
 
-                if (texture.image && !texture.image.src) {
-                    const previewUrl = this.getTexturePreviewUrl(texture);
-                    if (!previewUrl) {
-                        this.createAccessibleTextureImage(texture);
-                    }
+                // Generate preview for each texture in the batch
+                if (texture.image) {
+                    this.createAccessibleTextureImage(texture);
                 }
             }
 
