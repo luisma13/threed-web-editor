@@ -34,10 +34,10 @@
     </div>
     
     <div class="toolbar-actions">
-        <button mat-icon-button class="action-button" matTooltip="Undo" [disabled]="!canUndo" (click)="historyService.undo()">
+        <button mat-icon-button class="action-button" matTooltip="Undo" [disabled]="!canUndo" >
             <mat-icon>undo</mat-icon>
         </button>
-        <button mat-icon-button class="action-button" matTooltip="Redo" [disabled]="!canRedo" (click)="historyService.redo()">
+        <button mat-icon-button class="action-button" matTooltip="Redo" [disabled]="!canRedo" >
             <mat-icon>redo</mat-icon>
         </button>
         <span class="separator"></span>

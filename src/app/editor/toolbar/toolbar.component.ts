@@ -2,7 +2,6 @@ import { Component, OnInit, Renderer2, PLATFORM_ID, Inject } from "@angular/core
 import { isPlatformBrowser } from '@angular/common';
 import { EditorService } from "../editor.service";
 import { CommonModule } from "@angular/common";
-import { HistoryService } from "../history/history.service";
 import { MatButtonModule } from "@angular/material/button";
 import { MatMenuModule } from "@angular/material/menu";
 import { MatIconModule } from "@angular/material/icon";
@@ -41,7 +40,6 @@ export class ToolbarComponent implements OnInit {
 
     constructor(
         public editorService: EditorService,
-        public historyService: HistoryService,
         private renderer: Renderer2,
         @Inject(PLATFORM_ID) private platformId: Object
     ) {
@@ -98,12 +96,12 @@ export class ToolbarComponent implements OnInit {
                     {
                         label: 'Undo',
                         disabled: !this.canUndo,
-                        action: () => this.historyService.undo()
+                        action: () => {}
                     },
                     {
                         label: 'Redo',
                         disabled: !this.canRedo,
-                        action: () => this.historyService.redo()
+                        action: () => {}
                     }
                 ]
             },
@@ -126,29 +124,6 @@ export class ToolbarComponent implements OnInit {
                 ]
             }
         ];
-
-        // Actualizar estado de los botones de deshacer/rehacer
-        this.historyService.canUndo.subscribe(canUndo => {
-            this.canUndo = canUndo;
-            const editMenu = this.menuItems.find(item => item.label === 'Edit');
-            if (editMenu && editMenu.submenu) {
-                const undoItem = editMenu.submenu.find(item => item.label === 'Undo');
-                if (undoItem) {
-                    undoItem.disabled = !canUndo;
-                }
-            }
-        });
-
-        this.historyService.canRedo.subscribe(canRedo => {
-            this.canRedo = canRedo;
-            const editMenu = this.menuItems.find(item => item.label === 'Edit');
-            if (editMenu && editMenu.submenu) {
-                const redoItem = editMenu.submenu.find(item => item.label === 'Redo');
-                if (redoItem) {
-                    redoItem.disabled = !canRedo;
-                }
-            }
-        });
     }
 
     toggleTheme() {

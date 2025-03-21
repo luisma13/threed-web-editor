@@ -6,7 +6,7 @@ import { EditableObjectComponent } from "./editable-object.component";
 import { BehaviorSubject } from "rxjs";
 import { GameObject } from "../../core/gameobject";
 import { FirstPersonCameraComponent } from "../camera/first-camera.component";
-import { EditorEventsService } from "../../../editor/shared/editor-events.service";
+import { EditorEventsService } from "../../../editor/editor-events.service";
 
 export class EditableSceneComponent extends Component {
 

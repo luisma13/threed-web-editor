@@ -3,7 +3,9 @@ import { MatDialog } from '@angular/material/dialog';
 import { Observable } from 'rxjs';
 import { TextureDialogComponent, TextureDialogData } from './texture-dialog/texture-dialog.component';
 import { MaterialDialogComponent, MaterialDialogData } from './material-dialog/material-dialog.component';
-import { ResourceService } from './resource.service';
+import { TextureManagerAdapter } from './texture-manager-adapter.service';
+import { MaterialManagerAdapter } from './material-manager-adapter.service';
+import { ModelCacheAdapter } from './model-cache-adapter.service';
 import { Texture, TextureEncoding, MeshStandardMaterial } from 'three';
 
 @Injectable({
@@ -12,7 +14,9 @@ import { Texture, TextureEncoding, MeshStandardMaterial } from 'three';
 export class ResourceDialogService {
   constructor(
     private dialog: MatDialog,
-    private resourceService: ResourceService
+    private textureManager: TextureManagerAdapter,
+    private materialManager: MaterialManagerAdapter,
+    private modelCache: ModelCacheAdapter
   ) {}
 
   /**
@@ -31,7 +35,7 @@ export class ResourceDialogService {
       console.log(`Abriendo diálogo para editar textura: ${texturePath}`);
       
       // Obtener la textura existente del servicio de recursos
-      const textureInfo = this.resourceService.textures.get(texturePath);
+      const textureInfo = this.textureManager.textures.get(texturePath);
       if (textureInfo) {
         dialogData.path = texturePath;
         dialogData.texture = textureInfo.resource;
@@ -47,8 +51,8 @@ export class ResourceDialogService {
             console.log('La imagen no tiene una URL src');
             
             // Verificar si hay una previsualización en caché
-            if (dialogData.texture.uuid && this.resourceService.getTexturePreview) {
-              const cachedUrl = this.resourceService.getTexturePreview(dialogData.texture.uuid);
+            if (dialogData.texture.uuid) {
+              const cachedUrl = this.textureManager.getTexturePreview(dialogData.texture.uuid);
               if (cachedUrl) {
                 console.log('Se encontró una previsualización en caché para la textura');
               } else {
@@ -85,7 +89,7 @@ export class ResourceDialogService {
       console.log(`Abriendo diálogo para editar material con UUID: ${materialUuid}`);
       
       // Obtener el material existente del servicio de recursos
-      const materialInfo = this.resourceService.materials.get(materialUuid);
+      const materialInfo = this.materialManager.materials.get(materialUuid);
       if (materialInfo) {
         console.log(`Material encontrado: ${materialInfo.name} (UUID: ${materialUuid})`);
         
@@ -120,7 +124,7 @@ export class ResourceDialogService {
         });
       } else {
         console.warn(`No se encontró el material con UUID: ${materialUuid}`);
-        console.log('Materiales disponibles:', Array.from(this.resourceService.materials.entries()).map(([uuid, info]) => ({
+        console.log('Materiales disponibles:', Array.from(this.materialManager.materials.entries()).map(([uuid, info]) => ({
           uuid,
           name: info.name
         })));
@@ -144,13 +148,13 @@ export class ResourceDialogService {
     
     console.log('Buscando UUID para textura:', texture);
     console.log('UUID de la textura en Three.js:', texture.uuid);
-    console.log('Texturas disponibles:', Array.from(this.resourceService.textures.entries()).map(([uuid, info]) => ({
+    console.log('Texturas disponibles:', Array.from(this.textureManager.textures.entries()).map(([uuid, info]) => ({
       uuid,
       name: info.name,
       textureUuid: info.resource?.uuid
     })));
     
-    for (const [uuid, info] of this.resourceService.textures.entries()) {
+    for (const [uuid, info] of this.textureManager.textures.entries()) {
       if (info.resource === texture) {
         console.log('Textura encontrada con UUID:', uuid);
         return uuid;
@@ -186,7 +190,15 @@ export class ResourceDialogService {
       if (result.keepOriginalImage) {
         // Solo actualizar las propiedades de la textura existente
         console.log('Updating texture properties only (keeping original image):', result.path);
-        this.resourceService.updateTexture(result.path, textureOptions);
+        const texture = this.textureManager.getTexture(result.path);
+        if (texture) {
+          texture.wrapS = textureOptions.wrapS;
+          texture.wrapT = textureOptions.wrapT;
+          texture.encoding = textureOptions.encoding;
+          texture.generateMipmaps = textureOptions.generateMipmaps;
+          texture.flipY = textureOptions.flipY;
+          texture.needsUpdate = true;
+        }
         console.log('Texture updated (keeping original image):', result.path);
         return true;
       }
@@ -197,7 +209,7 @@ export class ResourceDialogService {
         const oldPath = result.originalPath || result.path;
         
         // Verificar si la textura existe en el mapa de texturas
-        const textureExists = this.resourceService.textures.has(oldPath);
+        const textureExists = this.textureManager.textures.has(oldPath);
         
         if (!textureExists) {
           console.warn(`Texture with key "${oldPath}" does not exist in the texture map. Creating a new texture.`);
@@ -205,7 +217,7 @@ export class ResourceDialogService {
           // Si la textura no existe, crear una nueva en lugar de actualizar
           if (result.file) {
             // Crear una nueva textura con el archivo
-            this.resourceService.createTextureFromFile(result.file, textureOptions)
+            this.textureManager.createTextureFromFile(result.file, textureOptions)
               .then(() => {
                 console.log('New texture created from file:', result.file.name);
               })
@@ -214,7 +226,7 @@ export class ResourceDialogService {
               });
           } else if (result.url) {
             // Crear una nueva textura con la URL
-            this.resourceService.loadTextureFromUrl(result.url, textureOptions)
+            this.textureManager.loadTextureFromUrl(result.url, textureOptions)
               .then(() => {
                 console.log('New texture created from URL:', result.url);
               })
@@ -227,7 +239,7 @@ export class ResourceDialogService {
           if (result.file) {
             console.log(`Updating existing texture "${oldPath}" with new file`);
             // Actualizar la textura existente con el nuevo archivo
-            this.resourceService.updateTextureFromFile(oldPath, result.file, textureOptions)
+            this.textureManager.createTextureFromFile(result.file, textureOptions)
               .then((texture) => {
                 console.log('Texture updated with new file:', oldPath);
               })
@@ -237,7 +249,7 @@ export class ResourceDialogService {
           } else if (result.url) {
             console.log(`Updating existing texture "${oldPath}" with new URL: ${result.url}`);
             // Actualizar la textura existente con la nueva URL
-            this.resourceService.updateTextureFromUrl(oldPath, result.url, textureOptions)
+            this.textureManager.loadTextureFromUrl(result.url, textureOptions)
               .then((texture) => {
                 console.log('Texture updated with new URL:', oldPath);
               })
@@ -249,7 +261,15 @@ export class ResourceDialogService {
       } else {
         // Solo actualizar las propiedades
         console.log(`Updating only properties of texture "${result.path}"`);
-        this.resourceService.updateTexture(result.path, textureOptions);
+        const texture = this.textureManager.getTexture(result.path);
+        if (texture) {
+          texture.wrapS = textureOptions.wrapS;
+          texture.wrapT = textureOptions.wrapT;
+          texture.encoding = textureOptions.encoding;
+          texture.generateMipmaps = textureOptions.generateMipmaps;
+          texture.flipY = textureOptions.flipY;
+          texture.needsUpdate = true;
+        }
         console.log('Texture properties updated:', result.path);
       }
     } else {
@@ -257,7 +277,7 @@ export class ResourceDialogService {
       if (result.file) {
         // Verificar si ya existe una textura con el mismo nombre de archivo
         const fileName = result.file.name;
-        const textureExists = this.resourceService.textures.has(fileName);
+        const textureExists = this.textureManager.textures.has(fileName);
         
         if (textureExists) {
           // Si ya existe una textura con el mismo nombre, generar un nombre único
@@ -266,7 +286,7 @@ export class ResourceDialogService {
           console.log(`A texture with name "${fileName}" already exists. Creating with unique name: "${uniqueFileName}"`);
           
           // Crear la textura con el nombre único
-          this.resourceService.createTextureFromFile(result.file, textureOptions, uniqueFileName)
+          this.textureManager.createTextureFromFile(result.file, textureOptions, uniqueFileName)
             .then((texture) => {
               console.log('New texture created with unique name:', uniqueFileName);
             })
@@ -276,7 +296,7 @@ export class ResourceDialogService {
         } else {
           // Si no existe, crear normalmente
           console.log(`Creating new texture from file: ${fileName}`);
-          this.resourceService.createTextureFromFile(result.file, textureOptions)
+          this.textureManager.createTextureFromFile(result.file, textureOptions)
             .then((texture) => {
               console.log('New texture created from file:', fileName);
             })
@@ -287,14 +307,14 @@ export class ResourceDialogService {
       } else if (result.url) {
         // Para URLs, extraer el nombre del archivo
         const fileName = this.getFileNameFromUrl(result.url);
-        const textureExists = this.resourceService.textures.has(fileName);
+        const textureExists = this.textureManager.textures.has(fileName);
         
         if (textureExists) {
           // Si ya existe una textura con el mismo nombre, generar un nombre único para la referencia interna
           console.log(`A texture with name "${fileName}" extracted from URL already exists. Using timestamp to differentiate.`);
           
           // Cargar la textura con un nombre único generado internamente
-          this.resourceService.loadTextureFromUrl(result.url, textureOptions, true)
+          this.textureManager.loadTexture(result.url, textureOptions)
             .then((texture) => {
               console.log('New texture created from URL with unique name');
             })
@@ -304,7 +324,7 @@ export class ResourceDialogService {
         } else {
           // Si no existe, cargar normalmente
           console.log(`Creating new texture from URL: ${result.url}`);
-          this.resourceService.loadTextureFromUrl(result.url, textureOptions)
+          this.textureManager.loadTexture(result.url, textureOptions)
             .then((texture) => {
               console.log('New texture created from URL:', fileName);
             })
@@ -314,7 +334,7 @@ export class ResourceDialogService {
         }
       } else if (result.path) {
         // Si solo tenemos una ruta, verificar si ya existe
-        const textureExists = this.resourceService.textures.has(result.path);
+        const textureExists = this.textureManager.textures.has(result.path);
         
         if (textureExists) {
           // Si ya existe, generar un nombre único
@@ -322,7 +342,7 @@ export class ResourceDialogService {
           console.log(`A texture with path "${result.path}" already exists. Using unique path: "${uniquePath}"`);
           
           // Cargar con el nombre único
-          this.resourceService.loadTexture(uniquePath, textureOptions)
+          this.textureManager.loadTexture(uniquePath, textureOptions)
             .then((texture) => {
               console.log('New texture created with unique path:', uniquePath);
             })
@@ -332,7 +352,7 @@ export class ResourceDialogService {
         } else {
           // Si no existe, cargar normalmente
           console.log(`Creating new texture from path: ${result.path}`);
-          this.resourceService.loadTexture(result.path, textureOptions)
+          this.textureManager.loadTexture(result.path, textureOptions)
             .then((texture) => {
               console.log('New texture created from path:', result.path);
             })
@@ -410,7 +430,7 @@ export class ResourceDialogService {
       } else {
         console.log('No se encontró UUID directo, buscando por nombre');
         // Buscar el UUID del material por su nombre actual
-        const materialData = this.resourceService.getMaterialByName(result.data.name);
+        const materialData = this.materialManager.getMaterialByName(result.data.name);
         if (materialData) {
           materialUuid = materialData.uuid;
           console.log('UUID encontrado por nombre:', materialUuid);
@@ -419,7 +439,7 @@ export class ResourceDialogService {
       
       if (materialUuid) {
         console.log(`Actualizando material con UUID: ${materialUuid}`);
-        this.resourceService.updateMaterial(materialUuid, materialProperties);
+        this.materialManager.updateMaterial(materialUuid, materialProperties);
         console.log('Material actualizado:', result.name);
         return true;
       } else {
@@ -428,8 +448,8 @@ export class ResourceDialogService {
       }
     } else {
       console.log('Modo creación detectado');
-      // Crear nuevo material
-      this.resourceService.createMaterial(result.name, materialProperties);
+      // Crear nuevo material (addMaterial es llamado internamente por createMaterial)
+      const material = this.materialManager.createMaterial(result.name, materialProperties);
       console.log('Material creado:', result.name);
       return true;
     }

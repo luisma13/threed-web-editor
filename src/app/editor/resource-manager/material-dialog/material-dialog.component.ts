@@ -11,13 +11,14 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSliderModule } from '@angular/material/slider';
-import { Material, MeshStandardMaterial, Color, WebGLRenderer, Scene, PerspectiveCamera, SphereGeometry, Mesh, DirectionalLight, AmbientLight, TextureLoader, Side, BoxGeometry, TorusKnotGeometry, CylinderGeometry } from 'three';
-import { ResourceService } from '../resource.service';
+import { Material, MeshStandardMaterial, Color, WebGLRenderer, Scene, PerspectiveCamera, SphereGeometry, Mesh, DirectionalLight, AmbientLight, TextureLoader, Side, BoxGeometry, TorusKnotGeometry } from 'three';
 import { MatListModule } from '@angular/material/list';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { PLATFORM_ID, Inject as NgInject } from '@angular/core';
 import * as THREE from 'three';
 import { TextureSelectionDialogComponent } from '../texture-selection-dialog/texture-selection-dialog.component';
+import { TextureManagerAdapter } from '../texture-manager-adapter.service';
+import { MaterialManagerAdapter } from '../material-manager-adapter.service';
 
 export interface MaterialDialogData {
     isEdit: boolean;
@@ -97,8 +98,9 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
         public dialogRef: MatDialogRef<MaterialDialogComponent>,
         @Inject(MAT_DIALOG_DATA) public data: MaterialDialogData,
         private dialog: MatDialog,
-        private resourceService: ResourceService,
-        @NgInject(PLATFORM_ID) platformId: Object
+        @NgInject(PLATFORM_ID) platformId: Object,
+        private textureManager: TextureManagerAdapter,
+        private materialManager: MaterialManagerAdapter
     ) {
         this.isBrowser = isPlatformBrowser(platformId);
         
@@ -111,7 +113,7 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
                 this.materialType = material instanceof MeshStandardMaterial ? 'MeshStandardMaterial' : 'MeshBasicMaterial';
                 
                 console.log('Material recibido:', material);
-                console.log('Texturas disponibles en ResourceService:', Array.from(this.resourceService.textures.entries()));
+                console.log('Texturas disponibles:', Array.from(this.textureManager.textures.entries()));
                 
                 // Propiedades básicas
                 this.color = '#' + material.color.getHexString();
@@ -378,11 +380,11 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
         
         // Limpiar mapas existentes según el tipo de material
         if (this.previewMaterial instanceof MeshStandardMaterial) {
-        this.previewMaterial.map = null;
-        this.previewMaterial.normalMap = null;
-        this.previewMaterial.roughnessMap = null;
-        this.previewMaterial.metalnessMap = null;
-        this.previewMaterial.emissiveMap = null;
+            this.previewMaterial.map = null;
+            this.previewMaterial.normalMap = null;
+            this.previewMaterial.roughnessMap = null;
+            this.previewMaterial.metalnessMap = null;
+            this.previewMaterial.emissiveMap = null;
         } else if (this.previewMaterial instanceof THREE.MeshBasicMaterial) {
             this.previewMaterial.map = null;
             this.previewMaterial.alphaMap = null;
@@ -391,11 +393,11 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
             this.previewMaterial.specularMap = null;
         }
         
-        // Obtener las texturas del ResourceService usando los UUIDs
+        // Obtener las texturas del TextureManager usando los UUIDs
         const applyTexture = (uuid: string, textureType: string) => {
             if (!uuid) return;
             
-            const textureInfo = this.resourceService.textures.get(uuid);
+            const textureInfo = this.textureManager.textures.get(uuid);
             if (textureInfo && textureInfo.resource) {
                 console.log(`Aplicando textura ${textureType}: ${uuid}`);
                 
@@ -469,10 +471,10 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
             return null;
         }
         
-        // Obtener la textura y usar getTexturePreviewUrl del ResourceService
-        const textureInfo = this.resourceService.textures.get(uuid);
-            if (textureInfo && textureInfo.resource) {
-            return this.resourceService.getTexturePreviewUrl(textureInfo.resource);
+        // Obtener la textura y usar getTexturePreviewUrl del TextureManager
+        const textureInfo = this.textureManager.textures.get(uuid);
+        if (textureInfo && textureInfo.resource) {
+            return this.textureManager.getTexturePreviewUrl(textureInfo.resource);
         }
         
         console.error(`No se pudo encontrar la textura con UUID: ${uuid}`);
@@ -514,7 +516,7 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
         const dialogRef = this.dialog.open(TextureSelectionDialogComponent, {
             width: '500px',
             data: {
-                textures: Array.from(this.resourceService.textures.entries()).map(([uuid]) => uuid)
+                textures: Array.from(this.textureManager.textures.entries()).map(([uuid]) => uuid)
             }
         });
 
@@ -665,10 +667,10 @@ export class MaterialDialogComponent implements AfterViewInit, OnDestroy, OnInit
     }
 
     /**
-     * Busca una textura en el ResourceService por su nombre
+     * Busca una textura en el TextureManager por su nombre
      */
     private findTextureByName(name: string): { uuid: string } | null {
-        for (const [uuid, info] of this.resourceService.textures.entries()) {
+        for (const [uuid, info] of this.textureManager.textures.entries()) {
             if (info.name === name) {
                 return { uuid };
             }

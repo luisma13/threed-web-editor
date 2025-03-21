@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { GameObject } from '../../simple-engine/core/gameobject';
-import { Action } from '../history/actions/actions';
+import { GameObject } from '../simple-engine/core/gameobject';
 
 /**
  * Service to handle events between EditorService and HistoryService
@@ -18,10 +17,6 @@ export class EditorEventsService {
   // Selected object
   private selectedObjectSubject = new BehaviorSubject<GameObject | null>(null);
   selectedObject$ = this.selectedObjectSubject.asObservable();
-  
-  // Action events
-  private actionSubject = new Subject<Action<any>>();
-  action$ = this.actionSubject.asObservable();
   
   // Scene change events
   private sceneChangeSubject = new Subject<void>();
@@ -45,13 +40,6 @@ export class EditorEventsService {
     this.selectedObjectSubject.next(gameObject);
   }
   
-  /**
-   * Emit an action event
-   * @param action The action to emit
-   */
-  emitAction(action: Action<any>): void {
-    this.actionSubject.next(action);
-  }
   
   /**
    * Emit a scene change event

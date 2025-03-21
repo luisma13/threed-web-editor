@@ -6,9 +6,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
-import { ResourceService } from '../resource.service';
 import { Subscription } from 'rxjs';
 import { Material, MeshStandardMaterial, Color } from 'three';
+import { MaterialManagerAdapter } from '../material-manager-adapter.service';
 
 @Component({
   selector: 'app-material-selector',
@@ -152,13 +152,13 @@ export class MaterialSelectorComponent implements OnInit, OnDestroy {
   private materialPreviewsSubscription: Subscription | null = null;
   
   constructor(
-    private resourceService: ResourceService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private materialManager: MaterialManagerAdapter
   ) {}
   
   ngOnInit(): void {
     // Suscribirse a los cambios en los materiales
-    this.materialsSubscription = this.resourceService.materialsSubject.subscribe(materials => {
+    this.materialsSubscription = this.materialManager.materialsSubject.subscribe(materials => {
       this.materials = Array.from(materials.entries()).map(([uuid, info]) => ({
         id: uuid,
         resource: info.resource,
@@ -168,7 +168,7 @@ export class MaterialSelectorComponent implements OnInit, OnDestroy {
     });
     
     // Suscribirse a los cambios en las previsualizaciones
-    this.materialPreviewsSubscription = this.resourceService.materialPreviewsSubject.subscribe(() => {
+    this.materialPreviewsSubscription = this.materialManager.materialPreviewsSubject.subscribe(() => {
       // Forzar actualización de la vista cuando cambian las previsualizaciones
       this.filteredMaterials = [...this.filteredMaterials];
     });
@@ -208,7 +208,7 @@ export class MaterialSelectorComponent implements OnInit, OnDestroy {
   }
   
   getMaterialPreviewStyle(materialId: string): string {
-    const previewUrl = this.resourceService.getMaterialPreview(materialId);
+    const previewUrl = this.materialManager.getMaterialPreview(materialId);
     if (previewUrl) {
       return `url('${previewUrl}')`;
     }

@@ -8,7 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { ResourceService } from '../resource.service';
+import { TextureManagerAdapter } from '../texture-manager-adapter.service';
 
 @Component({
     standalone: true,
@@ -45,7 +45,7 @@ export class TextureSelectionDialogComponent implements OnInit, OnDestroy {
     constructor(
         public dialogRef: MatDialogRef<TextureSelectionDialogComponent>,
         @Inject(MAT_DIALOG_DATA) public data: { textures: string[] },
-        private resourceService: ResourceService
+        private textureManager: TextureManagerAdapter
     ) {}
 
     ngOnInit(): void {
@@ -172,23 +172,18 @@ export class TextureSelectionDialogComponent implements OnInit, OnDestroy {
 
     private async loadTextureFromUrl(url: string, fileName: string): Promise<void> {
         try {
-            // Cargar la textura directamente desde la URL usando el ResourceService
-            const texture = await this.resourceService.loadTextureFromUrl(url, {
+            // Cargar la textura usando el TextureManagerAdapter
+            const textureInfo = await this.textureManager.loadTextureFromUrl(url, {
                 generateMipmaps: true,
                 flipY: true
             });
             
-            // Buscar el UUID de la textura recién creada
-            const textureEntry = Array.from(this.resourceService.textures.entries())
-                .find(([_, info]) => info.resource === texture);
-            
-            if (textureEntry) {
-                console.log(`Textura cargada con UUID: ${textureEntry[0]}`);
+            if (textureInfo) {
+                console.log(`Textura cargada con UUID: ${textureInfo.uuid}`);
                 // Cerrar el diálogo con el UUID de la textura
-                this.dialogRef.close(textureEntry[0]);
+                this.dialogRef.close(textureInfo.uuid);
             } else {
-                console.error('No se pudo encontrar la textura recién cargada');
-                // Cerrar el diálogo sin resultado
+                console.error('No se pudo cargar la textura desde la URL');
                 this.dialogRef.close();
             }
         } catch (error) {
@@ -199,23 +194,18 @@ export class TextureSelectionDialogComponent implements OnInit, OnDestroy {
 
     private async loadTextureFromFile(file: File): Promise<void> {
         try {
-            // Crear textura usando el ResourceService
-            const texture = await this.resourceService.createTextureFromFile(file, {
+            // Crear textura usando el TextureManagerAdapter
+            const textureInfo = await this.textureManager.createTextureFromFile(file, {
                 generateMipmaps: true,
                 flipY: true
             });
             
-            // Buscar el UUID de la textura recién creada
-            const textureEntry = Array.from(this.resourceService.textures.entries())
-                .find(([_, info]) => info.resource === texture);
-            
-            if (textureEntry) {
-                console.log(`Textura creada con UUID: ${textureEntry[0]}`);
+            if (textureInfo) {
+                console.log(`Textura creada con UUID: ${textureInfo.uuid}`);
                 // Cerrar el diálogo con el UUID de la textura
-                this.dialogRef.close(textureEntry[0]);
+                this.dialogRef.close(textureInfo.uuid);
             } else {
-                console.error('No se pudo encontrar la textura recién creada');
-                // Cerrar el diálogo sin resultado
+                console.error('No se pudo crear la textura desde el archivo');
                 this.dialogRef.close();
             }
         } catch (error) {
@@ -232,27 +222,25 @@ export class TextureSelectionDialogComponent implements OnInit, OnDestroy {
     getTexturePreviewUrl(textureId: string): string | null {
         if (!textureId) return null;
         
-        // Intentar obtener la textura por UUID
-        if (this.resourceService.textures.has(textureId)) {
-            const textureInfo = this.resourceService.textures.get(textureId);
-            if (textureInfo && textureInfo.resource) {
-                return this.resourceService.getTexturePreviewUrl(textureInfo.resource);
-            }
+        // Obtener la vista previa usando el TextureManagerAdapter
+        const textureInfo = this.textureManager.textures.get(textureId);
+        if (textureInfo && textureInfo.resource) {
+            return this.textureManager.getTexturePreviewUrl(textureInfo.resource);
         }
         
         // Si no se encuentra por UUID, intentar buscarla por nombre
-        const textureByName = Array.from(this.resourceService.textures.entries())
+        const textureByName = Array.from(this.textureManager.textures.entries())
             .find(([_, info]) => info.name === textureId);
         
         if (textureByName) {
-            return this.resourceService.getTexturePreviewUrl(textureByName[1].resource);
+            return this.textureManager.getTexturePreviewUrl(textureByName[1].resource);
         }
         
         return null;
     }
 
     getTextureName(uuid: string): string {
-        const textureInfo = this.resourceService.textures.get(uuid);
+        const textureInfo = this.textureManager.textures.get(uuid);
         return textureInfo ? textureInfo.name : uuid;
     }
 } 

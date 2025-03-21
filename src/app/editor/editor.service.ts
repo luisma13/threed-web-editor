@@ -13,22 +13,14 @@ import { PlayerComponent } from "../simple-engine/components/players/player.comp
 import { PlayerPhysicsComponent } from "../simple-engine/components/players/player-physics.component";
 import { PlayerControllerComponent } from "../simple-engine/components/players/player-controller.component";
 import { SceneExportService } from "./scene-export.service";
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
-import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { ComponentInfo } from './component-selector/component-selector-dialog.component';
 import { Component } from "../simple-engine/core/component";
 import { BoxComponent } from "../simple-engine/components/geometry/box.component";
 import { BoxColliderComponent } from "../simple-engine/components/geometry/box-collider.component";
-import { ResourceService } from './resource-manager/resource.service';
-import { TextureInfo } from './resource-manager/texture.service';
-import { MaterialInfo } from './resource-manager/material.service';
-import { MaterialManager } from '../simple-engine/managers/material-manager';
-import { ModelCacheService, ResourceInfo } from './resource-manager/model-cache.service';
-import { AddModelAction, RemoveModelAction } from './history/actions/model-action';
-import { EditorEventsService } from './shared/editor-events.service';
-import { ModelComponent } from "../simple-engine/components/geometry/model.component";
+import { TextureManagerAdapter } from './resource-manager/texture-manager-adapter.service';
+import { MaterialManagerAdapter } from './resource-manager/material-manager-adapter.service';
+import { ModelCacheAdapter } from './resource-manager/model-cache-adapter.service';
+import { EditorEventsService } from './editor-events.service';
 
 @Injectable({ providedIn: 'root' })
 export class EditorService {
@@ -62,8 +54,9 @@ export class EditorService {
     constructor(
         private sceneExportService: SceneExportService,
         @Inject(PLATFORM_ID) private platformId: Object,
-        private resourceService: ResourceService,
-        private modelCacheService: ModelCacheService,
+        private textureManager: TextureManagerAdapter,
+        private materialManager: MaterialManagerAdapter,
+        private modelCache: ModelCacheAdapter,
         private editorEventsService: EditorEventsService
     ) {
         // Solo crear el input si estamos en el navegador
@@ -73,12 +66,6 @@ export class EditorService {
             this.input.type = 'file';
             this.input.style.display = 'none';
             document.body.appendChild(this.input);
-
-            // Initialize MaterialManager with ResourceService
-            MaterialManager.getInstance().setResourceService(this.resourceService);
-
-            // Make the ResourceService available globally for components
-            (window as any)['resourceService'] = this.resourceService;
 
             // Make the EditorEventsService available globally for components
             (window as any)['editorEventsService'] = this.editorEventsService;
@@ -292,10 +279,12 @@ export class EditorService {
                             try {
                                 // Determine the file extension from the file name
                                 const fileName = file.name;
+                                console.log('Loading model:', fileName);
                                 const fileExtension = '.' + fileName.split('.').pop()?.toLowerCase();
 
                                 // Use the file extension as the model type
-                                const gameObject = await this.addModelToScene(fileExtension, fileUrl);
+                                const modelType = this.getModelTypeFromExtension(fileExtension);
+                                const gameObject = await this.loadModelWithCache(fileUrl, modelType, fileName);
                                 resolve(gameObject);
                             } catch (error) {
                                 console.error('Error loading model:', error);
@@ -311,56 +300,59 @@ export class EditorService {
                 });
             }
 
-            // Determine the model type from the extension
-            let modelType = '';
-            switch (extension.toLowerCase()) {
-                case '.gltf':
-                case '.glb':
-                    modelType = 'gltf';
-                    break;
-                case '.fbx':
-                    modelType = 'fbx';
-                    break;
-                case '.obj':
-                    modelType = 'obj';
-                    break;
-                case '.vrm':
-                    modelType = 'vrm';
-                    break;
-                default:
-                    throw new Error(`Unsupported model extension: ${extension}`);
-            }
-
-            // Load the model using the cache and add it to the scene
-            return this.loadModelWithCache(url, modelType);
+            // For direct URLs, extract the file name and determine model type
+            const urlFileName = url.split('/').pop()?.split('?')[0] || 'Model';
+            const modelType = this.getModelTypeFromExtension(extension);
+            return this.loadModelWithCache(url, modelType, urlFileName);
         } catch (error) {
             console.error('Error adding model to scene:', error);
             return undefined;
         }
     }
 
-    /**
-     * Carga un modelo con caché y lo añade a la escena
-     * @param url URL del modelo
-     * @param modelType Tipo de modelo
-     * @returns Promise con el GameObject creado
-     */
-    async loadModelWithCache(url: string, modelType: string): Promise<GameObject | undefined> {
-        try {
-            // Comprobar si el modelo ya está en caché
-            const cachedModel = this.modelCacheService.getModelByUrl(url);
-            let modelUuid: string;
+    private getModelTypeFromExtension(extension: string): string {
+        switch (extension.toLowerCase()) {
+            case '.gltf':
+            case '.glb':
+                return 'gltf';
+            case '.fbx':
+                return 'fbx';
+            case '.obj':
+                return 'obj';
+            case '.vrm':
+                return 'vrm';
+            default:
+                throw new Error(`Unsupported model extension: ${extension}`);
+        }
+    }
 
-            if (cachedModel) {
-                modelUuid = cachedModel.uuid;
-            } else {
-                // Cargar el modelo y añadirlo al caché
-                const modelInfo = await this.modelCacheService.loadModel(url, modelType);
-                modelUuid = modelInfo.uuid;
+    async loadModelWithCache(url: string, modelType: string, fileName: string): Promise<GameObject | undefined> {
+        try {
+            console.log('Loading model with name:', fileName);
+            const model = await this.modelCache.loadModel(url, fileName);
+            if (!model) {
+                return undefined;
             }
 
-            // Añadir el modelo a la escena desde el caché
-            return this.addModelToSceneFromCache(modelUuid);
+            // Crear un nuevo GameObject para el modelo
+            const gameObject = new GameObject();
+            gameObject.name = fileName;
+            gameObject.add(model);
+
+            // Añadir el EditableObjectComponent
+            gameObject.addComponent(new EditableObjectComponent());
+
+            // Guardar referencia al UUID del modelo y nombre original
+            gameObject.userData = {
+                ...gameObject.userData,
+                modelUuid: model.uuid,
+                originalFileName: fileName
+            };
+
+            // Añadir el GameObject a la escena
+            engine.addGameObjects(gameObject);
+
+            return gameObject;
         } catch (error) {
             console.error('Error loading model with cache:', error);
             return undefined;
@@ -380,26 +372,9 @@ export class EditorService {
         // Handle model resources only for root objects (not children)
         if (!isChild) {
             const modelUuid = gameObject.userData?.['modelUuid'];
-            let modelInfo = null;
-
             if (modelUuid) {
-                modelInfo = this.modelCacheService.getModel(modelUuid);
-                if (modelInfo) {
-                    // Release model and its resources
-                    this.modelCacheService.releaseModel(modelUuid, removeFromCache);
-
-                    // Add to history if needed
-                    if (addToHistory) {
-                        const removeModelAction = new RemoveModelAction({
-                            modelUuid: modelUuid,
-                            gameObject: gameObject,
-                            url: modelInfo.url,
-                            modelType: modelInfo.modelType,
-                            name: modelInfo.name
-                        }, this.modelCacheService);
-                        this.editorEventsService.emitAction(removeModelAction);
-                    }
-                }
+                // Release model and its resources
+                this.modelCache.releaseModel(modelUuid);
             }
         }
 
@@ -724,28 +699,27 @@ export class EditorService {
      */
     async addModelToSceneFromCache(uuid: string): Promise<GameObject | undefined> {
         try {
-            // Crear el GameObject usando el ModelCacheService
-            const gameObject = this.modelCacheService.createGameObjectFromModel(uuid);
-            if (!gameObject) {
+            const model = this.modelCache.getModel(uuid);
+            if (!model) {
                 return undefined;
             }
 
+            // Crear un nuevo GameObject para el modelo
+            const gameObject = new GameObject();
+            gameObject.name = model.name || 'Model';
+            gameObject.add(model.clone());
+
+            // Añadir el EditableObjectComponent
+            gameObject.addComponent(new EditableObjectComponent());
+
+            // Guardar referencia al UUID del modelo
+            gameObject.userData = {
+                ...gameObject.userData,
+                modelUuid: uuid
+            };
+
             // Añadir el GameObject a la escena
             engine.addGameObjects(gameObject);
-
-                // Registrar la acción para el historial
-            const modelInfo = this.modelCacheService.getModel(uuid);
-            if (modelInfo) {
-                const actionState = {
-                    modelUuid: uuid,
-                    gameObject: gameObject,
-                    url: modelInfo.url,
-                    modelType: modelInfo.modelType,
-                    name: modelInfo.name
-                };
-                const addModelAction = new AddModelAction(actionState, this.modelCacheService);
-                this.editorEventsService.emitAction(addModelAction);
-            }
 
             // Seleccionar el GameObject recién creado
             if (this.editableSceneComponent) {

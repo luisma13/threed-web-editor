@@ -4,14 +4,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { ResourceService } from '../resource-manager/resource.service';
-import { TextureService } from '../resource-manager/texture.service';
-import { MaterialService } from '../resource-manager/material.service';
-import { ModelCacheService } from '../resource-manager/model-cache.service';
+import { TextureManagerAdapter } from '../resource-manager/texture-manager-adapter.service';
+import { MaterialManagerAdapter } from '../resource-manager/material-manager-adapter.service';
+import { ModelCacheAdapter } from '../resource-manager/model-cache-adapter.service';
 import { ResourceDialogService } from '../resource-manager/resource-dialog.service';
 import { BehaviorSubject, Subscription } from 'rxjs';
 import { Material, Texture, WebGLRenderer, Scene, PerspectiveCamera, SphereGeometry, Mesh, DirectionalLight, AmbientLight, Box3, Vector3, MeshStandardMaterial } from 'three';
-import { CachedModelInfo } from '../resource-manager/model-cache.service';
+import { CachedModelInfo } from '../../simple-engine/managers/model-manager';
 
 type ViewMode = 'list' | 'icons';
 
@@ -31,7 +30,7 @@ class ResourceFolder {
     public items: ResourceItem[] = [],
     public subfolders: ResourceFolder[] = [],
     public isExpanded: boolean = false
-  ) {}
+  ) { }
 }
 
 @Component({
@@ -55,7 +54,7 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy, AfterViewIn
   selectedItem: ResourceItem | null = null;
   selectedFolder: ResourceFolder | null = null;
   viewMode: ViewMode = 'list';
-  
+
   rootFolders: ResourceFolder[] = [
     new ResourceFolder('Root', '/')
   ];
@@ -72,10 +71,9 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy, AfterViewIn
   private modelPreviews: Map<string, string> = new Map();
 
   constructor(
-    private resourceService: ResourceService,
-    private textureService: TextureService,
-    private materialService: MaterialService,
-    private modelCacheService: ModelCacheService,
+    private textureManager: TextureManagerAdapter,
+    private materialManager: MaterialManagerAdapter,
+    private modelCache: ModelCacheAdapter,
     private resourceDialogService: ResourceDialogService,
     private changeDetectorRef: ChangeDetectorRef,
     @Inject(PLATFORM_ID) platformId: Object
@@ -88,7 +86,7 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy, AfterViewIn
 
     // Subscribe to resource changes
     this.subscriptions.push(
-      this.resourceService.materialsSubject.subscribe(materials => {
+      this.materialManager.materialsSubject.subscribe(materials => {
         this.updateResources('material', materials);
         if (this.isInitialized && !this.isInitializing) {
           setTimeout(() => {
@@ -97,7 +95,7 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy, AfterViewIn
         }
       }),
 
-      this.resourceService.texturesSubject.subscribe(textures => {
+      this.textureManager.texturesSubject.subscribe(textures => {
         // Procesar las texturas inmediatamente
         this.processTextureUpdates(textures);
         // Forzar una actualización después de un breve retraso
@@ -107,13 +105,13 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy, AfterViewIn
         }, 500);
       }),
 
-      this.modelCacheService.cachedModelsSubject.subscribe(models => {
+      this.modelCache.modelsSubject.subscribe(models => {
         this.updateResources('model', models);
         if (this.isInitialized && !this.isInitializing) {
           this.renderModelPreviews();
           // Procesar las texturas del modelo después de cargarlo
           setTimeout(() => {
-            this.processTextureUpdates(this.resourceService.textures);
+            this.processTextureUpdates(this.textureManager.textures);
           }, 200);
         }
       })
@@ -140,7 +138,7 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy, AfterViewIn
   private isWebGLAvailable(): boolean {
     try {
       const canvas = document.createElement('canvas');
-      return !!(window.WebGLRenderingContext && 
+      return !!(window.WebGLRenderingContext &&
         (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
     } catch (e) {
       return false;
@@ -268,12 +266,12 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy, AfterViewIn
       }
 
       this.previewMesh.material = material.resource as Material;
-      
+
       // Fondo transparente para materiales
       this.renderer.setClearColor(0x000000, 0);
       this.renderer.render(this.scene, this.camera);
       const dataUrl = this.renderer.domElement.toDataURL('image/png');
-      this.resourceService.saveMaterialPreview(material.id, dataUrl);
+      this.materialManager.saveMaterialPreview(material.id, dataUrl);
       material.preview = dataUrl;
       this.changeDetectorRef.detectChanges();
     } catch (error) {
@@ -287,7 +285,7 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy, AfterViewIn
           ctx.fillStyle = `#${material.resource.color.getHexString()}`;
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           const dataUrl = canvas.toDataURL('image/png');
-          this.resourceService.saveMaterialPreview(material.id, dataUrl);
+          this.materialManager.saveMaterialPreview(material.id, dataUrl);
           material.preview = dataUrl;
           this.changeDetectorRef.detectChanges();
         }
@@ -428,7 +426,7 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy, AfterViewIn
 
       // Si no se pudo obtener la preview, intentar obtenerla del servicio
       if (!preview) {
-        preview = this.resourceService.getTexturePreview(id);
+        preview = this.textureManager.getTexturePreview(id);
       }
 
       // Si aún no hay preview y tenemos una textura válida
@@ -448,7 +446,7 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy, AfterViewIn
               texture.image.onload = () => {
                 ctx.drawImage(texture.image, 0, 0, canvas.width, canvas.height);
                 const newPreview = canvas.toDataURL('image/png');
-                this.resourceService.saveTexturePreview(id, newPreview);
+                this.textureManager.saveTexturePreview(id, newPreview);
                 // Actualizar el item existente
                 const existingItem = this.findItemById(id);
                 if (existingItem) {
@@ -462,7 +460,7 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy, AfterViewIn
             }
 
             if (preview) {
-              this.resourceService.saveTexturePreview(id, preview);
+              this.textureManager.saveTexturePreview(id, preview);
             }
           } catch (error) {
             console.warn('Error creating texture preview:', error);
@@ -520,9 +518,9 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy, AfterViewIn
 
     const items = Array.from(resources.entries()).map(([id, info]) => {
       let preview: string | undefined;
-      
+
       if (type === 'material') {
-        preview = this.resourceService.getMaterialPreview(id);
+        preview = this.materialManager.getMaterialPreview(id);
       } else if (type === 'model') {
         preview = this.modelPreviews.get(id);
       }
@@ -541,7 +539,7 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy, AfterViewIn
       // Para cada modelo, crear una carpeta y organizar sus recursos
       items.forEach(modelItem => {
         const modelInfo = modelItem.resource as CachedModelInfo;
-        
+
         // Crear o encontrar la carpeta del modelo
         let modelFolder = this.findFolder(`/${modelItem.name}`);
         if (!modelFolder) {
@@ -549,33 +547,32 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy, AfterViewIn
           rootFolder.subfolders.push(modelFolder);
         }
 
-        // Añadir el modelo a su carpeta si no existe
-        if (!modelFolder.items.some(item => item.id === modelItem.id)) {
-          modelFolder.items.push({
-            ...modelItem,
-            path: `/${modelItem.name}/${modelItem.name}`
-          });
-        }
+        // Limpiar items antiguos de la carpeta del modelo
+        modelFolder.items = [];
+
+        // Añadir el modelo a su carpeta
+        modelFolder.items.push({
+          ...modelItem,
+          path: `/${modelItem.name}/${modelItem.name}`
+        });
 
         // Mover las texturas asociadas a la carpeta del modelo
         if (modelInfo.textures) {
           modelInfo.textures.forEach(textureId => {
-            const textureInfo = this.resourceService.textures.get(textureId);
+            const textureInfo = this.textureManager.textures.get(textureId);
             if (textureInfo) {
               // Eliminar la textura de la carpeta raíz si existe
               rootFolder.items = rootFolder.items.filter(item => item.id !== textureId);
-              
-              // Añadir la textura a la carpeta del modelo si no existe
-              if (!modelFolder!.items.some(item => item.id === textureId)) {
-                modelFolder!.items.push({
-                  id: textureId,
-                  name: textureInfo.name,
-                  type: 'texture',
-                  preview: this.resourceService.getTexturePreview(textureId),
-                  resource: textureInfo.resource,
-                  path: `/${modelItem.name}/${textureInfo.name}`
-                });
-              }
+
+              // Añadir la textura a la carpeta del modelo
+              modelFolder!.items.push({
+                id: textureId,
+                name: textureInfo.name,
+                type: 'texture',
+                preview: this.textureManager.getTexturePreview(textureId),
+                resource: textureInfo.resource,
+                path: `/${modelItem.name}/${textureInfo.name}`
+              });
             }
           });
         }
@@ -583,22 +580,20 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy, AfterViewIn
         // Mover los materiales asociados a la carpeta del modelo
         if (modelInfo.materials) {
           modelInfo.materials.forEach(materialId => {
-            const materialInfo = this.resourceService.materials.get(materialId);
+            const materialInfo = this.materialManager.materials.get(materialId);
             if (materialInfo) {
               // Eliminar el material de la carpeta raíz si existe
               rootFolder.items = rootFolder.items.filter(item => item.id !== materialId);
-              
-              // Añadir el material a la carpeta del modelo si no existe
-              if (!modelFolder!.items.some(item => item.id === materialId)) {
-                modelFolder!.items.push({
-                  id: materialId,
-                  name: materialInfo.name,
-                  type: 'material',
-                  preview: this.resourceService.getMaterialPreview(materialId),
-                  resource: materialInfo.resource,
-                  path: `/${modelItem.name}/${materialInfo.name}`
-                });
-              }
+
+              // Añadir el material a la carpeta del modelo
+              modelFolder!.items.push({
+                id: materialId,
+                name: materialInfo.name,
+                type: 'material',
+                preview: this.materialManager.getMaterialPreview(materialId),
+                resource: materialInfo.resource,
+                path: `/${modelItem.name}/${materialInfo.name}`
+              });
             }
           });
         }
@@ -609,11 +604,18 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy, AfterViewIn
     } else {
       // Para texturas y materiales que no están asociados a ningún modelo
       items.forEach(item => {
-        if (!this.findItemInFolders(this.rootFolders, item.id)) {
-          rootFolder.items.push(item);
-        } else {
-          // Update existing item's preview if needed
-          this.updateItemPreview(item);
+        // Solo añadir el item si no está ya en alguna carpeta de modelo
+        if (!this.isItemInModelFolders(item.id)) {
+          const existingItem = this.findItemById(item.id);
+          if (existingItem) {
+            // Actualizar el item existente
+            existingItem.preview = item.preview;
+            existingItem.name = item.name;
+            existingItem.resource = item.resource;
+          } else {
+            // Añadir nuevo item a la carpeta raíz
+            rootFolder.items.push(item);
+          }
         }
       });
     }
@@ -621,27 +623,12 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy, AfterViewIn
     this.resourceStructure.next([...this.rootFolders]);
   }
 
-  private updateItemPreview(newItem: ResourceItem) {
-    const updateItemInFolder = (folders: ResourceFolder[]) => {
-      for (const folder of folders) {
-        const existingItem = folder.items.find(item => item.id === newItem.id);
-        if (existingItem) {
-          existingItem.preview = newItem.preview;
-          return true;
-        }
-        if (updateItemInFolder(folder.subfolders)) return true;
-      }
-      return false;
-    };
-    updateItemInFolder(this.rootFolders);
-  }
-
-  private findItemInFolders(folders: ResourceFolder[], itemId: string): boolean {
-    for (const folder of folders) {
-      if (folder.items.some(item => item.id === itemId)) return true;
-      if (this.findItemInFolders(folder.subfolders, itemId)) return true;
-    }
-    return false;
+  private isItemInModelFolders(itemId: string): boolean {
+    return this.rootFolders.some(folder => 
+      folder.subfolders.some(modelFolder => 
+        modelFolder.items.some(item => item.id === itemId)
+      )
+    );
   }
 
   private findFolder(path: string): ResourceFolder | null {
@@ -672,7 +659,7 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy, AfterViewIn
 
   navigateToParentFolder() {
     if (!this.selectedFolder) return;
-    
+
     const parentPath = this.selectedFolder.path.split('/').slice(0, -1).join('/') || '/';
     this.selectedFolder = this.findFolder(parentPath);
     this.selectedItem = null;
@@ -741,10 +728,10 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy, AfterViewIn
         // It's a ResourceItem
         switch (item.type) {
           case 'material':
-            this.materialService.updateMaterialName(item.id, newName);
+            this.materialManager.updateMaterialName(item.id, newName);
             break;
           case 'texture':
-            this.textureService.updateTextureName(item.id, newName);
+            this.textureManager.updateTextureName(item.id, newName);
             break;
           case 'model':
             // Implement model rename logic
@@ -762,13 +749,13 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy, AfterViewIn
     if (confirm(`Are you sure you want to delete ${item.name}?`)) {
       switch (item.type) {
         case 'material':
-          this.resourceService.releaseMaterial(item.id);
+          this.materialManager.releaseMaterial(item.id);
           break;
         case 'texture':
-          this.resourceService.releaseTexture(item.id);
+          this.textureManager.releaseTexture(item.id);
           break;
         case 'model':
-          this.modelCacheService.releaseModel(item.id, true);
+          this.modelCache.releaseModel(item.id);
           break;
       }
     }

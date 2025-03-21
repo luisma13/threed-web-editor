@@ -9,7 +9,6 @@ import { FormsModule } from '@angular/forms';
 import { ToolbarComponent } from './toolbar/toolbar.component';
 import { MatIconModule } from '@angular/material/icon';
 import { GameObjectsDraggableComponent } from './gameobject-draggables/gameobjects-draggables.component';
-import { HistoryService } from './history/history.service';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -59,7 +58,6 @@ export class EditorComponent {
 
     constructor(
         private editorService: EditorService,
-        private historyService: HistoryService,
         private changeDetector: ChangeDetectorRef,
         private contextMenuService: ContextMenuService,
         private resourceDialogService: ResourceDialogService,
@@ -136,25 +134,6 @@ export class EditorComponent {
     animate() {
         engine.update();
         requestAnimationFrame(this.animate);
-
-        if (engine.input.controlLeft && engine.input.keys.get('z')) {
-            if (!this.keyTimers['z']) {
-                this.historyService.undo();
-                this.keyTimers['z'] = setTimeout(() => {
-                    delete this.keyTimers['z'];
-                }, 300);
-            }
-        }
-
-        if (engine.input.controlLeft && engine.input.keys.get('y')) {
-            if (!this.keyTimers['y']) {
-                this.historyService.redo();
-                this.keyTimers['y'] = setTimeout(() => {
-                    delete this.keyTimers['y'];
-                }, 300);
-            }
-        }
-
         if (engine.draggingObject) {
             this.changeDetector.detectChanges();
         }

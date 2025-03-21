@@ -36,20 +36,9 @@
     <ng-container *ngFor="let folder of rootFolders">
       <!-- List View -->
       <ng-container *ngIf="viewMode === 'list'">
-        <!-- Folder Contents -->
+        <!-- Root Folder Contents -->
         <div class="folder-contents">
-          <!-- Subfolders -->
-          <div *ngFor="let subfolder of folder.subfolders" 
-               class="folder"
-               [class.selected]="selectedFolder === subfolder"
-               (click)="onFolderClick(subfolder)"
-               (dragover)="$event.preventDefault()"
-               (drop)="onItemDrop($event, subfolder)">
-            <mat-icon>{{ subfolder.isExpanded ? 'folder_open' : 'folder' }}</mat-icon>
-            <span class="folder-name">{{ subfolder.name }}</span>
-          </div>
-
-          <!-- Items -->
+          <!-- Root Items -->
           <div *ngFor="let item of folder.items" 
                class="resource-item"
                [class.selected]="selectedItem === item"
@@ -58,8 +47,6 @@
                (dragstart)="onItemDragStart($event, item)"
                [matMenuTriggerFor]="itemMenu"
                [matMenuTriggerData]="{item: item}">
-            
-            <!-- Preview/Icon -->
             <div class="item-preview" *ngIf="item.preview">
               <img [src]="item.preview" [alt]="item.name">
             </div>
@@ -67,25 +54,23 @@
               {{ item.type === 'material' ? 'format_paint' : 
                  item.type === 'texture' ? 'texture' : '3d_rotation' }}
             </mat-icon>
-            
             <span class="item-name">{{ item.name }}</span>
           </div>
 
-          <!-- Nested Folder Contents -->
+          <!-- Subfolders -->
           <ng-container *ngFor="let subfolder of folder.subfolders">
-            <div class="folder-contents" *ngIf="subfolder.isExpanded">
-              <!-- Nested Subfolders -->
-              <div *ngFor="let nestedFolder of subfolder.subfolders" 
-                   class="subfolder"
-                   [class.selected]="selectedFolder === nestedFolder"
-                   (click)="onFolderClick(nestedFolder)"
-                   (dragover)="$event.preventDefault()"
-                   (drop)="onItemDrop($event, nestedFolder)">
-                <mat-icon>{{ nestedFolder.isExpanded ? 'folder_open' : 'folder' }}</mat-icon>
-                <span class="folder-name">{{ nestedFolder.name }}</span>
-              </div>
+            <div class="folder"
+                 [class.selected]="selectedFolder === subfolder"
+                 (click)="onFolderClick(subfolder)"
+                 (dragover)="$event.preventDefault()"
+                 (drop)="onItemDrop($event, subfolder)">
+              <mat-icon>{{ subfolder.isExpanded ? 'folder_open' : 'folder' }}</mat-icon>
+              <span class="folder-name">{{ subfolder.name }}</span>
+            </div>
 
-              <!-- Nested Items -->
+            <!-- Subfolder Contents (only shown when expanded) -->
+            <div class="subfolder-contents" *ngIf="subfolder.isExpanded" [style.padding-left.px]="20">
+              <!-- Subfolder Items -->
               <div *ngFor="let item of subfolder.items" 
                    class="resource-item"
                    [class.selected]="selectedItem === item"
@@ -94,8 +79,6 @@
                    (dragstart)="onItemDragStart($event, item)"
                    [matMenuTriggerFor]="itemMenu"
                    [matMenuTriggerData]="{item: item}">
-                
-                <!-- Preview/Icon -->
                 <div class="item-preview" *ngIf="item.preview">
                   <img [src]="item.preview" [alt]="item.name">
                 </div>
@@ -103,9 +86,20 @@
                   {{ item.type === 'material' ? 'format_paint' : 
                      item.type === 'texture' ? 'texture' : '3d_rotation' }}
                 </mat-icon>
-                
                 <span class="item-name">{{ item.name }}</span>
               </div>
+
+              <!-- Nested Subfolders -->
+              <ng-container *ngFor="let nestedFolder of subfolder.subfolders">
+                <div class="folder"
+                     [class.selected]="selectedFolder === nestedFolder"
+                     (click)="onFolderClick(nestedFolder)"
+                     (dragover)="$event.preventDefault()"
+                     (drop)="onItemDrop($event, nestedFolder)">
+                  <mat-icon>{{ nestedFolder.isExpanded ? 'folder_open' : 'folder' }}</mat-icon>
+                  <span class="folder-name">{{ nestedFolder.name }}</span>
+                </div>
+              </ng-container>
             </div>
           </ng-container>
         </div>

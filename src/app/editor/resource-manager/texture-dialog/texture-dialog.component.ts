@@ -11,7 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Texture, TextureEncoding, Wrapping } from 'three';
 import { PLATFORM_ID, Inject as NgInject } from '@angular/core';
-import { ResourceService } from '../resource.service';
+import { TextureManagerAdapter } from '../texture-manager-adapter.service';
 
 export interface TextureDialogData {
     isEdit: boolean;
@@ -69,8 +69,8 @@ export class TextureDialogComponent implements OnInit, OnDestroy {
         public dialogRef: MatDialogRef<TextureDialogComponent>,
         @Inject(MAT_DIALOG_DATA) public data: TextureDialogData,
         @NgInject(PLATFORM_ID) platformId: Object,
-        private resourceService: ResourceService,
-        private changeDetectorRef: ChangeDetectorRef
+        private changeDetectorRef: ChangeDetectorRef,
+        private textureManager: TextureManagerAdapter
     ) {
         this.isBrowser = isPlatformBrowser(platformId);
         
@@ -93,7 +93,7 @@ export class TextureDialogComponent implements OnInit, OnDestroy {
             this.flipY = data.texture.flipY;
             
             // Obtener la URL de previsualización de la textura usando el servicio
-            this.previewUrl = this.resourceService.getTexturePreviewUrl(data.texture);
+            this.previewUrl = this.textureManager.getTexturePreviewUrl(data.texture);
             
             if (this.previewUrl) {
                 console.log('Preview URL obtained successfully');

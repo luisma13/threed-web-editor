@@ -129,7 +129,8 @@ export abstract class BaseGeometryComponent extends Component {
     protected updateMaterial(): void {
         // Get material from MaterialManager
         if (this._materialId) {
-            this._material = this.materialManager.getMaterial(this._materialId, this.color) as MeshStandardMaterial;
+            const material = this.materialManager.getMaterial(this._materialId);
+            this._material = material ? material as MeshStandardMaterial : new MeshStandardMaterial({ color: new Color(this.color) });
         } else {
             // Create a default material
             this._material = new MeshStandardMaterial({ color: new Color(this.color) });

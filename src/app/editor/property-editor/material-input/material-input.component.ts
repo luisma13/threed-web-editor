@@ -6,7 +6,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MaterialSelectorService } from '../../resource-manager/material-selector/material-selector.service';
-import { ResourceService } from '../../resource-manager/resource.service';
+import { MaterialManagerAdapter } from '../../resource-manager/material-manager-adapter.service';
 import { MeshStandardMaterial, Color } from 'three';
 
 @Component({
@@ -151,7 +151,7 @@ export class MaterialInputComponent {
   
   constructor(
     private materialSelectorService: MaterialSelectorService,
-    private resourceService: ResourceService
+    private materialManager: MaterialManagerAdapter
   ) {}
   
   ngOnChanges(): void {
@@ -163,7 +163,7 @@ export class MaterialInputComponent {
       return 'Sin material';
     }
     
-    const materialInfo = this.resourceService.materials.get(this.value);
+    const materialInfo = this.materialManager.materials.get(this.value);
     if (materialInfo) {
       return materialInfo.name;
     }
@@ -176,7 +176,7 @@ export class MaterialInputComponent {
       return 'none';
     }
     
-    const previewUrl = this.resourceService.getMaterialPreview(this.value);
+    const previewUrl = this.materialManager.getMaterialPreview(this.value);
     if (previewUrl) {
       return `url('${previewUrl}')`;
     }
@@ -186,7 +186,7 @@ export class MaterialInputComponent {
   
   updateMaterialColor(): void {
     if (this.value) {
-      const materialInfo = this.resourceService.materials.get(this.value);
+      const materialInfo = this.materialManager.materials.get(this.value);
       if (materialInfo && materialInfo.resource instanceof MeshStandardMaterial && 
           materialInfo.resource.color instanceof Color) {
         this.materialColor = `#${materialInfo.resource.color.getHexString()}`;

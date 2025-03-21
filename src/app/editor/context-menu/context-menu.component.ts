@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, HostListener, Input } from '@angular/core';
 import { EditorService } from '../editor.service';
-import { HistoryService } from '../history/history.service';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ComponentSelectorDialogComponent } from '../component-selector/component-selector-dialog.component';
 import { BoxComponent } from '../../simple-engine/components/geometry/box.component';
@@ -122,21 +121,11 @@ export class ContextMenuComponent {
 
     constructor(
         private editorService: EditorService,
-        private historyService: HistoryService,
         private changeDetectorRef: ChangeDetectorRef,
         private dialog: MatDialog
     ) {}
 
-    ngOnInit() {
-        // Actualizar estado de undo/redo
-        this.historyService.canUndo.subscribe(canUndo => {
-            this.updateMenuItemState('undo', !canUndo);
-        });
-        
-        this.historyService.canRedo.subscribe(canRedo => {
-            this.updateMenuItemState('redo', !canRedo);
-        });
-        
+    ngOnInit() {        
         // Verificar si hay un componente copiado al mostrar el menú
         this.editorService.hasCopiedComponent();
     }
@@ -256,16 +245,6 @@ export class ContextMenuComponent {
     }
 
     private executeAction(action: string): void {
-        // Handle undo/redo actions first
-        if (action === 'undo') {
-            this.historyService.undo();
-            return;
-        }
-        if (action === 'redo') {
-            this.historyService.redo();
-            return;
-        }
-
         const [category, type] = action.split(':');
 
         switch (category) {

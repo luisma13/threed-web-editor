@@ -1,13 +1,11 @@
-import { BoxGeometry, Mesh, MeshStandardMaterial, Color } from 'three';
+import { BoxGeometry, Mesh, MeshStandardMaterial, Color, BufferGeometry } from 'three';
 import { Component } from '../../core/component';
 import { Editable } from '../../decorators/editable.decorator';
 import { MaterialManager } from '../../managers/material-manager';
 import 'reflect-metadata';
+import { BaseGeometryComponent } from './base-geometry.component';
 
-export class BoxComponent extends Component {
-    private mesh: Mesh;
-    private geometry: BoxGeometry;
-    private materialManager: MaterialManager;
+export class BoxComponent extends BaseGeometryComponent {
 
     @Editable({
         type: 'number',
@@ -36,68 +34,12 @@ export class BoxComponent extends Component {
     })
     public depth: number = 1;
 
-    @Editable({
-        type: 'color',
-        description: 'Color of the box'
-    })
-    public color: string = '#ffffff';
-
-    @Editable({
-        type: 'material',
-        description: 'Material ID'
-    })
-    private _materialId: string = '';
-
-    // Material property (not directly editable)
-    private _material: MeshStandardMaterial;
-
-    // Getter and setter for material
-    get material(): MeshStandardMaterial {
-        return this._material;
-    }
-
-    set material(value: MeshStandardMaterial) {
-        this._material = value;
-        if (this.mesh) {
-            this.mesh.material = this._material;
-        }
-    }
 
     constructor() {
         super('BoxComponent');
         this.materialManager = MaterialManager.getInstance();
     }
 
-    start(): void {
-        this.geometry = new BoxGeometry(this.width, this.height, this.depth);
-        
-        // Get or create material
-        this.updateMaterial();
-        
-        this.mesh = new Mesh(this.geometry, this._material);
-        this.gameObject.add(this.mesh);
-    }
-
-    update(deltaTime: number): void {
-        // No update needed for static box
-    }
-
-    lateUpdate(deltaTime: number): void {
-        // No late update needed for static box
-    }
-
-    onDestroy(): void {
-        if (this.mesh) {
-            this.geometry.dispose();
-            
-            // Release the material if it has an ID
-            if (this._materialId) {
-                this.materialManager.releaseMaterial(this._materialId);
-            }
-            
-            this.gameObject.remove(this.mesh);
-        }
-    }
 
     public override set(key: string, value: any): void {
         const oldMaterialId = key === '_materialId' ? this._materialId : null;
@@ -124,7 +66,12 @@ export class BoxComponent extends Component {
         }
     }
 
-    private updateGeometry(): void {
+    protected override createGeometry(): BufferGeometry {
+        return new BoxGeometry(this.width, this.height, this.depth);
+    }
+
+
+    updateGeometry(): void {
         if (this.mesh) {
             this.geometry.dispose();
             this.geometry = new BoxGeometry(this.width, this.height, this.depth);
@@ -132,27 +79,10 @@ export class BoxComponent extends Component {
         }
     }
 
-    private updateMaterial(): void {
-        // Get material from MaterialManager
-        if (this._materialId) {
-            this._material = this.materialManager.getMaterial(this._materialId, this.color) as MeshStandardMaterial;
-        } else {
-            // Create a default material
-            this._material = new MeshStandardMaterial({ color: new Color(this.color) });
-        }
-        
-        // Update the mesh material
-        if (this.mesh) {
-            this.mesh.material = this._material;
-        }
-    }
-
     /**
      * Reset the component to its default values
      */
-    public reset(): void {
-        console.log('BoxComponent.reset');
-        
+    public reset(): void {        
         // Release the current material if it has an ID
         if (this._materialId) {
             this.materialManager.releaseMaterial(this._materialId);
