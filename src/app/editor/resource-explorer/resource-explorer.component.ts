@@ -18,6 +18,7 @@ import { IconViewComponent } from './components/icon-view/icon-view.component';
 import { MatDialog } from '@angular/material/dialog';
 import { ModelInspectorDialogComponent } from '../model-inspector/model-inspector-dialog.component';
 import { EditorService } from '../editor.service';
+import { ModelManagerService } from '../model-manager.service';
 
 export type ViewMode = 'list' | 'icons';
 export type ResourceType = 'material' | 'texture' | 'model';
@@ -79,6 +80,7 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
     private contextMenuService: ContextMenuService,
     private editorEventsService: EditorEventsService,
     private editorService: EditorService,
+    private modelManager: ModelManagerService,
     private dialog: MatDialog,
     @Inject(PLATFORM_ID) platformId: Object
   ) {
@@ -588,18 +590,12 @@ export class ResourceExplorerComponent implements OnInit, OnDestroy {
     const modelInfo = item.resource as CachedModelInfo;
     if (!modelInfo) return;
 
-    // Crear un nuevo GameObject
-    const newGameObject = this.editorService.newGameObject();
-    newGameObject.name = item.name;
-
-    // Clonar el modelo y asignarlo al GameObject
-    const clonedModel = modelInfo.rootObject.clone();
-    newGameObject.add(clonedModel);
-
-    // Actualizar la escena
-    if (this.editorService.editableSceneComponent) {
-        this.editorService.editableSceneComponent.selectObject(newGameObject);
-        this.editorService.editableSceneComponent.selectedObject.next(newGameObject);
-    }
+    // Usar el ModelManagerService en lugar del EditorService
+    this.modelManager.addModelToSceneFromCache(item.id).then(gameObject => {
+        if (gameObject && this.editorService.editableSceneComponent) {
+            this.editorService.editableSceneComponent.selectObject(gameObject);
+            this.editorService.editableSceneComponent.selectedObject.next(gameObject);
+        }
+    });
   }
 } 

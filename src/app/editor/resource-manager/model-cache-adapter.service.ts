@@ -39,7 +39,7 @@ export class ModelCacheAdapter {
         }
     }
 
-    async loadModel(path: string, modelType: string, fileName?: string): Promise<Object3D | undefined> {
+    async loadModel(path: string, modelType: string, fileName?: string): Promise<CachedModelInfo> {
         try {
             // Remove file extension from the name if present
             const cleanFileName = fileName ? fileName.split('.')[0] : undefined;
@@ -57,12 +57,12 @@ export class ModelCacheAdapter {
                 }
             }
             
-            console.log('Model loaded with name:', modelInfo.name);
+            console.log('Model loaded with name:', modelInfo?.name);
             this.updateModelsList();
-            return modelInfo.rootObject;
+            return modelInfo;
         } catch (error) {
             console.error('Error loading model:', error);
-            return undefined;
+            throw error;
         }
     }
 

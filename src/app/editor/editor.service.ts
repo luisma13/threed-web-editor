@@ -9,6 +9,7 @@ import { SpotLightComponent } from "../simple-engine/components/light/spot-light
 import { engine } from "../simple-engine/core/engine/engine";
 import { GameObject } from "../simple-engine/core/gameobject";
 import * as THREE from "three";
+import { Object3D, Mesh } from "three";
 import { PlayerComponent } from "../simple-engine/components/players/player.component";
 import { PlayerPhysicsComponent } from "../simple-engine/components/players/player-physics.component";
 import { PlayerControllerComponent } from "../simple-engine/components/players/player-controller.component";
@@ -17,8 +18,8 @@ import { ComponentInfo } from './component-selector/component-selector-dialog.co
 import { Component } from "../simple-engine/core/component";
 import { BoxComponent } from "../simple-engine/components/geometry/box.component";
 import { BoxColliderComponent } from "../simple-engine/components/geometry/box-collider.component";
-import { ModelCacheAdapter } from './resource-manager/model-cache-adapter.service';
 import { EditorEventsService } from './editor-events.service';
+import { ModelManagerService } from './model-manager.service';
 
 @Injectable({ providedIn: 'root' })
 export class EditorService {
@@ -52,8 +53,8 @@ export class EditorService {
     constructor(
         private sceneExportService: SceneExportService,
         @Inject(PLATFORM_ID) private platformId: Object,
-        private modelCache: ModelCacheAdapter,
-        private editorEventsService: EditorEventsService
+        private editorEventsService: EditorEventsService,
+        private modelManager: ModelManagerService
     ) {
         // Solo crear el input si estamos en el navegador
         if (isPlatformBrowser(this.platformId)) {
@@ -232,147 +233,26 @@ export class EditorService {
 
     /**
      * Adds a model to the scene
-     * @param extension File extension or model type
-     * @param url Optional URL to load the model from
-     * @returns Promise with the created GameObject
      */
     async addModelToScene(extension: string, url?: string): Promise<GameObject | undefined> {
-        try {
-            if (!url) {
-                // Create a file input element
-                const input = document.createElement('input');
-                input.type = 'file';
-
-                // Set accepted file types based on extension
-                switch (extension) {
-                    case '.gltf':
-                        input.accept = '.gltf,.glb';
-                        break;
-                    case '.glb':
-                        input.accept = '.glb';
-                        break;
-                    case '.fbx':
-                        input.accept = '.fbx';
-                        break;
-                    case '.obj':
-                        input.accept = '.obj';
-                        break;
-                    case '.vrm':
-                        input.accept = '.vrm';
-                        break;
-                    default:
-                        input.accept = '.gltf,.glb,.fbx,.obj,.vrm';
-                }
-
-                // Create a promise to handle the file selection
-                return new Promise<GameObject | undefined>((resolve) => {
-                    input.onchange = async (event) => {
-                        const files = (event.target as HTMLInputElement).files;
-                        const file = files ? files[0] : null;
-
-                        if (file) {
-                            const fileUrl = URL.createObjectURL(file);
-                            try {
-                                // Determine the file extension from the file name
-                                const fileName = file.name;
-                                console.log('Loading model:', fileName);
-                                const fileExtension = '.' + fileName.split('.').pop()?.toLowerCase();
-
-                                // Use the file extension as the model type
-                                const modelType = this.getModelTypeFromExtension(fileExtension);
-                                const gameObject = await this.loadModelWithCache(fileUrl, modelType, fileName);
-                                resolve(gameObject);
-                            } catch (error) {
-                                console.error('Error loading model:', error);
-                                resolve(undefined);
-                            }
-                        } else {
-                            resolve(undefined);
-                        }
-                    };
-
-                    // Trigger the file dialog
-                    input.click();
-                });
-            }
-
-            // For direct URLs, extract the file name and determine model type
-            const urlFileName = url.split('/').pop()?.split('?')[0] || 'Model';
-            const modelType = this.getModelTypeFromExtension(extension);
-            return this.loadModelWithCache(url, modelType, urlFileName);
-        } catch (error) {
-            console.error('Error adding model to scene:', error);
-            return undefined;
-        }
-    }
-
-    private getModelTypeFromExtension(extension: string): string {
-        switch (extension.toLowerCase()) {
-            case '.gltf':
-            case '.glb':
-                return 'gltf';
-            case '.fbx':
-                return 'fbx';
-            case '.obj':
-                return 'obj';
-            case '.vrm':
-                return 'vrm';
-            default:
-                throw new Error(`Unsupported model extension: ${extension}`);
-        }
-    }
-
-    async loadModelWithCache(url: string, modelType: string, fileName: string): Promise<GameObject | undefined> {
-        try {
-            console.log('Loading model with name:', fileName);
-            const model = await this.modelCache.loadModel(url, modelType, fileName);
-            if (!model) {
-                return undefined;
-            }
-
-            // Crear un nuevo GameObject para el modelo
-            const gameObject = new GameObject();
-            gameObject.name = fileName;
-            gameObject.add(model);
-
-            // Añadir el EditableObjectComponent
-            gameObject.addComponent(new EditableObjectComponent());
-
-            // Guardar referencia al UUID del modelo y nombre original
-            gameObject.userData = {
-                ...gameObject.userData,
-                modelUuid: model.uuid,
-                originalFileName: fileName
-            };
-
-            // Añadir el GameObject a la escena
-            engine.addGameObjects(gameObject);
-
-            return gameObject;
-        } catch (error) {
-            console.error('Error loading model with cache:', error);
-            return undefined;
-        }
+        return this.modelManager.addModelToScene(extension, url);
     }
 
     /**
-     * Deletes a GameObject and releases its model from the cache if applicable
+     * Adds a model to the scene from the cache
+     */
+    async addModelToSceneFromCache(uuid: string): Promise<GameObject | undefined> {
+        return this.modelManager.addModelToSceneFromCache(uuid);
+    }
+
+    /**
+     * Deletes a GameObject from the scene
      * @param gameObject GameObject to delete
      * @param addToHistory Whether to add the action to history for undo/redo
-     * @param removeFromCache Whether to remove the model from the cache (defaults to false)
      * @param isChild Internal flag to handle child deletion differently
      */
-    deleteGameObject(gameObject: GameObject, addToHistory: boolean = true, removeFromCache: boolean = false, isChild: boolean = false): void {
+    deleteGameObject(gameObject: GameObject, addToHistory: boolean = true, isChild: boolean = false): void {
         if (!gameObject) return;
-
-        // Handle model resources only for root objects (not children)
-        if (!isChild) {
-            const modelUuid = gameObject.userData?.['modelUuid'];
-            if (modelUuid) {
-                // Release model and its resources
-                this.modelCache.releaseModel(modelUuid);
-            }
-        }
 
         // Unselect if selected
         if (this.editableSceneComponent.selectedObject.value === gameObject) {
@@ -388,7 +268,7 @@ export class EditorService {
             const children = [...gameObject.children];
             for (const child of children) {
                 if (child instanceof GameObject) {
-                    this.deleteGameObject(child, false, false, true);
+                    this.deleteGameObject(child, false, true);
                 }
             }
         }
@@ -686,58 +566,5 @@ export class EditorService {
 
         // Renombrar el GameObject
         gameObject.setName(newName);
-    }
-
-    /**
-     * Añade un modelo a la escena desde el caché
-     * @param uuid UUID del modelo en caché
-     * @returns Promise con el GameObject creado
-     */
-    async addModelToSceneFromCache(uuid: string): Promise<GameObject | undefined> {
-        try {
-            const modelInfo = this.modelCache.getModel(uuid);
-            if (!modelInfo) {
-                return undefined;
-            }
-
-            // Crear un nuevo GameObject para el modelo
-            const gameObject = new GameObject();
-            gameObject.name = modelInfo.name || 'Model';
-            
-            // Clonar el objeto raíz del modelo
-            const clonedModel = modelInfo.rootObject.clone();
-            gameObject.add(clonedModel);
-
-            // Añadir el EditableObjectComponent
-            gameObject.addComponent(new EditableObjectComponent());
-
-            // Guardar referencia al UUID del modelo
-            gameObject.userData = {
-                ...gameObject.userData,
-                modelUuid: uuid
-            };
-
-            // Añadir el GameObject a la escena
-            engine.addGameObjects(gameObject);
-
-            // Seleccionar el GameObject recién creado
-            if (this.editableSceneComponent) {
-                this.editableSceneComponent.selectedObject.next(gameObject);
-            }
-
-            return gameObject;
-        } catch (error) {
-            console.error('Error adding model from cache:', error);
-            return undefined;
-        }
-    }
-
-    /**
-     * Añade un modelo a la escena desde el caché
-     * @param uuid UUID del modelo en caché
-     * @returns Promise con el GameObject clonado
-     */
-    async cloneModelFromCache(uuid: string): Promise<GameObject | undefined> {
-        return this.addModelToSceneFromCache(uuid);
     }
 }
